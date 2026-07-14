@@ -1,0 +1,16 @@
+  version: '3.8'
+
+  services: 
+    mysqldb:
+      image: mysql:8.4
+      container_name: nestjs-mysql
+      restart: always
+      environment:
+        MYSQL_ROOT_PASSWORD: 123456
+        MYSQL_DATABASE: mydatabase
+        MYSQL_USER: root
+        MYSQL_PASSWORD: 123456
+      ports:
+        - "3306:3306"
+      volumes: 
+        - mysqldb_data:/var/lib/mysql
