@@ -1,9 +1,9 @@
-// import { Entity } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
 
-// @Entity("products")
-// export class Product {
-//     @PrimaryGeneratedColumn() id!: number;
-//     @Column() name!: string;
-//     @Column({ nullable: true }) description!: string;
-//     @Column() price!: number;
-// }
+@Entity("products")
+export class Product {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column() name!: string;
+    @Column({ nullable: true }) description!: string;
+    @Column() price!: number;
+}

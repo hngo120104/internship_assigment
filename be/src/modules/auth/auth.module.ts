@@ -5,24 +5,30 @@ import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthGuard } from './guards/auth/auth.guard';
 import { APP_GUARD } from '@nestjs/core/constants';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     UsersModule,
-    JwtModule.register({
+    JwtModule.registerAsync({
       global: true,
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '30s' },
-    }),
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'), // <-- Lấy an toàn thông qua ConfigService
+        signOptions: {
+          expiresIn: '1d',
+        },
+      }),
+    })
   ],
   controllers: [AuthController],
   providers: [
-    AuthService,  
-  {
-    provide: APP_GUARD,
-    useClass: AuthGuard,
-  },
-],
+    AuthService,
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

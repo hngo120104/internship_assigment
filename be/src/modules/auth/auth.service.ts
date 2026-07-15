@@ -1,50 +1,59 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
-import { UsersService } from '../users/users.service';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { UsersRepository } from '../users/repositories/users.repository';
+import { UserCreateRequestDto } from '../users/dto/user-create-request.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private userService: UsersService,
-    private jwtService: JwtService
+    private usersRepository: UsersRepository,
+    private jwtService: JwtService,
   ) {}
 
-  async register(registerDto: RegisterDto) {
-    const user = await this.userService.findByEmail(registerDto.email);
+  async register(registerRequestDto: UserCreateRequestDto): Promise<{ access_token: string } | null> {
+    const emailExist = await this.usersRepository.checkEmailExist(registerRequestDto.email);
 
-    if (user) {
-      throw new Error('Email already exists');
-    }
-    
-    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-
-    const newUser = await this.userService.create({ ...registerDto, password: hashedPassword });
-
-    if (newUser) {
-      return("User registered successfully");
-    }
-  }
-
-  async login(loginDto: LoginDto): Promise<{ access_token: string }> {
-    const user = await this.userService.findByEmail(loginDto.email);
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (emailExist) {
+      return null;
     }
 
-    const matchedPassword = await bcrypt.compare(loginDto.password, user.password_hashed);
+    const hashedPassword = await bcrypt.hash(registerRequestDto.password, 10);
+    const user = await this.usersRepository.createUser({
+      ...registerRequestDto,
+      password: hashedPassword,
+    });
 
-    if (!matchedPassword) {
-      throw new UnauthorizedException('Wrong Password!');
-    }
+    const payload = {
+      sub: { id: user.id, role: user.role },
+    };
 
-    const payload = { sub: { id: user.id, email: user.email, role: user.role } };
     return {
-      access_token: this.jwtService.sign(payload)
-      
+      access_token: this.jwtService.sign(payload),
     };
   }
+
+  // async login(loginDto: LoginDto): Promise<{ access_token: string }> {
+  //   const user = await this.usersRepository.findByEmail(loginDto.email);
+
+  //   if (!user) {
+  //     throw new UnauthorizedException('Invalid credentials');
+  //   }
+
+  //   const matchedPassword = await bcrypt.compare(
+  //     loginDto.password,
+  //     user.password_hashed,
+  //   );
+
+  //   if (!matchedPassword) {
+  //     throw new UnauthorizedException('Wrong Password!');
+  //   }
+
+  //   const payload = {
+  //     sub: { id: user.id, role: user.role },
+  //   };
+  //   return {
+  //     access_token: this.jwtService.sign(payload),
+  //   };
+  // }
 }

@@ -1,5 +1,3 @@
-  version: '3.8'
-
   services: 
     mysqldb:
       image: mysql:8.4
@@ -7,10 +5,14 @@
       restart: always
       environment:
         MYSQL_ROOT_PASSWORD: 123456
-        MYSQL_DATABASE: mydatabase
-        MYSQL_USER: root
+        MYSQL_DATABASE: internship_assignment
+        MYSQL_USER: hoangngo
         MYSQL_PASSWORD: 123456
       ports:
-        - "3306:3306"
+        - "3307:3306"
       volumes: 
+        # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
         - mysqldb_data:/var/lib/mysql
+
+  volumes:
+    mysqldb_data:

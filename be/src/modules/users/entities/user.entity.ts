@@ -1,19 +1,20 @@
-// import {Entity, PrimaryGeneratedColumn, Column, OneToOne} from "typeorm";
-// import { Shop } from "./shop.entity";
-// import { Cart } from "./cart.entity";
+import {Entity, PrimaryGeneratedColumn, Column, OneToOne, OneToMany, CreateDateColumn} from "typeorm";
+import { Shop } from "./shop.entity";
+import { Role } from "../../auth/guards/role/role.enum";
+import { Photo } from "./photo.entities";
 
-// export enum UserRole{CUSTOMER = "customer", SHOP = "shop"};
+@Entity("users")
+export class User {
 
-// @Entity("users")
-// export class User {
-    
-//   @PrimaryGeneratedColumn() id!: number;
-//   @Column() username!: string;
-//   @Column() name!: string;
-//   @Column() password!: string;
-//   @Column({ type: 'enum', enum: UserRole, default: UserRole.CUSTOMER })
-//   role!: UserRole;
+  @PrimaryGeneratedColumn() id!: number;
+  @Column() username!: string;
+  @Column({ unique: true }) email!: string;
+  @Column({ select: false }) password!: string;
+  @Column({ type: 'enum', enum: Role, default: Role.CUSTOMER })
+  role!: Role;
+  @CreateDateColumn()
+  createdAt!: Date;
 
-//   @OneToOne(() => Shop, shop => shop.user) shop!: Shop;
-//   @OneToOne(() => Cart, cart => cart.user) cart: Cart;
-// }
+  @OneToOne(() => Shop, shop => shop.user) shop!: Shop;
+  @OneToMany(() => Photo, photos => photos.user) photos?: Photo[]; 
+}
