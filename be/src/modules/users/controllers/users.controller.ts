@@ -8,25 +8,28 @@ import {
   Delete,
 } from '@nestjs/common';
 import { UsersService } from '../services/users.service';
-import { UserCreateRequestDto } from '../dto/user-create-request.dto';
-import { UserUpdateDto } from '../dto/user-update.dto';
+import { UserCreateRequestDto } from '../dto/user.create.request.dto';
+import { UserUpdateDto } from '../dto/user.update.dto';
 import { Public } from '../../auth/public.decorator';
-import { UserResponseDto } from '../dto/user-response.dto';
+import { HttpStatus, HttpCode } from '@nestjs/common';
+import { UserResponseDto } from '../dto/user.response.dto';
 
-@Controller('users')
+@Controller('api/users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
+  @Post('register')
+  @Public()
+  @HttpCode(HttpStatus.OK)
   async createUser(@Body() UserCreateRequestDto: UserCreateRequestDto): Promise<UserResponseDto> {
     return await this.usersService.createUser(UserCreateRequestDto);
   }
 
-  // @Get()
-  // @Public()
-  // async findMany() {
-  //   return await this.usersService.findMany(20);
-  // }
+  @Get()
+  @Public()
+  async findMany() {
+    return await this.usersService.findMany(20);
+  }
 
   // @Public()
   // @Get(':id')

@@ -1,11 +1,12 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "./user.entity";
 
 @Entity('photos')
 export class Photo {
     @PrimaryGeneratedColumn('uuid') id!: string;
     @Column() type!: string;
-    @Column({ unique: true }) url!: string;
+    @Column() url!: string;
     @CreateDateColumn() createdAt!: Date;
-    @ManyToOne(() => User, user => user.photos) user!: User;
+    @JoinColumn({name: 'user_id'}) userId!: number;
+    @ManyToOne(() => User, user => user.photos, { onDelete: "CASCADE"}) user!: User;
 }

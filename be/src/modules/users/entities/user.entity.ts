@@ -16,5 +16,5 @@ export class User {
   createdAt!: Date;
 
   @OneToOne(() => Shop, shop => shop.user) shop!: Shop;
-  @OneToMany(() => Photo, photos => photos.user) photos?: Photo[]; 
+  @OneToMany(() => Photo, photos => photos.user, { cascade: true }) photos?: Photo[];   
 }

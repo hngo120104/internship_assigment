@@ -1,13 +1,9 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
-import { UserCreateRequestDto } from '../dto/user-create-request.dto';
-import { UserUpdateDto } from '../dto/user-update.dto';
-import { DatabaseService } from '../../database/database.service';
-import { UserResponseDto } from '../dto/user-response.dto';
-import { plainToInstance } from 'class-transformer';
+import { Injectable } from '@nestjs/common';
+import { UserCreateRequestDto } from '../dto/user.create.request.dto';
 import { User } from '../entities/user.entity';
-import { Photo } from '../entities/photo.entities';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { take } from 'rxjs';
 
 @Injectable()
 export class UsersRepository extends Repository<User> {
@@ -28,5 +24,11 @@ export class UsersRepository extends Repository<User> {
 
   async checkEmailExist(email: string): Promise<boolean> {
     return this.existsBy({ email });
+  }
+
+  async findMany(pagination: number): Promise<User[]> {
+    return await this.find(
+      { relations: {photos: true }, take: pagination }
+    )
   }
 }

@@ -12,12 +12,10 @@ import {
   Request,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register-request.dto';
-import { Public } from './public.decorator';
 import { AuthGuard } from './guards/auth/auth.guard';
-import { LoginDto } from './dto/login-request.dto';
 
-@Controller('auth')
+
+@Controller('api/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -27,13 +25,6 @@ export class AuthController {
   // Login(@Body() body: LoginDto) {
   //   return this.authService.login(body);
   // }
-
-  @HttpCode(HttpStatus.CREATED)
-  @Post('register')
-  @Public()
-  Register(@Body() body: RegisterDto) {
-    return this.authService.register(body);
-  }
 
   @UseGuards(AuthGuard)
   @Get('profile')
