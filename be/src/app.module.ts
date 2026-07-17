@@ -14,20 +14,32 @@ import { AuthGuard } from './modules/auth/guards/auth/auth.guard';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { addTransactionalDataSource } from 'typeorm-transactional';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      autoLoadEntities: true,
-      synchronize: true,
-    }),
+    TypeOrmModule.forRootAsync({
+	     useFactory() {
+	       return {
+	         type: 'mysql',
+	         host: process.env.DB_HOST,
+	         port: process.env.DB_PORT? parseInt(process.env.DB_PORT) : 3307,
+	         username: process.env.DB_USERNAME,
+	         password: process.env.DB_PASSWORD,
+           database: process.env.DB_NAME,
+	         synchronize: true,
+	         logging: false,
+	       };
+	     },
+	     async dataSourceFactory(options) {
+	       if (!options) {
+	         throw new Error('Invalid options passed');
+	       }
+
+	       return addTransactionalDataSource(new DataSource(options));
+	     },
+	   }),
     OrdersModule,
     UsersModule,
     AuthModule,

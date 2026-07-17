@@ -15,11 +15,10 @@ import { Role } from '../../auth/guards/role/role.enum';
 
 export class UserCreateRequestDto {
   @IsString() @IsNotEmpty() username!: string;
-  // @IsString() full_name?: string;
   @IsEmail({}, { message: 'Email required.' }) @IsNotEmpty() email!: string;
-  @Matches(/((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
+  @Matches(/((?=.*\d)&(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
     message:
-      'Password is too weak. Must include uppercase, lowercase, and a number/special character.',
+      'Password is too weak. Must include uppercase, lowercase, and a number and special character.',
   })
   @IsNotEmpty()
   @MinLength(8, { message: 'Password is at least 8 characters.' })

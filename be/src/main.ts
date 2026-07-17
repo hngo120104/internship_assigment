@@ -3,9 +3,15 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
 import { ValidationError } from '@nestjs/common';
 import { BadRequestException } from '@nestjs/common';
+import { initializeTransactionalContext, StorageDriver} from 'typeorm-transactional';
+
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  initializeTransactionalContext({ storageDriver: StorageDriver.AUTO });
+
+  const app = await NestFactory.create(AppModule, {
+    abortOnError: true,
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -25,6 +31,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+  
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

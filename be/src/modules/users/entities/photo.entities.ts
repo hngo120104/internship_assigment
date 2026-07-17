@@ -2,7 +2,7 @@ import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGenerat
 import { User } from "./user.entity";
 
 @Entity('photos')
-export class Photo {
+export class UserPhotos {
     @PrimaryGeneratedColumn('uuid') id!: string;
     @Column() type!: string;
     @Column() url!: string;

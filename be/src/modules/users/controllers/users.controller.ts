@@ -18,12 +18,12 @@ import { UserResponseDto } from '../dto/user.response.dto';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post('register')
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  async createUser(@Body() UserCreateRequestDto: UserCreateRequestDto): Promise<UserResponseDto> {
-    return await this.usersService.createUser(UserCreateRequestDto);
-  }
+  // @Post('register')
+  // @Public()
+  // @HttpCode(HttpStatus.OK)
+  // async createUser(@Body() UserCreateRequestDto: UserCreateRequestDto): Promise<UserResponseDto> {
+  //   return await this.usersService.createUserWithPhotos(UserCreateRequestDto);
+  // }
 
   @Get()
   @Public()

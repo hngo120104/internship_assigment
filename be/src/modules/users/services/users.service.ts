@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserCreateRequestDto } from '../dto/user.create.request.dto';
 import { UserUpdateDto } from '../dto/user.update.dto';
 import { UsersRepository } from '../repositories/users.repository';
@@ -6,64 +10,52 @@ import { UserResponseDto } from '../dto/user.response.dto';
 import { plainToInstance } from 'class-transformer';
 import { UserPhotosService } from './user.photos.services';
 import { UserPhotosInsertResponseDto } from '../dto/user.photos.insert.response.dto';
+import { User } from '../entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
-
+import { UserPhotos } from '../entities/photo.entities';
+import { DataSource } from 'typeorm';
+import { Transactional } from '@nestjs-cls/transactional';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly userRepository: UsersRepository,
     private readonly userPhotosService: UserPhotosService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
   ) {}
 
-  async 
+  @Transactional()
+  async createUserWithPhotos(
+    userCreateRequestDto: UserCreateRequestDto,
+  ): Promise<User> {
+    const existEmail = await this.userRepository.findByEmail(
+      userCreateRequestDto.email,
+    );
 
-  async createUser(userCreateRequestDto: UserCreateRequestDto): Promise<UserResponseDto> {
+    if (existEmail) {
+      throw new ConflictException('Email already exists.');
+    }
     const newUser = await this.userRepository.createUser(userCreateRequestDto);
+    const userPhotosRequest = userCreateRequestDto.photos;
 
-    let savedUserPhotos: UserPhotosInsertResponseDto[]= [];
+    let userPhotos: UserPhotos[] = [];
 
-    if (userCreateRequestDto.photos && userCreateRequestDto.photos.length > 0) {
-      savedUserPhotos = await this.userPhotosService.insertPhotosToUser(
+    if (userPhotosRequest && userPhotosRequest.length > 0) {
+      userPhotos = await this.userPhotosService.insertPhotosToUser(
         newUser.id,
-        userCreateRequestDto.photos
-      )
+        userPhotosRequest,
+      );
     }
+    newUser.photos = userPhotos;
 
-    const payload = {
-      sub: newUser.id,
-      email: newUser.email,
-      role: newUser.role
-    }
-
-    const userResponseDtoWithPhotos = {
-      ...newUser,
-      userPhotos: savedUserPhotos,
-      access_token: this.jwtService.sign(payload)
-    }    
-
-    return plainToInstance(UserResponseDto, userResponseDtoWithPhotos, {
-      excludeExtraneousValues: true,
-    });
+    return newUser;
   }
 
-  async findByEmail(email: string): Promise<UserResponseDto | null> {
-    const foundUser = await this.userRepository.findByEmail(email);
-    return plainToInstance(UserResponseDto, foundUser, {
-      excludeExtraneousValues:true,
-    });
+  async findByEmail(email: string): Promise<User | null> {
+    return await this.userRepository.findByEmail(email);
   }
 
-  async findMany(pagination: number): Promise<UserResponseDto[]> {
-    const users = await this.userRepository.findMany(pagination);
-    return plainToInstance(UserResponseDto, users,
-      { excludeExtraneousValues: true }
-    )
-  }
-
-  async checkEmailExist(email: string): Promise<boolean> {
-    return await this.userRepository.checkEmailExist(email);
-    
+  async findMany(pagination: number): Promise<User[] | []> {
+    return await this.userRepository.findMany(pagination);
   }
 }

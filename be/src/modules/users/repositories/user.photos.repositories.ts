@@ -1,14 +1,14 @@
-import { Repository } from 'typeorm';
-import { Photo } from '../entities/photo.entities';
+import { EntityManager, Repository } from 'typeorm';
+import { UserPhotos } from '../entities/photo.entities';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { UserPhotosInsertRequestDto } from '../dto/user.photos.insert.request.dto';
 import { plainToInstance } from 'class-transformer';
 
 @Injectable()
-export class UserPhotosRepository extends Repository<Photo> {
+export class UserPhotosRepository extends Repository<UserPhotos> {
   constructor(
-    @InjectRepository(Photo) private userPhotosRepo: Repository<Photo>,
+    @InjectRepository(UserPhotos) private userPhotosRepo: Repository<UserPhotos>,
   ) {
     super(
       userPhotosRepo.target,
@@ -20,7 +20,7 @@ export class UserPhotosRepository extends Repository<Photo> {
   async insertPhotosIntoUser(
     userId: number,
     userPhotossInsertRequestDto: UserPhotosInsertRequestDto[],
-  ): Promise<Photo[]> {
+  ): Promise<UserPhotos[]> {
     const userPhotos = userPhotossInsertRequestDto.map((userPhotos) => ({
       url: userPhotos.url,
       type: userPhotos.type,
