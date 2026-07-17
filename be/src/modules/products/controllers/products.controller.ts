@@ -9,30 +9,30 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ProductsService } from './products.service';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { Roles } from '../auth/guards/role/role.decorator';
-import { Role } from '../auth/guards/role/role.enum';
-import { AuthGuard } from '../auth/guards/auth/auth.guard';
-import { Public } from '../auth/public.decorator';
+import { ProductsService } from '../services/products.service';
+import { ProductCreaterequestDto } from '../dto/products.create.dto';
+import { UpdateProductDto } from '../dto/products.update.dto';
+import { Roles } from '../../auth/guards/role/role.decorator';
+import { Role } from '../../auth/guards/role/role.enum';
+import { AuthGuard } from '../../auth/guards/auth/auth.guard';
+import { Public } from '../../auth/public.decorator';
 
-@Controller('products')
+@Controller('api/products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  @Post()
-  @Roles(Role.SHOP)
+  @Post('new-product')
+  @Roles(Role.SHOP) 
   @UseGuards(AuthGuard)
-  create(@Request() req, @Body() createProductDto: CreateProductDto) {
+  createProducts(@Request() req, @Body() productCreateDto: ProductCreaterequestDto) {
     const shopId = req.user.id;
-    return this.productsService.create(shopId, createProductDto);
+    return this.productsService.createProduct(shopId, productCreateDto);
   }
 
   @Public()
   @Get()
-  findAll() {
-    return this.productsService.findAll();
+  findMany() {
+    return this.productsService.findMany(20);
   }
 
   @Public()

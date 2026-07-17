@@ -1,5 +1,6 @@
 import {Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany} from "typeorm";
 import { User } from "./user.entity";
+import { Product } from "../../products/entities/product.entity";
 
 @Entity('shops')
 export class Shop {
@@ -11,5 +12,5 @@ export class Shop {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-//   @OneToMany(() => Product, p => p.shop) products: Product[];
+  @OneToMany(() => Product, product => product.shopId, { cascade: true }) products!: Product[];
 }

@@ -28,6 +28,7 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
 	         username: process.env.DB_USERNAME,
 	         password: process.env.DB_PASSWORD,
            database: process.env.DB_NAME,
+           autoLoadEntities: true,
 	         synchronize: true,
 	         logging: false,
 	       };
@@ -53,11 +54,11 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
     AppService,
     {
       provide: APP_GUARD,
-      useClass: RolesGuard,
+      useClass: AuthGuard,
     },
     {
       provide: APP_GUARD,
-      useClass: AuthGuard,
+      useClass: RolesGuard,
     },
   ],
 })

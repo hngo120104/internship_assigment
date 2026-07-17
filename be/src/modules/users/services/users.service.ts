@@ -4,17 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UserCreateRequestDto } from '../dto/user.create.request.dto';
-import { UserUpdateDto } from '../dto/user.update.dto';
 import { UsersRepository } from '../repositories/users.repository';
-import { UserResponseDto } from '../dto/user.response.dto';
-import { plainToInstance } from 'class-transformer';
 import { UserPhotosService } from './user.photos.services';
-import { UserPhotosInsertResponseDto } from '../dto/user.photos.insert.response.dto';
 import { User } from '../entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
-import { UserPhotos } from '../entities/photo.entities';
-import { DataSource } from 'typeorm';
-import { Transactional } from '@nestjs-cls/transactional';
+import { UserPhoto } from '../entities/photo.entities';
+import * as bcrypt from 'bcrypt';
+import { Transactional } from 'typeorm-transactional';
 
 @Injectable()
 export class UsersService {
@@ -35,10 +31,12 @@ export class UsersService {
     if (existEmail) {
       throw new ConflictException('Email already exists.');
     }
-    const newUser = await this.userRepository.createUser(userCreateRequestDto);
+
+    const passwordHashed = await bcrypt.hash(userCreateRequestDto.password, 12);
+    const newUser = await this.userRepository.createUser(userCreateRequestDto, passwordHashed);
     const userPhotosRequest = userCreateRequestDto.photos;
 
-    let userPhotos: UserPhotos[] = [];
+    let userPhotos: UserPhoto[] = [];
 
     if (userPhotosRequest && userPhotosRequest.length > 0) {
       userPhotos = await this.userPhotosService.insertPhotosToUser(

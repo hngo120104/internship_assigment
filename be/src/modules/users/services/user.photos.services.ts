@@ -3,7 +3,7 @@ import { UserPhotosInsertRequestDto } from '../dto/user.photos.insert.request.dt
 import { UserPhotosInsertResponseDto } from '../dto/user.photos.insert.response.dto';
 import { plainToInstance } from 'class-transformer';
 import { UserPhotosRepository } from '../repositories/user.photos.repositories';
-import { UserPhotos } from '../entities/photo.entities';
+import { UserPhoto } from '../entities/photo.entities';
 
 @Injectable()
 export class UserPhotosService {
@@ -12,7 +12,7 @@ export class UserPhotosService {
 
   async insertPhotosToUser(userId: number,
     userPhotosInsertRequestDto: UserPhotosInsertRequestDto[],
-  ): Promise<UserPhotos[]> {
+  ): Promise<UserPhoto[]> {
     return await this.userPhotosRepository.insertPhotosIntoUser(userId, userPhotosInsertRequestDto);
   }
 }

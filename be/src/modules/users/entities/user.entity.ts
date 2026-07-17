@@ -1,11 +1,17 @@
-import {Entity, PrimaryGeneratedColumn, Column, OneToOne, OneToMany, CreateDateColumn} from "typeorm";
-import { Shop } from "./shop.entity";
-import { Role } from "../../auth/guards/role/role.enum";
-import { UserPhotos } from "./photo.entities";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToOne,
+  OneToMany,
+  CreateDateColumn,
+} from 'typeorm';
+import { Shop } from './shop.entity';
+import { Role } from '../../auth/guards/role/role.enum';
+import { UserPhoto } from './photo.entities';
 
-@Entity("users")
+@Entity('users')
 export class User {
-
   @PrimaryGeneratedColumn() id!: number;
   @Column() username!: string;
   @Column({ unique: true }) email!: string;
@@ -15,6 +21,7 @@ export class User {
   @CreateDateColumn()
   createdAt!: Date;
 
-  @OneToOne(() => Shop, shop => shop.user) shop!: Shop;
-  @OneToMany(() => UserPhotos, photos => photos.user, { cascade: true }) photos?: UserPhotos[];   
+  @OneToOne(() => Shop, (shop) => shop.user) shop!: Shop;
+  @OneToMany(() => UserPhoto, (photos) => photos.user, { cascade: true })
+  photos?: UserPhoto[];
 }
