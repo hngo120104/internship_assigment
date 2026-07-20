@@ -20,33 +20,35 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
-	     useFactory() {
-	       return {
-	         type: 'mysql',
-	         host: process.env.DB_HOST,
-	         port: process.env.DB_PORT? parseInt(process.env.DB_PORT) : 3307,
-	         username: process.env.DB_USERNAME,
-	         password: process.env.DB_PASSWORD,
-           database: process.env.DB_NAME,
-           autoLoadEntities: true,
-	         synchronize: true,
-	         logging: false,
-	       };
-	     },
-	     async dataSourceFactory(options) {
-	       if (!options) {
-	         throw new Error('Invalid options passed');
-	       }
+      useFactory() {
+        return {
+          type: 'mysql',
+          host: process.env.DB_HOST || 'localhost',
+          port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3307,
+          username: process.env.DB_USERNAME || 'hoangngo',
+          password: process.env.DB_PASSWORD || '123456',
+          database: process.env.DB_NAME || 'internship_assignment',
+          autoLoadEntities: true,
+          synchronize: true,
+          migrations: ['dist/migrations/*.js'],
+          migrationsRun: true,
+          logging: false,
+        };
+      },
+      async dataSourceFactory(options) {
+        if (!options) {
+          throw new Error('Invalid options passed');
+        }
 
-	       return addTransactionalDataSource(new DataSource(options));
-	     },
-	   }),
+        return addTransactionalDataSource(new DataSource(options));
+      },
+    }),
     OrdersModule,
     UsersModule,
     AuthModule,
     CartsModule,
     ProductsModule,
-    DatabaseModule
+    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [

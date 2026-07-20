@@ -23,7 +23,6 @@ import { UserResponseDto } from '../users/dto/user.response.dto';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private usersService: UsersService,
   ) {}
 
   @HttpCode(HttpStatus.OK)

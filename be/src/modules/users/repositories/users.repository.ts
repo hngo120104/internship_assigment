@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserCreateRequestDto } from '../dto/user.create.request.dto';
 import { User } from '../entities/user.entity';
 import { EntityManager, Repository } from 'typeorm';
@@ -22,11 +22,21 @@ export class UsersRepository extends Repository<User> {
     return await this.userRepo.save(newUser);
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    return await this.findOneBy({ email });
+  findByEmail(email: string): Promise<User | null> {
+    return this.findOneBy({ email });
   }
 
-  async findMany(pagination: number): Promise<User[] | []> {
-    return await this.find({ relations: { photos: true }, take: pagination });
+  findMany(pagination: number): Promise<User[] | []> {
+    return this.find({ relations: { photos: true }, take: pagination });
+  }
+
+  async deleteUserById(userId: number): Promise<User | null> {
+    const foundUser = await this.userRepo.findOneBy({
+        id: userId
+    })
+    if (!foundUser) {
+      throw new NotFoundException(`User with id:${userId} not found.`);
+    }
+    return await this.userRepo.remove(foundUser);
   }
 }

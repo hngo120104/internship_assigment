@@ -12,5 +12,6 @@ export class Shop {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @OneToMany(() => Product, product => product.shopId, { cascade: true }) products!: Product[];
+  @OneToMany(() => Product, (product) => product.shop, { cascade: true })
+  products!: Product[];
 }

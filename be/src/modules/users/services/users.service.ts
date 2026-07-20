@@ -17,7 +17,6 @@ export class UsersService {
   constructor(
     private readonly userRepository: UsersRepository,
     private readonly userPhotosService: UserPhotosService,
-    private readonly jwtService: JwtService,
   ) {}
 
   @Transactional()
@@ -49,11 +48,16 @@ export class UsersService {
     return newUser;
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    return await this.userRepository.findByEmail(email);
+  findByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findByEmail(email);
   }
 
-  async findMany(pagination: number): Promise<User[] | []> {
-    return await this.userRepository.findMany(pagination);
+  findMany(pagination: number): Promise<User[] | []> {
+    return this.userRepository.findMany(pagination);
   }
+
+  async deleteUserById(userId: number): Promise<User | null> {
+    return await this.userRepository.deleteUserById(userId);
+  }
+  
 }

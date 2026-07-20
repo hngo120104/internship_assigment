@@ -20,10 +20,11 @@ export class UserPhotosRepository extends Repository<UserPhoto> {
     userId: number,
     userPhotossInsertRequestDto: UserPhotosInsertRequestDto[],
   ): Promise<UserPhoto[]> {
-    const userPhotos = userPhotossInsertRequestDto.map((userPhotos) => ({
-      url: userPhotos.url,
-      type: userPhotos.type,
-      userId: userId,
+    const userPhotos = userPhotossInsertRequestDto.map((userPhoto) => ({
+      url: userPhoto.url,
+      type: userPhoto.type,
+      userId,
+      user: { id: userId },
     }));
 
     return await this.userPhotosRepo.save(userPhotos);

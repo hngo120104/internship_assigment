@@ -1,32 +1,35 @@
 import { Injectable } from '@nestjs/common';
-import { ProductCreaterequestDto } from '../dto/products.create.dto';
-import { UpdateProductDto } from '../dto/products.update.dto';
-import { InjectRepository } from '@nestjs/typeorm';
+import { ProductCreateRequestDto } from '../dto/products.create.dto';
+import { ProductUpdateDto } from '../dto/products.update.dto';
+
 import { Product } from '../entities/product.entity';
 import { ProductsRepository } from '../repositories/products.repository';
 
 @Injectable()
 export class ProductsService {
-  constructor(@InjectRepository(Product) private readonly productsRepo: ProductsRepository) {}
+  constructor(private readonly productsRepo: ProductsRepository) {}
 
-  async createProduct(shopId: number, productCreateDto: ProductCreaterequestDto): Promise<Product | null> {
+  async createProduct(shopId: number, productCreateDto: ProductCreateRequestDto): Promise<Product | null> {
     return await this.productsRepo.createProduct(shopId, productCreateDto);
   }
 
-  async findMany(pagination: number): Promise<Product[] | []> {
-    return await this.productsRepo.findMany(pagination);
+  async findManyLatestProducts(page: number, limit: number): Promise<Product[] | []> {
+    return await this.productsRepo.findManyLastestProducts(page, limit);
   }
 
-  async findOne(id: number) {
-
+  async findLatestShopProducts(shopId: number): Promise<Product[] | null> {
+    return await this.productsRepo.findLatestShopProducts(shopId);
   }
 
-  async update(id: number, shopId: number, updateProductDto: UpdateProductDto) {
-    
-
+  async findProductById(productId: number): Promise<Product | null> {
+    return await this.productsRepo.findProductById(productId);
   }
 
-  async remove(id: number, shopId: number) {
+  async updateShopProductById(productId: number, shopId: number, updateProductDto: ProductUpdateDto): Promise<Product | null> {
+    return await this.productsRepo.updateShopProductById(productId, shopId, updateProductDto);
+  }
 
+  async deleteShopProductById(productId: number, shopId: number): Promise<Product | null> {
+    return await this.productsRepo.deleteShopProductById(productId, shopId);
   }
 }
