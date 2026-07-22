@@ -13,13 +13,13 @@ import { ConfigService } from '@nestjs/config';
     JwtModule.registerAsync({
       global: true,
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'), // <-- Lấy an toàn thông qua ConfigService
         signOptions: {
           expiresIn: '1d',
         },
       }),
-    })
+    }),
   ],
   controllers: [AuthController],
   providers: [

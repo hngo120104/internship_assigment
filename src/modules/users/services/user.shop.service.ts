@@ -1,8 +1,8 @@
 import { Role } from '../../auth/guards/role/role.enum';
 import { UserShopCreateRequestDto } from '../dto/user.shop.create.request.dto';
 import { Shop } from '../entities/shop.entity';
-import { UserShopRepository } from '../repositories/user.shop.repositories';
-import { UsersRepository } from '../repositories/users.repositories';
+import { UserShopRepository } from '../repositories/user.shop.repository';
+import { UsersRepository } from '../repositories/users.repository';
 import {
   BadRequestException,
   Injectable,
@@ -23,7 +23,6 @@ export class UserShopService {
     userShopCreateRequestDto: UserShopCreateRequestDto,
   ): Promise<Shop> {
     const foundUser = await this.usersRepo.findById(userId);
-
     if (!foundUser) {
       throw new NotFoundException(`User with id: ${userId} not found.`);
     }
@@ -32,12 +31,13 @@ export class UserShopService {
       throw new BadRequestException('User is already shop.');
     }
 
+    foundUser.role = Role.SHOP;
+    await this.usersRepo.save(foundUser);
+
     const newShop = await this.userShopRepo.createShop(
       foundUser,
       userShopCreateRequestDto,
     );
-    foundUser.role = Role.SHOP;
-    await this.usersRepo.save(foundUser);
     return newShop;
   }
 }

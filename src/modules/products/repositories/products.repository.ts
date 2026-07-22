@@ -1,8 +1,8 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from '../entities/product.entity';
 import { Repository } from 'typeorm';
-import { ProductCreateRequestDto } from '../dto/products.create.dto';
-import { ProductUpdateDto } from '../dto/products.update.dto';
+import { ProductCreateRequestDto } from '../dto/product.create.dto';
+import { ProductUpdateDto } from '../dto/product.update.dto';
 import { NotFoundException } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 
@@ -13,7 +13,7 @@ export class ProductsRepository {
     private readonly productsRepo: Repository<Product>,
   ) {}
 
-  async createProduct(
+  createProduct(
     shopId: number,
     productCreateRequestDto: ProductCreateRequestDto,
   ): Promise<Product> {
@@ -21,14 +21,11 @@ export class ProductsRepository {
       shopId,
       ...productCreateRequestDto,
     });
-    return await this.productsRepo.save(product);
+    return this.productsRepo.save(product);
   }
 
-  async findManyLatestProducts(
-    page: number,
-    limit: number,
-  ): Promise<Product[]> {
-    const result = await this.productsRepo.find({
+  findManyLatestProducts(page: number, limit: number): Promise<Product[]> {
+    return this.productsRepo.find({
       relations: { shop: true },
       skip: (page - 1) * limit,
       take: limit,
@@ -36,11 +33,10 @@ export class ProductsRepository {
         createdAt: 'DESC',
       },
     });
-    return result;
   }
 
-  async findLatestShopProducts(shopId: number): Promise<Product[]> {
-    return await this.productsRepo.find({
+  findLatestShopProducts(shopId: number): Promise<Product[]> {
+    return this.productsRepo.find({
       where: {
         shopId,
       },
@@ -51,8 +47,8 @@ export class ProductsRepository {
     });
   }
 
-  async findProductById(productId: number): Promise<Product | null> {
-    return await this.productsRepo.findOne({
+  findProductById(productId: number): Promise<Product | null> {
+    return this.productsRepo.findOne({
       where: {
         id: productId,
       },
@@ -74,7 +70,7 @@ export class ProductsRepository {
       .where('id = :productId', { productId })
       .andWhere('shop_id = :shopId', { shopId })
       .execute();
-    return await this.productsRepo.findOneOrFail({
+    return this.productsRepo.findOneOrFail({
       where: {
         id: productId,
         shopId,
@@ -85,16 +81,19 @@ export class ProductsRepository {
     });
   }
 
-  async deleteShopProductById(productId: number, shopId: number): Promise<Product> {
+  async deleteShopProductById(
+    productId: number,
+    shopId: number,
+  ): Promise<Product> {
     const foundProduct = await this.productsRepo.findOne({
       where: {
         id: productId,
         shopId,
-      }
-    })
+      },
+    });
     if (!foundProduct) {
-      throw new NotFoundException(`Prouct with id:${productId} not found.`);
+      throw new NotFoundException(`Product with id:${productId} not found.`);
     }
-    return await this.productsRepo.remove(foundProduct);
+    return this.productsRepo.remove(foundProduct);
   }
 }

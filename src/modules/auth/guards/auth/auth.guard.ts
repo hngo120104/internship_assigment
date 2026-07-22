@@ -20,10 +20,6 @@ export class AuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    // console.log(
-    //   `API Path: ${context.switchToHttp().getRequest().url} - ${isPublic ? 'isPublic' : 'isGuard'}`,
-    // );
-
     if (isPublic) {
       return true;
     }
@@ -39,8 +35,7 @@ export class AuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token);
 
       request['user'] = payload;
-      console.log('request user:', request.user)
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid token');
     }
 

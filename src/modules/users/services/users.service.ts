@@ -1,14 +1,9 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { UserCreateRequestDto } from '../dto/user.create.request.dto';
-import { UsersRepository } from '../repositories/users.repositories';
+import { UsersRepository } from '../repositories/users.repository';
 import { UserPhotosService } from './user.photos.service';
 import { User } from '../entities/user.entity';
-import { JwtService } from '@nestjs/jwt';
-import { UserPhoto } from '../entities/photo.entities';
+import { UserPhoto } from '../entities/photo.entity';
 import * as bcrypt from 'bcrypt';
 import { Transactional } from 'typeorm-transactional';
 
@@ -61,9 +56,5 @@ export class UsersService {
 
   findMany(pagination: number): Promise<User[] | []> {
     return this.userRepository.findMany(pagination);
-  }
-
-  async deleteUserById(userId: number): Promise<User | null> {
-    return await this.userRepository.deleteUserById(userId);
   }
 }

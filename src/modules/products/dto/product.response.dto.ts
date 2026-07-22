@@ -2,8 +2,8 @@ import { Exclude, Expose } from 'class-transformer';
 
 @Exclude()
 export class ProductResponseDto {
-  @Expose() id!: string;
-  @Expose() shopId!: string;
+  @Expose() id!: number;
+  @Expose() shopId!: number;
   @Expose() name!: string;
   @Expose() type!: string;
   @Expose() description?: string;

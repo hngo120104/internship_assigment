@@ -3,15 +3,13 @@ import {
   IsString,
   MinLength,
   Matches,
-  IsEnum,
   IsEmail,
   IsOptional,
   IsArray,
-  ValidateNested
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UserPhotosInsertRequestDto } from './user.photos.insert.request.dto';
-import { Role } from '../../auth/guards/role/role.enum';
 
 export class UserCreateRequestDto {
   @IsString() @IsNotEmpty() username!: string;

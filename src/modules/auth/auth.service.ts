@@ -1,6 +1,5 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/services/users.service';
 import { LoginRequestDto } from './dto/login.request.dto';
 import * as bcrypt from 'bcrypt';
@@ -25,6 +24,7 @@ export class AuthService {
     const payload = {
       sub: newUser.id,
       role: newUser.role,
+      shopId: null
     };
     return { access_token: this.jwtService.sign(payload) };
   }
@@ -42,10 +42,11 @@ export class AuthService {
       userId,
       userShopCreateRequestDto,
     );
-
+    console.log('shop register id: ', newShop.id);
     const payload = {
-      sub: newShop.id,
+      sub: userId,
       role: Role.SHOP,
+      shopId: newShop.id
     };
     return { access_token: this.jwtService.sign(payload) };
   }
@@ -72,6 +73,7 @@ export class AuthService {
     const payload = {
       sub: userExist.id,
       role: userExist.role,
+      shopId: userExist.shop.id
     };
     return {
       access_token: this.jwtService.sign(payload),

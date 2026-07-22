@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { Shop } from './shop.entity';
 import { Role } from '../../auth/guards/role/role.enum';
-import { UserPhoto } from './photo.entities';
+import { UserPhoto } from './photo.entity';
 
 @Entity('users')
 export class User {
@@ -21,7 +21,8 @@ export class User {
   @CreateDateColumn()
   createdAt!: Date;
 
-  @OneToOne(() => Shop, (shop) => shop.user, { nullable: true, cascade: true }) shop!: Shop;
+  @OneToOne(() => Shop, (shop) => shop.user, { nullable: true, cascade: true })
+  shop!: Shop;
   @OneToMany(() => UserPhoto, (photos) => photos.user, { cascade: true })
   photos?: UserPhoto[];
 }

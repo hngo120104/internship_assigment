@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { ProductCreateRequestDto } from '../dto/products.create.dto';
-import { ProductUpdateDto } from '../dto/products.update.dto';
+import { ProductCreateRequestDto } from '../dto/product.create.dto';
+import { ProductUpdateDto } from '../dto/product.update.dto';
 
 import { Product } from '../entities/product.entity';
 import { ProductsRepository } from '../repositories/products.repository';
@@ -9,15 +9,18 @@ import { ProductsRepository } from '../repositories/products.repository';
 export class ProductsService {
   constructor(private readonly productsRepo: ProductsRepository) {}
 
-  createProduct(shopId: number, productCreateDto: ProductCreateRequestDto): Promise<Product | null> {
+  createProduct(
+    shopId: number,
+    productCreateDto: ProductCreateRequestDto,
+  ): Promise<Product | null> {
     return this.productsRepo.createProduct(shopId, productCreateDto);
   }
 
-  findManyLatestProducts(page: number, limit: number): Promise<Product[] | []> {
-    return this.productsRepo.findManyLastestProducts(page, limit);
+  findLatestProducts(page: number, limit: number): Promise<Product[]> {
+    return this.productsRepo.findManyLatestProducts(page, limit);
   }
 
-  findLatestShopProducts(shopId: number): Promise<Product[] | null> {
+  findLatestShopProducts(shopId: number): Promise<Product[]> {
     return this.productsRepo.findLatestShopProducts(shopId);
   }
 
@@ -25,11 +28,22 @@ export class ProductsService {
     return this.productsRepo.findProductById(productId);
   }
 
-  async updateShopProductById(productId: number, shopId: number, updateProductDto: ProductUpdateDto): Promise<Product | null> {
-    return await this.productsRepo.updateShopProductById(productId, shopId, updateProductDto);
+  updateShopProductById(
+    productId: number,
+    shopId: number,
+    updateProductDto: ProductUpdateDto,
+  ): Promise<Product> {
+    return this.productsRepo.updateShopProductById(
+      productId,
+      shopId,
+      updateProductDto,
+    );
   }
 
-  async deleteShopProductById(productId: number, shopId: number): Promise<Product | null> {
-    return await this.productsRepo.deleteShopProductById(productId, shopId);
+  deleteShopProductById(
+    productId: number,
+    shopId: number,
+  ): Promise<Product> {
+    return this.productsRepo.deleteShopProductById(productId, shopId);
   }
 }

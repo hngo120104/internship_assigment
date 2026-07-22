@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import { Expose } from 'class-transformer';
 import { Role } from '../../auth/guards/role/role.enum';
 import { UserPhotosInsertResponseDto } from './user.photos.insert.response.dto';
-import { UserProductsResponseDto } from './user.products.response.dto';
+import { UserShopCreateResponseDto } from './user.shop.create.response.dto';
 
 export class UserResponseDto {
   @Expose() id!: number;
@@ -13,8 +13,7 @@ export class UserResponseDto {
   @Expose()
   @Type(() => UserPhotosInsertResponseDto)
   photos?: UserPhotosInsertResponseDto[];
-  @Expose()
-  @Type(() => UserProductsResponseDto)
-  products?: UserProductsResponseDto[];
+  @Type(() => UserShopCreateResponseDto)
+  shop?: UserShopCreateResponseDto;
   @Expose() createdAt!: Date;
 }

@@ -13,13 +13,13 @@ export class UserShopRepository {
     user: User,
     userShopCreateRequestDto: UserShopCreateRequestDto,
   ): Promise<Shop> {
+
     const newUserShop = this.userShopRepo.create({
       user,
       shopName: userShopCreateRequestDto.shopName,
       description: userShopCreateRequestDto.description,
       address: userShopCreateRequestDto.address,
     });
-
-    return await this.userShopRepo.save(newUserShop);
+    return this.userShopRepo.save(newUserShop);
   }
 }

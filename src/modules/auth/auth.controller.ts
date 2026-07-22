@@ -3,9 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Patch,
-  Param,
-  Delete,
   HttpStatus,
   HttpCode,
   UseGuards,
@@ -25,32 +22,27 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('login')
   @Public()
-  Login(@Body() body: LoginRequestDto) {
+  login(@Body() body: LoginRequestDto) {
     return this.authService.login(body);
   }
 
   @Post('register')
   @Public()
   @HttpCode(HttpStatus.OK)
-  async createUser(
+  createUser(
     @Body() userCreateRequestDto: UserCreateRequestDto,
   ): Promise<{ access_token: string }> {
-    return await this.authService.userRegister(userCreateRequestDto);
+    return this.authService.userRegister(userCreateRequestDto);
   }
 
   @Post('register/shop')
   @UseGuards(AuthGuard)
-  async createShop(
+  createShop(
     @Request() req,
     @Body() userShopCreateRequestDto: UserShopCreateRequestDto,
   ): Promise<{ access_token: string }> {
-    console.log('request user: ', req.user.sub);
-
     const userId = req.user.sub;
-    return await this.authService.shopRegister(
-      userId,
-      userShopCreateRequestDto,
-    );
+    return this.authService.shopRegister(userId, userShopCreateRequestDto);
   }
 
   @UseGuards(AuthGuard)

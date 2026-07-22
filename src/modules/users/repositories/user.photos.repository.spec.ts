@@ -1,5 +1,5 @@
-import { UserPhotosRepository } from './userPhotosrepositories';
-import { UserPhoto } from '../entities/photo.entities';
+import { UserPhotosRepository } from './user.photos.repository';
+import { UserPhoto } from '../entities/photo.entity';
 
 describe('UserPhotosRepository', () => {
   it('associates inserted photos with the user via both the foreign key and relation', async () => {
