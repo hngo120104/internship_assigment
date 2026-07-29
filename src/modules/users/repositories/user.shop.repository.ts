@@ -1,9 +1,11 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Shop } from '../entities/shop.entity';
 import { User } from '../entities/user.entity';
-import { UserShopCreateRequestDto } from '../dto/user.shop.create.request.dto';
+import { UserShopCreateRequestDto } from '../dto/user.shop/user.shop.create.request.dto';
 import { Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class UserShopRepository {
   constructor(
     @InjectRepository(Shop) private readonly userShopRepo: Repository<Shop>,
@@ -13,13 +15,26 @@ export class UserShopRepository {
     user: User,
     userShopCreateRequestDto: UserShopCreateRequestDto,
   ): Promise<Shop> {
-
     const newUserShop = this.userShopRepo.create({
       user,
+      userId: user.id,
       shopName: userShopCreateRequestDto.shopName,
       description: userShopCreateRequestDto.description,
       address: userShopCreateRequestDto.address,
     });
+
     return this.userShopRepo.save(newUserShop);
+  }
+
+  findActiveShopByUserId(userId: string): Promise<Shop | null> {
+    return this.userShopRepo.findOne({
+      where: {
+        userId,
+        isDeleted: false
+      },
+      relations: {
+        user: true,
+      },
+    });
   }
 }

@@ -1,12 +1,14 @@
-import {
-  IsNotEmpty,
-  IsEnum,
-  IsNumber,
-} from 'class-validator';
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import { Role } from '../../auth/guards/role/role.enum';
+import { RoleResponseDto } from '../../users/dto/role/role.response.dto';
 
 export class LoginResponseDto {
-  @IsNotEmpty() @IsNumber() @Expose() id!: number;
-  @IsEnum(Role) @IsNotEmpty() @Expose() role!: Role;
+  @Expose()
+  id!: string;
+
+  @Expose()
+  @Type(() => RoleResponseDto)
+  roles!: RoleResponseDto[];
+
+  @Expose() access_token!: string;
 }

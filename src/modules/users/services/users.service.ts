@@ -1,60 +1,142 @@
-import { ConflictException, Injectable } from '@nestjs/common';
-import { UserCreateRequestDto } from '../dto/user.create.request.dto';
-import { UsersRepository } from '../repositories/users.repository';
-import { UserPhotosService } from './user.photos.service';
-import { User } from '../entities/user.entity';
-import { UserPhoto } from '../entities/photo.entity';
 import * as bcrypt from 'bcrypt';
 import { Transactional } from 'typeorm-transactional';
+
+import { NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
+
+import { User } from '../entities/user.entity';
+import { UserPhoto } from '../entities/user.photo.entity';
+import { UsersRepository } from '../repositories/users.repository';
+import { UserShopService } from './user.shop.service';
+import { UserPhotosService } from './user.photos.service';
+import { UserCreateRequestDto } from '../dto/users/user.create.request.dto';
+import { UserShopCreateRequestDto } from '../dto/user.shop/user.shop.create.request.dto';
+import { UserPhotosInsertRequestDto } from '../dto/user.photos/user.photos.insert.request.dto';
+import { RolesRepository } from '../repositories/role.repository';
+import { UserShopCreateResponseDto } from '../dto/user.shop/user.shop.create.response.dto';
+import { UserShopResponseDto } from '../dto/user.shop/user.shop.response.dto';
+import { UserResponseDto } from '../dto/users/user.response.dto';
+import { plainToInstance } from 'class-transformer';
+import { UserCreateResponseDto } from '../dto/users/user.create.response.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
-    private readonly userRepository: UsersRepository,
+    private readonly usersRepo: UsersRepository,
+    private readonly roleRepo: RolesRepository,
     private readonly userPhotosService: UserPhotosService,
+    private readonly userShopService: UserShopService,
   ) {}
 
-  @Transactional()
-  async createUserWithPhotos(
+  async findManyActiveUsers(page: number, limit: number): Promise<UserResponseDto[]> {
+    const foundUsers = await this.usersRepo.findManyActiveUsers(page, limit);
+    return this.toUserArrayResponseDto(foundUsers);
+  }
+
+  async findActiveUserByEmail(email: string): Promise<User> {
+    const foundUser = await this.usersRepo.findActiveUserByEmail(email);
+    if (!foundUser) {
+      throw new NotFoundException('User not found.');
+    }
+    return foundUser;
+  }
+
+  private async validateUserRegistration(
     userCreateRequestDto: UserCreateRequestDto,
-  ): Promise<User> {
-    const existEmail = await this.userRepository.findByEmail(
+  ) {
+    const existUserWithEmail = await this.usersRepo.findActiveUserByEmail(
       userCreateRequestDto.email,
     );
 
-    if (existEmail) {
+    if (existUserWithEmail) {
       throw new ConflictException('Email already exists.');
     }
+  }
 
+  private async createUserWithPasswordHashed(
+    userCreateRequestDto: UserCreateRequestDto,
+  ): Promise<User> {
     const passwordHashed = await bcrypt.hash(userCreateRequestDto.password, 12);
-    const newUser = await this.userRepository.createUser(
+    const defaultRole = await this.roleRepo.findByRoleName('CUSTOMER');
+    const newUserWithPasswordHashed = await this.usersRepo.createUser(
       userCreateRequestDto,
+      defaultRole,
       passwordHashed,
     );
-    const userPhotosRequest = userCreateRequestDto.photos;
 
+    return newUserWithPasswordHashed;
+  }
+
+  private async insertPhotosIntoUser(
+    createdUser: User,
+    userPhotosRequest: UserPhotosInsertRequestDto[],
+  ) {
     let userPhotos: UserPhoto[] = [];
 
-    if (userPhotosRequest && userPhotosRequest.length > 0) {
-      userPhotos = await this.userPhotosService.insertPhotosToUser(
-        newUser.id,
-        userPhotosRequest,
+    userPhotos = await this.userPhotosService.insertPhotosToUser(
+      createdUser.id,
+      userPhotosRequest,
+    );
+
+    createdUser.photos = userPhotos;
+  }
+
+  @Transactional()
+  async createDefaultUser(
+    userCreateRequestDto: UserCreateRequestDto,
+  ): Promise<UserResponseDto> {
+    await this.validateUserRegistration(userCreateRequestDto);
+
+    const newUserWithPasswordHashed =
+      await this.createUserWithPasswordHashed(userCreateRequestDto);
+
+    if (userCreateRequestDto.photos && userCreateRequestDto.photos.length > 0) {
+      const userPhotosInsertRequest = userCreateRequestDto.photos;
+      await this.insertPhotosIntoUser(
+        newUserWithPasswordHashed,
+        userPhotosInsertRequest,
       );
     }
-    newUser.photos = userPhotos;
 
-    return newUser;
+    return this.toUserResponseDto(newUserWithPasswordHashed);
   }
 
-  findById(userId: number): Promise<User | null> {
-    return this.userRepository.findById(userId);
+  async updateUser(
+    userId: string,
+    updateData: Partial<User>,
+  ): Promise<UserResponseDto> {
+    const updatedUser = await this.usersRepo.updateUser(userId, updateData);
+    return this.toUserResponseDto(updatedUser);
   }
 
-  findByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findByEmail(email);
+  @Transactional()
+  async shopRegister(
+    userId: string,
+    userShopCreateRequestDto: UserShopCreateRequestDto,
+  ): Promise<UserShopCreateResponseDto> {
+    const userShopRegisterResponse = await this.userShopService.createShop(
+      userId,
+      userShopCreateRequestDto,
+    );
+
+    return userShopRegisterResponse;
   }
 
-  findMany(pagination: number): Promise<User[] | []> {
-    return this.userRepository.findMany(pagination);
+  toUserCreateResponseDto(user: User): UserCreateResponseDto {
+    return plainToInstance(UserCreateResponseDto, user, {
+      excludeExtraneousValues: true
+    })
+  }
+
+  toUserResponseDto(user: User): UserResponseDto {
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  toUserArrayResponseDto(users: User[]): UserResponseDto[] {
+    return plainToInstance(UserResponseDto, users, {
+      excludeExtraneousValues: true,
+    });
   }
 }

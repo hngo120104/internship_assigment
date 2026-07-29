@@ -3,8 +3,11 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
 import { ValidationError } from '@nestjs/common';
 import { BadRequestException } from '@nestjs/common';
-import { initializeTransactionalContext, StorageDriver} from 'typeorm-transactional';
-
+import {
+  initializeTransactionalContext,
+  StorageDriver,
+} from 'typeorm-transactional';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   initializeTransactionalContext({ storageDriver: StorageDriver.AUTO });
@@ -13,25 +16,19 @@ async function bootstrap() {
     abortOnError: true,
   });
 
+  app.use(cookieParser());
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  });
   app.useGlobalPipes(
     new ValidationPipe({
-      exceptionFactory: (validationErrors: ValidationError[]) => {
-        // Extract all constraint messages into a flat array
-        const messages = validationErrors.flatMap((error) => 
-          Object.values(error.constraints || {})
-        );
-
-        // Return ONLY the message property inside the exception
-        return new BadRequestException({
-          message: messages.join('\n'), // Or just 'messages' if you prefer an array
-        });
-      },
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
     }),
   );
-  
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

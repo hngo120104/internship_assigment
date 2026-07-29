@@ -23,12 +23,18 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const userRole = request.user.role;
+    const user = request.user;
+    if (!user) {
+      throw new UnauthorizedException('You need to login first.');
+    }
+    const userRoles: Role[] = request.user.roles ?? [];
 
-    if (!userRole) {
+    if (!userRoles || userRoles.length === 0) {
       throw new UnauthorizedException('Need to login first.');
     }
 
-    return requiredRoles.includes(userRole);
+    return requiredRoles.some((requiredRole) =>
+      userRoles.includes(requiredRole),
+    );
   }
 }

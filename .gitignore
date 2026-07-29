@@ -3,6 +3,9 @@
 /node_modules
 /build
 
+# file md AI
+*.md
+
 # Logs
 logs
 *.log

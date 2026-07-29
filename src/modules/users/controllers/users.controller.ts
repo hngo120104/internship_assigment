@@ -1,8 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
-import { UsersService } from '../services/users.service';
-import { Public } from '../../auth/public.decorator';
-import { UserResponseDto } from '../dto/user.response.dto';
 import { plainToInstance } from 'class-transformer';
+
+import { Public } from '../../auth/public.decorator';
+
+import { UsersService } from '../services/users.service';
+import { UserResponseDto } from '../dto/users/user.response.dto';
 
 @Controller('api/users')
 export class UsersController {
@@ -11,9 +13,7 @@ export class UsersController {
   @Get()
   @Public()
   async findMany(): Promise<UserResponseDto[]> {
-    const foundUsers = await this.usersService.findMany(20);
-    return plainToInstance(UserResponseDto, foundUsers, {
-      excludeExtraneousValues: true,
-    });
+    const foundUsers = await this.usersService.findManyActiveUsers(1, 30);
+    return foundUsers;
   }
 }
