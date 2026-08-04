@@ -8,6 +8,6 @@ export class ProductPhotoResponseDto {
   @Expose()
   description?: string;
 
-  @Expose({ name: 'isPrimary' })
-  is_primary!: boolean;
+  @Expose({ name: 'is_primary' })
+  isPrimary!: boolean;
 }

@@ -6,6 +6,8 @@ import { UserShopCreateRequestDto } from '../../users/dto/user.shop/user.shop.cr
 import { UserShopCreateResponseDto } from '../../users/dto/user.shop/user.shop.create.response.dto';
 import { Public } from '../public.decorator';
 import { AuthService } from '../services/auth.service';
+import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
+import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 
 @Controller('api/users')
 export class RegistrationController {
@@ -21,12 +23,9 @@ export class RegistrationController {
 
   @Post('register/shop')
   registerShop(
-    @Request() req,
+    @CurrentUser() user: CurrentUserPayload,
     @Body() userShopCreateRequestDto: UserShopCreateRequestDto,
   ): Promise<UserShopCreateResponseDto> {
-    return this.authService.registerShop(
-      req.user.sub,
-      userShopCreateRequestDto,
-    );
+    return this.authService.registerShop(user.sub, userShopCreateRequestDto);
   }
 }

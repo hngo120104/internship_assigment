@@ -1,4 +1,5 @@
 import { Exclude, Expose } from 'class-transformer';
+import { ShopStatus } from '../../entities/shop.entity';
 
 @Exclude()
 export class UserShopResponseDto {
@@ -16,4 +17,13 @@ export class UserShopResponseDto {
 
   @Expose()
   address?: string;
+
+  @Expose({ name: 'userStatus' })
+  shop_status!: ShopStatus;
+
+  @Expose({ name: 'createdAt' })
+  created_at!: Date;
+
+  @Expose({ name: 'updatedAt' })
+  updated_at!: Date;
 }

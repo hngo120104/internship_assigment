@@ -1,6 +1,6 @@
-import { Type } from 'class-transformer';
+import { Transform, TransformFnParams, Type } from 'class-transformer';
 import { Expose } from 'class-transformer';
-import { Role } from '../../../auth/guards/role/role.enum';
+import { User, UserStatus } from '../../entities/user.entity';
 import { UserPhotoResponseDto } from '../user.photos/user.photos.insert.response.dto';
 import { RoleResponseDto } from '../role/role.response.dto';
 
@@ -11,12 +11,22 @@ export class UserCreateResponseDto {
   @Expose({ name: 'userName' })
   user_name!: string;
 
-  // @Expose()
+  @Expose()
   email!: string;
 
   @Type(() => RoleResponseDto)
   @Expose()
+  @Transform(
+    ({ obj }: TransformFnParams) => {
+      const user = obj as User;
+      return user.userRoles?.map((userRole) => userRole.role) ?? [];
+    },
+    { toClassOnly: true },
+  )
   roles!: RoleResponseDto[];
+
+  @Expose({ name: 'userStatus' })
+  user_status!: UserStatus;
 
   @Expose()
   @Type(() => UserPhotoResponseDto)

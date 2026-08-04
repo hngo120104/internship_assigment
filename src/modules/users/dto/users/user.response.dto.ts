@@ -1,8 +1,10 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { Expose } from 'class-transformer';
 import { RoleResponseDto } from '../role/role.response.dto';
 import { UserPhotoResponseDto } from '../user.photos/user.photos.insert.response.dto';
 import { UserShopResponseDto } from '../user.shop/user.shop.response.dto';
+import { TransformFnParams } from 'class-transformer';
+import { User, UserStatus } from '../../entities/user.entity';
 
 export class UserResponseDto {
   @Expose()
@@ -16,7 +18,17 @@ export class UserResponseDto {
 
   @Type(() => RoleResponseDto)
   @Expose()
+  @Transform(
+    ({ obj }: TransformFnParams) => {
+      const user = obj as User;
+      return user.userRoles?.map((userRole) => userRole.role) ?? [];
+    },
+    { toClassOnly: true },
+  )
   roles!: RoleResponseDto[];
+
+  @Expose({ name: 'userStatus' })
+  user_status!: UserStatus;
 
   @Expose()
   @Type(() => UserPhotoResponseDto)
@@ -26,5 +38,9 @@ export class UserResponseDto {
   @Type(() => UserShopResponseDto)
   shop?: UserShopResponseDto;
 
-  @Expose({ name: 'createdAt' }) created_at!: Date;
+  @Expose({ name: 'createdAt' })
+  created_at!: Date;
+
+  @Expose({ name: 'updatedAt' })
+  updated_at!: Date;
 }

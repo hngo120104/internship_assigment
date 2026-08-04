@@ -1,6 +1,5 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   OneToOne,
   JoinColumn,
@@ -11,6 +10,10 @@ import {
 import { User } from './user.entity';
 import { ShopPhoto } from './shop.photos.entity';
 import { Product } from '../../products/entities/product.entity';
+import {
+  BinaryUuidColumn,
+  PrimaryGeneratedBinaryUuidColumn,
+} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 export enum ShopStatus {
   PENDING = 'PENDING',
@@ -21,15 +24,19 @@ export enum ShopStatus {
 
 @Entity('shops')
 export class Shop {
-  @PrimaryGeneratedColumn('uuid') id!: string;
+  @PrimaryGeneratedBinaryUuidColumn()
+  id!: string;
 
-  @Column({ name: 'shop_name', unique: true }) shopName!: string;
+  @Column({ name: 'shop_name', unique: true })
+  shopName!: string;
 
-  @Column({ nullable: true }) description?: string;
+  @Column({ nullable: true })
+  description?: string;
 
-  @Column({ nullable: true }) address!: string;
+  @Column({ nullable: true })
+  address!: string;
 
-  @Column({ name: 'user_id', type: 'varchar', length: 36 })
+  @BinaryUuidColumn('user_id')
   userId!: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
@@ -39,10 +46,15 @@ export class Shop {
   updatedAt!: Date;
 
   @Column({ name: 'is_deleted', type: 'tinyint', default: 0 })
-  isDeleted!: Boolean;
+  isDeleted!: boolean;
 
-  @Column({ name: 'shop_status', type: 'enum', enum: ShopStatus, default: ShopStatus.ACTIVE })
-  status!: ShopStatus;
+  @Column({
+    name: 'shop_status',
+    type: 'enum',
+    enum: ShopStatus,
+    default: ShopStatus.ACTIVE,
+  })
+  userStatus!: ShopStatus;
 
   @OneToOne(() => User, (user) => user.shop, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })

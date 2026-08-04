@@ -1,6 +1,5 @@
 import {
   Entity,
-  PrimaryColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
@@ -9,13 +8,17 @@ import {
 } from 'typeorm';
 import { Shop } from './shop.entity';
 import { PhotoType } from './user.photo.entity';
+import {
+  BinaryUuidColumn,
+  PrimaryGeneratedBinaryUuidColumn,
+} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 @Entity('shop_photos')
 export class ShopPhoto {
-  @PrimaryColumn('uuid')
+  @PrimaryGeneratedBinaryUuidColumn()
   id!: string;
 
-  @Column({ name: 'shop_id', type: 'varchar', length: 36 })
+  @BinaryUuidColumn('shop_id')
   shopId!: string;
 
   @Column({ type: 'enum', enum: PhotoType })
@@ -31,7 +34,7 @@ export class ShopPhoto {
   updatedAt!: Date;
 
   @Column({ name: 'is_deleted', type: 'tinyint', default: 0 })
-  isDeleted!: Boolean;
+  isDeleted!: boolean;
 
   @ManyToOne(() => Shop, (shop) => shop.photos, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'shop_id' })

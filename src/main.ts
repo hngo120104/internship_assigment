@@ -1,8 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
-import { ValidationError } from '@nestjs/common';
-import { BadRequestException } from '@nestjs/common';
 import {
   initializeTransactionalContext,
   StorageDriver,

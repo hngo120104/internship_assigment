@@ -1,6 +1,5 @@
 import {
   Entity,
-  PrimaryColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
@@ -8,13 +7,17 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from './user.entity';
+import {
+  BinaryUuidColumn,
+  PrimaryGeneratedBinaryUuidColumn,
+} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 @Entity('user_addresses')
 export class Address {
-  @PrimaryColumn({ type: 'varchar', length: 36 })
+  @PrimaryGeneratedBinaryUuidColumn()
   id!: string;
 
-  @Column({ name: 'user_id', type: 'varchar', length: 36 })
+  @BinaryUuidColumn('user_id')
   userId!: string;
 
   @Column({ name: 'recipient_name', type: 'varchar', length: 255 })
@@ -42,7 +45,7 @@ export class Address {
   updatedAt!: Date;
 
   @Column({ name: 'is_deleted', type: 'tinyint', default: 0 })
-  isDeleted!: Boolean;
+  isDeleted!: boolean;
 
   @ManyToOne(() => User, (user) => user.addresses, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })

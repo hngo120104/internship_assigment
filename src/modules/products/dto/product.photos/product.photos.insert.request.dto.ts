@@ -1,9 +1,5 @@
-import {
-  IsBoolean,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { Expose } from 'class-transformer';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class ProductPhotosInsertRequestDto {
   @IsNotEmpty()
@@ -16,5 +12,6 @@ export class ProductPhotosInsertRequestDto {
 
   @IsOptional()
   @IsBoolean()
-  is_primary?: boolean;
+  @Expose({ name: 'is_primary' })
+  isPrimary?: boolean;
 }

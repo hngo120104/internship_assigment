@@ -8,11 +8,13 @@ import { UserShopRepository } from '../repositories/user.shop.repository';
 import { UsersRepository } from '../repositories/users.repository';
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Transactional } from 'typeorm-transactional';
 import { plainToInstance } from 'class-transformer';
+import { UserRolesRepository } from '../repositories/user.roles.repository';
 
 @Injectable()
 export class UserShopService {
@@ -20,9 +22,13 @@ export class UserShopService {
     private readonly userShopRepo: UserShopRepository,
     private readonly usersRepo: UsersRepository,
     private readonly roleRepo: RolesRepository,
+    private readonly userRolesRepo: UserRolesRepository,
   ) {}
 
-  private async validateShopRegistration(userId: string): Promise<User> {
+  private async validateShopRegistration(
+    userId: string,
+    userShopCreateRequestDto: UserShopCreateRequestDto,
+  ): Promise<User> {
     const foundUser = await this.usersRepo.findActiveUserById(userId);
     if (!foundUser) {
       throw new NotFoundException(`User with id: ${userId} not found.`);
@@ -31,20 +37,32 @@ export class UserShopService {
     if (foundUser.shop) {
       throw new BadRequestException('User is already shop.');
     }
+
+    const existShopName = await this.userShopRepo.findActiveShopByName(
+      userShopCreateRequestDto.shopName,
+    );
+    if (existShopName) {
+      throw new ConflictException('Shop name already exists.');
+    }
     return foundUser;
   }
 
-  @Transactional()
-  async createShop(
+  async proccessCreateShop(
     userId: string,
     userShopCreateRequestDto: UserShopCreateRequestDto,
-  ): Promise<UserShopCreateResponseDto> {
-    const foundUser = await this.validateShopRegistration(userId);
+  ): Promise<{ existUser: User; createdShop: Shop }> {
+    const foundUser = await this.validateShopRegistration(
+      userId,
+      userShopCreateRequestDto,
+    );
 
-    // first assign found user role with 'SELLER'
     const sellerRole = await this.roleRepo.findByRoleName('SELLER');
-    if (!foundUser.roles.some((role) => role.name === 'SELLER')) {
-      foundUser.roles.push(sellerRole);
+    if (!foundUser.userRoles.some((roles) => roles.role.name === 'SELLER')) {
+      const insertedUserRole = await this.userRolesRepo.saveUserRoles(
+        foundUser,
+        sellerRole,
+      );
+      foundUser.userRoles.push(insertedUserRole);
     }
     await this.usersRepo.saveUser(foundUser);
 
@@ -53,7 +71,23 @@ export class UserShopService {
       userShopCreateRequestDto,
     );
 
-    return this.toUserShopCreateResponseDto(foundUser, newShop);
+    return {
+      existUser: foundUser,
+      createdShop: newShop,
+    };
+  }
+
+  @Transactional()
+  async createShop(
+    userId: string,
+    userShopCreateRequestDto: UserShopCreateRequestDto,
+  ): Promise<UserShopCreateResponseDto> {
+    const { existUser, createdShop } = await this.proccessCreateShop(
+      userId,
+      userShopCreateRequestDto,
+    );
+
+    return this.toUserShopCreateResponseDto(existUser, createdShop);
   }
 
   async findShopByUserId(userId: string): Promise<UserShopResponseDto> {
@@ -78,8 +112,8 @@ export class UserShopService {
     return plainToInstance(
       UserShopCreateResponseDto,
       {
-        ...user,
         ...shop,
+        user,
       },
       {
         excludeExtraneousValues: true,

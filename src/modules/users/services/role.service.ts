@@ -9,14 +9,16 @@ import { plainToInstance } from 'class-transformer';
 export class RolesService {
   constructor(private readonly rolesRepo: RolesRepository) {}
 
-  async createRole(roleCreateRequestDto:RoleCreateRequestDto): Promise<RoleResponseDto> {
+  async createRole(
+    roleCreateRequestDto: RoleCreateRequestDto,
+  ): Promise<RoleResponseDto> {
     const createdRole = await this.rolesRepo.createRole(roleCreateRequestDto);
     return this.toResponse(createdRole);
   }
 
   private toResponse(role: Role): RoleResponseDto {
     return plainToInstance(RoleResponseDto, role, {
-      excludeExtraneousValues : true
-    })
+      excludeExtraneousValues: true,
+    });
   }
 }

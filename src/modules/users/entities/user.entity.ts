@@ -1,23 +1,27 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   OneToOne,
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToMany,
-  JoinTable,
 } from 'typeorm';
 import { Shop } from './shop.entity';
 import { UserPhoto } from './user.photo.entity';
 import { Cart } from '../../carts/entities/cart.entity';
 import { Address } from './user.address.entity';
-import { Role } from './role.entity';
+import { PrimaryGeneratedBinaryUuidColumn } from '../../../custom.decorators/primary.generated.uuid.binary.column';
+import { UserRoles } from './user.roles.entity';
+
+export enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  BANNED = 'BANNED',
+}
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn('uuid') id!: string;
+  @PrimaryGeneratedBinaryUuidColumn()
+  id!: string;
 
   @Column({ name: 'user_name', type: 'varchar', length: 255 })
   userName!: string;
@@ -34,25 +38,28 @@ export class User {
   updatedAt!: Date;
 
   @Column({ name: 'is_deleted', type: 'tinyint', default: 0 })
-  isDeleted!: Boolean;
+  isDeleted!: boolean;
 
-  @ManyToMany(() => Role)
-  @JoinTable({
-    name: 'user_roles',
-    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
+  @Column({
+    name: 'user_status',
+    type: 'enum',
+    enum: UserStatus,
+    default: UserStatus.ACTIVE,
   })
-  roles!: Role[];
+  userStatus!: UserStatus;
+
+  @OneToMany(() => UserRoles, (userRoles) => userRoles.user)
+  userRoles!: UserRoles[];
 
   @OneToMany(() => Address, (address) => address.user)
   addresses!: Address[];
 
   @OneToOne(() => Shop, (shop) => shop.user, { nullable: true })
-  shop!: Shop;
+  shop?: Shop;
 
   @OneToMany(() => UserPhoto, (photos) => photos.user)
   photos?: UserPhoto[];
 
   @OneToMany(() => Cart, (cart) => cart.user)
-  cart!: Cart[];
+  cart?: Cart[];
 }

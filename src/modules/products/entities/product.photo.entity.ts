@@ -5,16 +5,18 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Product } from './product.entity';
+import {
+  BinaryUuidColumn,
+  PrimaryGeneratedBinaryUuidColumn,
+} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 @Entity('product_photos')
 export class ProductPhoto {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedBinaryUuidColumn()
   id!: string;
-
-  @Column({ name: 'product_id', type: 'varchar', length: 36 })
+  @BinaryUuidColumn('product_id')
   productId!: string;
 
   @Column({ type: 'varchar', length: 2048 })
@@ -33,7 +35,7 @@ export class ProductPhoto {
   updatedAt!: Date;
 
   @Column({ name: 'is_deleted', type: 'tinyint', default: 0 })
-  isDeleted!: Boolean;
+  isDeleted!: boolean;
 
   @ManyToOne(() => Product, (product) => product.photos, {
     onDelete: 'RESTRICT',

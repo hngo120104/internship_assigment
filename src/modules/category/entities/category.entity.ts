@@ -4,14 +4,19 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
-  ManyToMany,
-  PrimaryGeneratedColumn
+  PrimaryColumn,
 } from 'typeorm';
-import { Product } from '../../products/entities/product.entity';
+import { UuidBinaryTransformer } from '../../transformer/uuid.binary.transformer';
+import { BinaryUuidColumn } from '../../../custom.decorators/primary.generated.uuid.binary.column';
+import { ProductCategories } from '../../products/entities/product.categories.entity';
 
 @Entity('categories')
 export class Category {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({
+    type: 'binary',
+    length: 16,
+    transformer: UuidBinaryTransformer,
+  })
   id!: string;
 
   @Column({ name: 'icon_url', type: 'varchar', length: 2048, nullable: true })
@@ -23,20 +28,25 @@ export class Category {
   @Column({ type: 'text', nullable: true })
   description!: string;
 
-  @Column({ name: 'parent_id',  type: 'varchar', length: 36, nullable: true })
+  @BinaryUuidColumn('parent_id')
   parentId!: string;
 
   @Column({ name: 'is_active', type: 'tinyint', default: 1 })
   isActive!: boolean;
 
   // Self Reference Relations
-  @ManyToOne(() => Category, (category) => category.children, { onDelete: 'SET NULL' })
+  @ManyToOne(() => Category, (category) => category.children, {
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'parent_id' })
   parent!: Category;
 
   @OneToMany(() => Category, (category) => category.parent)
   children!: Category[];
 
-  @ManyToMany(() => Product, (product) => product.categories)
-  products!: Product[];
+  @OneToMany(
+    () => ProductCategories,
+    (productCategories) => productCategories.category,
+  )
+  productCategories!: ProductCategories[];
 }

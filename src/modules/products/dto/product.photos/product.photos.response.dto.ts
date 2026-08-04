@@ -3,8 +3,8 @@ import { ProductPhotoResponseDto } from './product.photos.insert.response.dto';
 
 @Exclude()
 export class ProductPhotosResponseDto {
-  @Expose({ name: 'productId' })
-  product_id!: string;
+  @Expose({ name: 'product_id' })
+  productId!: string;
 
   @Expose()
   @Type(() => ProductPhotoResponseDto)

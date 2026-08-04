@@ -8,12 +8,13 @@ import { CartsModule } from './modules/carts/carts.module';
 import { ProductsModule } from './modules/products/products.module';
 import { RolesGuard } from './modules/auth/guards/role/role.guard';
 import { APP_GUARD } from '@nestjs/core';
-import { AuthGuard } from './modules/auth/guards/auth/auth.guard';
+import { JwtAuthGuard } from './modules/auth/guards/auth/jwt.auth.guard';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 import { CategoriesModule } from './modules/category/categories.module';
+import { AdminModules } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -48,13 +49,14 @@ import { CategoriesModule } from './modules/category/categories.module';
     CartsModule,
     ProductsModule,
     CategoriesModule,
+    AdminModules,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     {
       provide: APP_GUARD,
-      useClass: AuthGuard,
+      useClass: JwtAuthGuard,
     },
     {
       provide: APP_GUARD,
@@ -62,6 +64,4 @@ import { CategoriesModule } from './modules/category/categories.module';
     },
   ],
 })
-export class AppModule {
-  constructor(dataSource: DataSource) {}
-}
+export class AppModule {}

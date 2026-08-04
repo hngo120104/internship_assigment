@@ -27,7 +27,9 @@ export class UserPhotosService {
     });
   }
 
-  private toUserPhotosResponseDto(userPhoto: UserPhoto[]): UserPhotoResponseDto[] {
+  private toUserPhotosResponseDto(
+    userPhoto: UserPhoto[],
+  ): UserPhotoResponseDto[] {
     return plainToInstance(UserPhotoResponseDto, userPhoto, {
       excludeExtraneousValues: true,
     });

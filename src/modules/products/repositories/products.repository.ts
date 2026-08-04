@@ -5,35 +5,38 @@ import { ProductCreateRequestDto } from '../dto/products/product.create.dto';
 import { ProductUpdateDto } from '../dto/products/product.update.dto';
 import { NotFoundException } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
-import { UserShopRepository } from '../../users/repositories/user.shop.repository';
-import { Category } from '../../category/entities/category.entity';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class ProductsRepository {
   constructor(
     @InjectRepository(Product)
     private readonly productsRepo: Repository<Product>,
-
   ) {}
-
 
   async createProduct(
     shopId: string,
     productCreateRequestDto: ProductCreateRequestDto,
-    categories: Category[],
   ): Promise<Product> {
     const product = this.productsRepo.create({
+      id: randomUUID(),
       shop: { id: shopId },
       ...productCreateRequestDto,
-      categories: categories
     });
     return this.productsRepo.save(product);
   }
 
-  findManyLatestProducts(page: number, limit: number): Promise<Product[]> {
+  findManyLatestActiveProducts(
+    page: number,
+    limit: number,
+  ): Promise<Product[]> {
     return this.productsRepo.find({
-      where: { isActive: true },
-      relations: { shop: true },
+      where: { isActive: true, isDeleted: false },
+      relations: {
+        shop: true,
+        photos: true,
+        productCategories: { category: true },
+      },
       skip: (page - 1) * limit,
       take: limit,
       order: {
@@ -42,26 +45,37 @@ export class ProductsRepository {
     });
   }
 
-  async findLatestShopProducts(shopId: string): Promise<Product[]> {
+  async findLatestActiveShopProducts(shopId: string): Promise<Product[]> {
     return this.productsRepo.find({
       where: {
         isActive: true,
+        isDeleted: false,
         shopId: shopId,
       },
-      relations: { shop: true },
+      relations: {
+        shop: true,
+        photos: true,
+        productCategories: { category: true },
+      },
       order: {
         createdAt: 'DESC',
       },
     });
   }
 
-  async findProductById(productId: string): Promise<Product> {
+  async findActiveProductById(productId: string): Promise<Product> {
     const foundProduct = await this.productsRepo.findOne({
       where: {
         id: productId,
+        isActive: true,
+        isDeleted: false,
       },
       relations: {
         shop: true,
+        photos: true,
+        productCategories: {
+          category: true,
+        },
       },
     });
     if (!foundProduct) {

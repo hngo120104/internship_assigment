@@ -1,26 +1,27 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
   JoinColumn,
-  ManyToMany,
-  JoinTable,
 } from 'typeorm';
 import { Shop } from '../../users/entities/shop.entity';
-import { Category } from '../../category/entities/category.entity';
 import { CartItem } from '../../carts/entities/cart.item.entity';
 import { ProductPhoto } from './product.photo.entity';
+import {
+  BinaryUuidColumn,
+  PrimaryGeneratedBinaryUuidColumn,
+} from '../../../custom.decorators/primary.generated.uuid.binary.column';
+import { ProductCategories } from './product.categories.entity';
 
 @Entity('products')
 export class Product {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedBinaryUuidColumn()
   id!: string;
 
-  @Column({ name: 'shop_id', type: 'varchar', length: 36 })
+  @BinaryUuidColumn('shop_id')
   shopId!: string;
 
   @Column({ type: 'varchar', length: 255 })
@@ -30,7 +31,7 @@ export class Product {
   description?: string;
 
   @Column({ type: 'int', default: 0 })
-  stock!: number;
+  amount!: number;
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   price!: number;
@@ -52,19 +53,11 @@ export class Product {
   @JoinColumn({ name: 'shop_id' })
   shop!: Shop;
 
-  @ManyToMany(() => Category, (category) => category.products)
-  @JoinTable({
-    name: 'product_categories',
-    joinColumn: {
-      name: 'product_id',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'category_id',
-      referencedColumnName: 'id',
-    },
-  })
-  categories!: Category[];
+  @OneToMany(
+    () => ProductCategories,
+    (productCategories) => productCategories.product,
+  )
+  productCategories!: ProductCategories[];
 
   @OneToMany(() => ProductPhoto, (photo) => photo.product)
   photos!: ProductPhoto[];

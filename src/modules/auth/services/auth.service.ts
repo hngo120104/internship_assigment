@@ -10,7 +10,6 @@ import { UserCreateRequestDto } from '../../users/dto/users/user.create.request.
 import { UserCreateResponseDto } from '../../users/dto/users/user.create.response.dto';
 import { UserShopCreateRequestDto } from '../../users/dto/user.shop/user.shop.create.request.dto';
 import { UserShopCreateResponseDto } from '../../users/dto/user.shop/user.shop.create.response.dto';
-import { Role } from '../../users/entities/role.entity';
 import { RoleResponseDto } from '../../users/dto/role/role.response.dto';
 
 @Injectable()
@@ -23,27 +22,27 @@ export class AuthService {
   private async validateLoginUser(
     loginRequestDto: LoginRequestDto,
   ): Promise<User> {
-    const userExist = await this.usersService.findActiveUserByEmail(
+    const userWithEmailExist = await this.usersService.findActiveUserByEmail(
       loginRequestDto.email,
     );
 
-    if (!userExist) {
+    if (!userWithEmailExist) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const matchedPassword = await bcrypt.compare(
       loginRequestDto.password,
-      userExist.passwordHashed,
+      userWithEmailExist.passwordHashed,
     );
 
     if (!matchedPassword) {
       throw new UnauthorizedException('Invalid credentials!');
     }
 
-    return userExist;
+    return userWithEmailExist;
   }
 
-  async signAccessToken(userId: string, roles: RoleResponseDto[]): Promise<string> {
+  signAccessToken(userId: string, roles: RoleResponseDto[]): string {
     return this.jwtService.sign({
       sub: userId,
       roles: roles.map((role) => role.name),
@@ -55,21 +54,14 @@ export class AuthService {
   ): Promise<UserCreateResponseDto> {
     const createdUserResponse =
       await this.usersService.createDefaultUser(userCreateRequestDto);
-    const accessToken = await this.signAccessToken(
+    const accessToken = this.signAccessToken(
       createdUserResponse.id,
       createdUserResponse.roles,
     );
-
-    return plainToInstance(
-      UserCreateResponseDto,
-      {
-        ...createdUserResponse,
-        access_token: accessToken,
-      },
-      {
-        excludeExtraneousValues: true,
-      },
-    );
+    return {
+      ...createdUserResponse,
+      access_token: accessToken,
+    };
   }
 
   async registerShop(
@@ -80,32 +72,31 @@ export class AuthService {
       userId,
       userShopCreateRequestDto,
     );
-    const accessToken = await this.signAccessToken(
+    const accessToken = this.signAccessToken(
       shopRegisterResponse.user.id,
       shopRegisterResponse.user.roles,
     );
 
-    return plainToInstance(UserShopCreateResponseDto, {
+    return {
       ...shopRegisterResponse,
       access_token: accessToken,
-    });
+    };
   }
 
   async login(loginRequestDto: LoginRequestDto): Promise<LoginResponseDto> {
     const validatedUser = await this.validateLoginUser(loginRequestDto);
-    const validatedUserAccessToken = await this.signAccessToken(
+    const validatedUserAccessToken = this.signAccessToken(
       validatedUser.id,
-      validatedUser.roles
+      validatedUser.userRoles.map((userRoles) => userRoles.role),
     );
-    return plainToInstance(
-      LoginResponseDto,
-      {
-        ...validatedUser,
-        access_token: validatedUserAccessToken,
-      },
-      {
-        excludeExtraneousValues: true,
-      },
-    );
+    const loginResponse = this.toLoginResponseDto(validatedUser);
+    loginResponse.access_token = validatedUserAccessToken;
+    return loginResponse;
+  }
+
+  private toLoginResponseDto(user: User): LoginResponseDto {
+    return plainToInstance(LoginResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 }

@@ -11,12 +11,20 @@ import { ProductPhotosService } from './services/product.photos.service';
 import { ProductPhotosRepository } from './repositories/product.photo.repository';
 import { Category } from '../category/entities/category.entity';
 import { CategoriesModule } from '../category/categories.module';
+import { ProductCategories } from './entities/product.categories.entity';
+import { ProductCategoriesRepository } from './repositories/product.categories.repository';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, Shop, ProductPhoto, Category]),
+    TypeOrmModule.forFeature([
+      Product,
+      Shop,
+      ProductPhoto,
+      Category,
+      ProductCategories,
+    ]),
     UsersModule,
-    CategoriesModule
+    CategoriesModule,
   ],
   controllers: [ProductsController],
   providers: [
@@ -24,6 +32,7 @@ import { CategoriesModule } from '../category/categories.module';
     ProductsRepository,
     ProductPhotosService,
     ProductPhotosRepository,
+    ProductCategoriesRepository,
   ],
   exports: [ProductsService, ProductsRepository],
 })

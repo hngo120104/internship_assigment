@@ -4,10 +4,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity';
+import {
+  BinaryUuidColumn,
+  PrimaryGeneratedBinaryUuidColumn,
+} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 export enum PhotoType {
   AVATAR = 'AVATAR',
@@ -16,10 +19,10 @@ export enum PhotoType {
 
 @Entity('user_photos')
 export class UserPhoto {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedBinaryUuidColumn()
   id!: string;
 
-  @Column({ name: 'user_id', type: 'varchar', length: 36 })
+  @BinaryUuidColumn('user_id')
   userId!: string;
 
   @Column({ type: 'enum', enum: PhotoType })
@@ -35,7 +38,7 @@ export class UserPhoto {
   updatedAt!: Date;
 
   @Column({ name: 'is_deleted', type: 'tinyint', default: 0 })
-  isDeleted!: Boolean;
+  isDeleted!: boolean;
 
   @ManyToOne(() => User, (user) => user.photos, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })

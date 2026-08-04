@@ -10,16 +10,26 @@ import { UserPhotosService } from './services/user.photos.service';
 import { UserPhotosRepository } from './repositories/user.photos.repository';
 import { UserShopService } from './services/user.shop.service';
 import { UserShopRepository } from './repositories/user.shop.repository';
-import { Cart } from '../carts/entities/cart.entity';
-import { CartItem } from '../carts/entities/cart.item.entity';
 import { Role } from './entities/role.entity';
 import { RolesRepository } from './repositories/role.repository';
 import { Address } from './entities/user.address.entity';
 import { ShopPhoto } from './entities/shop.photos.entity';
+import { UserRoles } from './entities/user.roles.entity';
+import { UserRolesRepository } from './repositories/user.roles.repository';
+import { UserRolesServce } from './services/user.roles.service';
+import { RolesService } from './services/role.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Shop, Address, UserPhoto, ShopPhoto, Role]),
+    TypeOrmModule.forFeature([
+      User,
+      Shop,
+      Address,
+      UserPhoto,
+      ShopPhoto,
+      Role,
+      UserRoles,
+    ]),
   ],
   providers: [
     UsersService,
@@ -29,8 +39,18 @@ import { ShopPhoto } from './entities/shop.photos.entity';
     UserPhotosRepository,
     UserShopRepository,
     RolesRepository,
+    UserRolesServce,
+    UserRolesRepository,
+    RolesService,
+    RolesRepository,
   ],
   controllers: [UsersController],
-  exports: [UsersService, UserShopService, UserShopRepository, UsersRepository],
+  exports: [
+    UsersService,
+    UserShopService,
+    UserShopRepository,
+    UsersRepository,
+    RolesService,
+  ],
 })
 export class UsersModule {}

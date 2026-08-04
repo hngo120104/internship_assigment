@@ -21,7 +21,8 @@
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
     "migration:generate": "npm run build && ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate -d dist/data-source.js",
     "migration:run": "npm run build && ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d dist/data-source.js",
-    "migration:revert": "npm run build && ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d dist/data-source.js"
+    "migration:revert": "npm run build && ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d dist/data-source.js",
+    "seed": "ts-node src/database/seeder/main.ts"
   },
   "dependencies": {
     "@nestjs-cls/transactional": "^3.2.1",
@@ -61,7 +62,7 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
     "@types/supertest": "^7.0.0",
-    "eslint": "^9.18.0",
+    "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^17.0.0",

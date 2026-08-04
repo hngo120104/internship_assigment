@@ -10,8 +10,8 @@ import { ProductPhotosRepository } from '../repositories/product.photo.repositor
 import { ProductPhotosInsertRequestDto } from '../dto/product.photos/product.photos.insert.request.dto';
 import { Transactional } from 'typeorm-transactional';
 import { UserShopService } from '../../users/services/user.shop.service';
-import { Category } from '../../category/entities/category.entity';
 import { CategoriesService } from '../../category/services/categories.service';
+import { ProductCategoriesRepository } from '../repositories/product.categories.repository';
 
 @Injectable()
 export class ProductsService {
@@ -20,16 +20,47 @@ export class ProductsService {
     private readonly productPhotosRepo: ProductPhotosRepository,
     private readonly userShopService: UserShopService,
     private readonly categoriesService: CategoriesService,
+    private readonly productCategoriesRepo: ProductCategoriesRepository,
   ) {}
 
   private async insertPhotosIntoProduct(
     productId: string,
+    createdProduct: Product,
     productPhotosInsertRequestDto: ProductPhotosInsertRequestDto[],
   ) {
-    await this.productPhotosRepo.insertPhotosIntoproduct(
+    const insertedPhotos = await this.productPhotosRepo.insertPhotosIntoProduct(
       productId,
       productPhotosInsertRequestDto,
     );
+    createdProduct.photos = insertedPhotos;
+  }
+
+  async proccessCreateProduct(
+    userId: string,
+    productCreateRequestDto: ProductCreateRequestDto,
+  ): Promise<Product> {
+    const shopId = (await this.userShopService.findShopByUserId(userId)).id;
+    const createdProduct = await this.productsRepo.createProduct(
+      shopId,
+      productCreateRequestDto,
+    );
+
+    const createdProductCategories =
+      await this.productCategoriesRepo.saveProductCategories(
+        createdProduct.id,
+        productCreateRequestDto.categoryIds,
+      );
+
+    createdProduct.productCategories = createdProductCategories;
+
+    const productPhotos = productCreateRequestDto.photos;
+    await this.insertPhotosIntoProduct(
+      createdProduct.id,
+      createdProduct,
+      productPhotos,
+    );
+
+    return createdProduct;
   }
 
   @Transactional()
@@ -37,42 +68,33 @@ export class ProductsService {
     userId: string,
     productCreateRequestDto: ProductCreateRequestDto,
   ): Promise<ProductResponseDto> {
-    const shopId = (await this.userShopService.findShopByUserId(userId)).id;
-    const categories =
-      await this.categoriesService.findActiveCategoryEntitiesByIds(
-        productCreateRequestDto.categoryIds,
-      );
-    const createdProduct = await this.productsRepo.createProduct(
-      shopId,
+    const createdProduct = await this.proccessCreateProduct(
+      userId,
       productCreateRequestDto,
-      categories,
     );
-    const productId = createdProduct.id;
-    const productPhotos = productCreateRequestDto.photos;
-    await this.insertPhotosIntoProduct(productId, productPhotos);
-
     return this.toResponseDto(createdProduct);
   }
 
-  async findLatestProducts(
+  async findLatestActiveProducts(
     page: number,
     limit: number,
   ): Promise<ProductResponseDto[]> {
-    const foundLatestProducts = await this.productsRepo.findManyLatestProducts(
-      page,
-      limit,
-    );
+    const foundLatestProducts =
+      await this.productsRepo.findManyLatestActiveProducts(page, limit);
     return this.toArrayResponseDto(foundLatestProducts);
   }
 
-  async findLatestShopProducts(shopId: string): Promise<ProductResponseDto[]> {
+  async findLatestActiveShopProducts(
+    shopId: string,
+  ): Promise<ProductResponseDto[]> {
     const foundShopLatestProducts =
-      await this.productsRepo.findLatestShopProducts(shopId);
+      await this.productsRepo.findLatestActiveShopProducts(shopId);
     return this.toArrayResponseDto(foundShopLatestProducts);
   }
 
-  async findProductById(productId: string): Promise<ProductResponseDto> {
-    const foundProduct = await this.productsRepo.findProductById(productId);
+  async findActiveProductById(productId: string): Promise<ProductResponseDto> {
+    const foundProduct =
+      await this.productsRepo.findActiveProductById(productId);
     return this.toResponseDto(foundProduct);
   }
 
@@ -81,9 +103,10 @@ export class ProductsService {
     userId: string,
     updateProductDto: ProductUpdateDto,
   ): Promise<ProductResponseDto> {
+    const shopId = (await this.userShopService.findShopByUserId(userId)).id;
     const updatedProduct = await this.productsRepo.updateShopProductById(
       productId,
-      userId,
+      shopId,
       updateProductDto,
     );
     return this.toResponseDto(updatedProduct);
