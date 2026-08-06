@@ -1,10 +1,11 @@
 import { InjectRepository } from '@nestjs/typeorm';
-import { Shop } from '../entities/shop.entity';
+import { Shop, ShopStatus } from '../entities/shop.entity';
 import { User } from '../entities/user.entity';
 import { UserShopCreateRequestDto } from '../dto/user.shop/user.shop.create.request.dto';
 import { Repository } from 'typeorm';
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { UserShopUpdateDto } from '../dto/user.shop/user.shop.update.dto';
 
 @Injectable()
 export class UserShopRepository {
@@ -32,6 +33,7 @@ export class UserShopRepository {
     return this.userShopRepo.findOne({
       where: {
         shopName: shopName,
+        shopStatus: ShopStatus.ACTIVE,
         isDeleted: false,
       },
       relations: {
@@ -44,11 +46,26 @@ export class UserShopRepository {
     return this.userShopRepo.findOne({
       where: {
         userId,
+        shopStatus: ShopStatus.ACTIVE,
         isDeleted: false,
       },
       relations: {
         user: true,
       },
     });
+  }
+
+  async updateShopDetails(
+    userId: string,
+    userShopUpdateDto: UserShopUpdateDto,
+  ): Promise<Shop> {
+    const result = await this.userShopRepo.update(
+      { userId: userId },
+      userShopUpdateDto,
+    );
+    if (result.affected === 0)
+      throw new NotFoundException('You do not have a shop. Create one.');
+
+    return this.userShopRepo.findOneByOrFail({ userId: userId });
   }
 }

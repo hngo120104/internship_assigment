@@ -6,6 +6,8 @@ import { CategoryCreateRequestDto } from '../../category/dto/category.create.req
 import { CategoryResponseDto } from '../../category/dto/category.response.dto';
 import { UserResponseDto } from '../../users/dto/users/user.response.dto';
 import { CategoryUpdateRequestDto } from '../../category/dto/category.update.request.dto';
+import { CartResponseDto } from '../../carts/dto/cart.response.dto';
+import { CartsService } from '../../carts/services/carts.service';
 
 @Injectable()
 export class AdminService {
@@ -13,7 +15,12 @@ export class AdminService {
     private readonly usersService: UsersService,
     private readonly rolesService: RolesService,
     private readonly categoriesService: CategoriesService,
+    private readonly cartsService: CartsService,
   ) {}
+
+  async findActiveUsersCarts(): Promise<CartResponseDto[]> {
+    return await this.cartsService.findActiveCarts();
+  }
 
   async createNewCategory(
     categoryCreateRequestDto: CategoryCreateRequestDto,

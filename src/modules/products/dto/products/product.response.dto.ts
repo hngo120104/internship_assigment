@@ -7,8 +7,8 @@ export class ProductResponseDto {
   @Expose()
   id!: string;
 
-  @Expose({ name: 'shop_id' })
-  shopId!: string;
+  @Expose({ name: 'shopId' })
+  shop_id!: string;
 
   @Expose()
   name!: string;
@@ -30,6 +30,6 @@ export class ProductResponseDto {
   @Expose()
   amount!: number;
 
-  @Expose({ name: 'is_active' })
-  isActive!: boolean;
+  @Expose({ name: 'isActive' })
+  is_active!: boolean;
 }

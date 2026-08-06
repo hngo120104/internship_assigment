@@ -1,5 +1,6 @@
 import { Exclude, Expose, Transform, Type } from 'class-transformer';
 import { ProductResponseDto } from '../../products/dto/products/product.response.dto';
+import { CartItem } from '../entities/cart.item.entity';
 
 @Exclude()
 export class CartItemResponseDto {
@@ -17,6 +18,9 @@ export class CartItemResponseDto {
   quantity!: number;
 
   @Expose()
-  @Transform(({ obj }) => obj.quantity * (obj.product?.price ?? 0))
+  @Transform(({ obj }) => {
+    const item = obj as CartItem;
+    return item.quantity * item.product?.price;
+  })
   line_total!: number;
 }

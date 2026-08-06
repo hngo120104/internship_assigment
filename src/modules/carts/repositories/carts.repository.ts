@@ -4,13 +4,27 @@ import { Repository } from 'typeorm';
 import { Cart } from '../entities/cart.entity';
 import { CartStatus } from '../entities/cart.entity';
 import { randomUUID } from 'crypto';
+import { CartItemsRepository } from './cart.items.repository';
 
 @Injectable()
 export class CartsRepository {
   constructor(
     @InjectRepository(Cart)
     private readonly cartsRepo: Repository<Cart>,
+    private readonly cartItemsRepo: CartItemsRepository,
   ) {}
+
+  async findActiveCarts(): Promise<Cart[]> {
+    return await this.cartsRepo.find({
+      where: { cartStatus: CartStatus.ACTIVE, isDeleted: false },
+      relations: {
+        user: true,
+        cartItems: {
+          product: true,
+        },
+      },
+    });
+  }
 
   async findOrCreateActiveCart(owner: {
     userId?: string;
@@ -33,7 +47,7 @@ export class CartsRepository {
   }
 
   async findCartByUserId(userId: string): Promise<Cart | null> {
-    const foundUserCart = await this.cartsRepo.findOne({
+    return await this.cartsRepo.findOne({
       where: {
         userId,
         cartStatus: CartStatus.ACTIVE,
@@ -44,11 +58,10 @@ export class CartsRepository {
         },
       },
     });
-    return foundUserCart;
   }
 
   async findCartByGuestId(guestId: string): Promise<Cart | null> {
-    const foundGuestCart = await this.cartsRepo.findOne({
+    return await this.cartsRepo.findOne({
       where: {
         guestId,
         cartStatus: CartStatus.ACTIVE,
@@ -59,7 +72,11 @@ export class CartsRepository {
         },
       },
     });
-    return foundGuestCart;
+  }
+
+  async findCartByCartItemId(cartItemId: string): Promise<Cart | null> {
+    const cartId = await this.cartItemsRepo.getCartIdFromCartItemId(cartItemId);
+    return await this.cartsRepo.findOneBy({ id: cartId });
   }
 
   async getActiveCart(owner: {
@@ -70,23 +87,36 @@ export class CartsRepository {
       ? {
           userId: owner.userId,
           cartStatus: CartStatus.ACTIVE,
+          isDeleted: false,
         }
       : {
           guestId: owner.guestId,
           cartStatus: CartStatus.ACTIVE,
+          isDeleted: false,
         };
-    const foundCart = await this.cartsRepo.findOne({
+    return await this.cartsRepo.findOne({
       where,
       relations: {
         cartItems: {
           product: true,
         },
+        user: true,
       },
     });
-    return foundCart;
   }
 
   async saveCart(newCart: Cart): Promise<Cart> {
     return this.cartsRepo.save(newCart);
+  }
+
+  async softDeleteCart(userId: string): Promise<Cart> {
+    await this.cartsRepo.update(
+      { userId: userId, isDeleted: false, cartStatus: CartStatus.ACTIVE },
+      { isDeleted: true, cartStatus: CartStatus.EXPIRED },
+    );
+    return await this.cartsRepo.findOneByOrFail({
+      userId: userId,
+      isDeleted: true,
+    });
   }
 }

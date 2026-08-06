@@ -3,36 +3,37 @@ import {
   Controller,
   Delete,
   Get,
-  Param,
-  Patch,
+  HttpCode,
+  HttpStatus,
   Post,
 } from '@nestjs/common';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
 import { CartsService } from '../services/carts.service';
 import { CartItemsAddRequestDto } from '../dto/cart.items.add.request.dto';
-import { CartItemsUpdateRequestDto } from '../dto/cart.items.update.request.dto';
 
 import { CartResponseDto } from '../dto/cart.response.dto';
-import { plainToInstance } from 'class-transformer';
+import { CartItemsService } from '../services/cart.items.service';
 
 @Controller('api/carts')
 export class CartsController {
-  constructor(private readonly cartsService: CartsService) {}
+  constructor(
+    private readonly cartsService: CartsService,
+    private readonly cartItemsService: CartItemsService,
+  ) {}
 
-  @Get()
+  @Get('me')
   async getUserActiveCart(
     @CurrentUser() user: CurrentUserPayload,
   ): Promise<CartResponseDto> {
-    const cart = await this.cartsService.getActiveCart({
+    const owner = {
       userId: user.sub,
-    });
-    return plainToInstance(CartResponseDto, cart, {
-      excludeExtraneousValues: true,
-    });
+      guestId: undefined,
+    };
+    return this.cartsService.getCurrentUserActiveCart(owner);
   }
 
-  @Post('items')
+  @Post('me')
   async addItem(
     @CurrentUser() user: CurrentUserPayload,
     @Body() cartItemsAddRequestDto: CartItemsAddRequestDto,
@@ -44,27 +45,9 @@ export class CartsController {
     return cart;
   }
 
-  @Patch('items')
-  async updateItemQuantity(
-    @CurrentUser() user: CurrentUserPayload,
-    @Body() cartItemsUpdateRequestDto: CartItemsUpdateRequestDto,
-  ): Promise<CartResponseDto | null> {
-    const cart = await this.cartsService.updateItemNewQuantity(
-      { userId: user.sub },
-      cartItemsUpdateRequestDto,
-    );
-    return cart;
-  }
-
-  @Delete('items/:productId')
-  async removeItem(
-    @CurrentUser() user: CurrentUserPayload,
-    @Param('productId') productId: string,
-  ): Promise<CartResponseDto | null> {
-    const cart = await this.cartsService.removeCartItem(
-      { userId: user.sub },
-      productId,
-    );
-    return cart;
+  @Delete('me/clear')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteCart(@CurrentUser() user: CurrentUserPayload) {
+    await this.cartsService.deleteCart(user.sub);
   }
 }

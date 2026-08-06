@@ -54,7 +54,7 @@ export class Shop {
     enum: ShopStatus,
     default: ShopStatus.ACTIVE,
   })
-  userStatus!: ShopStatus;
+  shopStatus!: ShopStatus;
 
   @OneToOne(() => User, (user) => user.shop, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })

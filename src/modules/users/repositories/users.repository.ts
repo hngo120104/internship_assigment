@@ -37,12 +37,15 @@ export class UsersRepository {
       throw new NotFoundException(`User does not exist.`);
     }
 
-    return await this.userRepo.findOneByOrFail({ id: userId });
+    return await this.userRepo.findOneByOrFail({
+      id: userId,
+      isDeleted: false,
+    });
   }
 
   async banUser(userId: string): Promise<User> {
     const bannedUser = await this.userRepo.update(
-      { id: userId, userStatus: UserStatus.ACTIVE },
+      { id: userId, userStatus: UserStatus.ACTIVE, isDeleted: false },
       { userStatus: UserStatus.BANNED },
     );
 

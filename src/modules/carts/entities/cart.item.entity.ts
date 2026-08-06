@@ -47,7 +47,4 @@ export class CartItem {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'datetime', precision: 6 })
   updatedAt!: Date;
-
-  @Column({ name: 'is_deleted', type: 'tinyint', default: 0 })
-  isDeleted!: boolean;
 }

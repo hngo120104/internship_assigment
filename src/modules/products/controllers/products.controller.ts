@@ -68,6 +68,20 @@ export class ProductsController {
     return updatedProductResponse;
   }
 
+  @Patch('categories/:productId')
+  @Roles(Role.SELLER)
+  async updateShopProductCategories(
+    @Param('productId') updateProductId: string,
+    @Body() categoryIds: string[],
+  ) {
+    const updatedProductResponse =
+      await this.productsService.updateShopProductCategories(
+        updateProductId,
+        categoryIds,
+      );
+    return updatedProductResponse;
+  }
+
   @Delete(':productId')
   @Roles(Role.SELLER)
   async deleteShopProduct(

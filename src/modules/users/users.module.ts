@@ -18,6 +18,7 @@ import { UserRoles } from './entities/user.roles.entity';
 import { UserRolesRepository } from './repositories/user.roles.repository';
 import { UserRolesServce } from './services/user.roles.service';
 import { RolesService } from './services/role.service';
+import { ShopsController } from './controllers/user.shops.controller';
 
 @Module({
   imports: [
@@ -44,7 +45,7 @@ import { RolesService } from './services/role.service';
     RolesService,
     RolesRepository,
   ],
-  controllers: [UsersController],
+  controllers: [UsersController, ShopsController],
   exports: [
     UsersService,
     UserShopService,

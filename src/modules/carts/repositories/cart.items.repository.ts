@@ -2,8 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CartItem } from '../entities/cart.item.entity';
 import { Repository } from 'typeorm';
-import { Cart } from '../entities/cart.entity';
-import { Product } from '../../products/entities/product.entity';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -13,30 +11,48 @@ export class CartItemsRepository {
     private readonly cartItemsRepo: Repository<CartItem>,
   ) {}
 
-  async findCartItem(
+  async findCartItemByCartIdAndProductId(
     cartId: string,
     productId: string,
   ): Promise<CartItem | null> {
-    const foundCartItem = await this.cartItemsRepo.findOne({
+    return await this.cartItemsRepo.findOne({
       where: {
         cartId,
         productId,
       },
+      relations: {
+        product: true,
+        cart: true,
+      },
     });
-    return foundCartItem;
+  }
+
+  async findCartItemById(cartItemId: string): Promise<CartItem | null> {
+    return await this.cartItemsRepo.findOne({
+      where: { id: cartItemId },
+      relations: { product: true },
+    });
+  }
+
+  async getCartIdFromCartItemId(
+    cartItemId: string,
+  ): Promise<string | undefined> {
+    return await this.cartItemsRepo
+      .createQueryBuilder()
+      .select('cart_id')
+      .where('id = :id', { id: cartItemId })
+      .getRawOne<string>();
   }
 
   async createCartItem(
-    cart: Cart,
-    product: Product,
+    cartId: string,
+    productId: string,
     quantity: number,
   ): Promise<CartItem> {
     const newCartItem = this.cartItemsRepo.create({
       id: randomUUID(),
-      cart,
-      cartId: cart.id,
-      product,
-      productId: product.id,
+      cartId: cartId,
+      productId: productId,
       quantity,
     });
     return await this.cartItemsRepo.save(newCartItem);
@@ -46,7 +62,16 @@ export class CartItemsRepository {
     return this.cartItemsRepo.save(cartItem);
   }
 
-  async removeCartItem(cartItem: CartItem) {
-    return this.cartItemsRepo.remove(cartItem);
+  async deleteCartItem(cartItemId: string): Promise<boolean> {
+    const cartItemToDelete = await this.cartItemsRepo.delete(cartItemId);
+    return cartItemToDelete.affected !== 0;
+  }
+
+  async deleteAllCartItems(cartId: string): Promise<boolean> {
+    const cartItemToDelete = await this.cartItemsRepo.delete({
+      cartId: cartId,
+    });
+    console.log(cartItemToDelete.affected !== 0);
+    return cartItemToDelete.affected !== 0;
   }
 }

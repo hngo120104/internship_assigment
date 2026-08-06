@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProductCreateRequestDto } from '../dto/products/product.create.dto';
 import { ProductUpdateDto } from '../dto/products/product.update.dto';
 
@@ -10,7 +10,6 @@ import { ProductPhotosRepository } from '../repositories/product.photo.repositor
 import { ProductPhotosInsertRequestDto } from '../dto/product.photos/product.photos.insert.request.dto';
 import { Transactional } from 'typeorm-transactional';
 import { UserShopService } from '../../users/services/user.shop.service';
-import { CategoriesService } from '../../category/services/categories.service';
 import { ProductCategoriesRepository } from '../repositories/product.categories.repository';
 
 @Injectable()
@@ -19,7 +18,6 @@ export class ProductsService {
     private readonly productsRepo: ProductsRepository,
     private readonly productPhotosRepo: ProductPhotosRepository,
     private readonly userShopService: UserShopService,
-    private readonly categoriesService: CategoriesService,
     private readonly productCategoriesRepo: ProductCategoriesRepository,
   ) {}
 
@@ -95,7 +93,23 @@ export class ProductsService {
   async findActiveProductById(productId: string): Promise<ProductResponseDto> {
     const foundProduct =
       await this.productsRepo.findActiveProductById(productId);
+    if (!foundProduct) throw new NotFoundException('Product not found.');
     return this.toResponseDto(foundProduct);
+  }
+
+  async findActiveProductEntityById(productId: string): Promise<Product> {
+    const foundProduct =
+      await this.productsRepo.findActiveProductById(productId);
+    if (!foundProduct) throw new NotFoundException('Product not found.');
+
+    return foundProduct;
+  }
+
+  async updateShopProductCategories(productId: string, categoryIds: string[]) {
+    return await this.productCategoriesRepo.updateProductCategories(
+      productId,
+      categoryIds,
+    );
   }
 
   async updateShopProductById(
@@ -116,9 +130,10 @@ export class ProductsService {
     productId: string,
     userId: string,
   ): Promise<ProductResponseDto> {
+    const foundShop = await this.userShopService.findShopByUserId(userId);
     const deletedProduct = await this.productsRepo.softDeleteShopProductById(
       productId,
-      userId,
+      foundShop.id,
     );
     return this.toResponseDto(deletedProduct);
   }

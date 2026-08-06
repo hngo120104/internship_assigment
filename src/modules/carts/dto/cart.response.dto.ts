@@ -26,7 +26,7 @@ export class CartResponseDto {
   @Expose()
   @Transform(({ obj }) => {
     const cart = obj as Cart;
-    (cart.cartItems ?? []).reduce(
+    return (cart.cartItems ?? []).reduce(
       (
         total: number,
         item: { quantity: number; product?: { price: number } },

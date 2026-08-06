@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { AdminService } from '../services/admin.service';
 import { CategoryResponseDto } from '../../category/dto/category.response.dto';
 import { CategoryCreateRequestDto } from '../../category/dto/category.create.request.dto';
@@ -6,10 +6,17 @@ import { Roles } from '../../auth/guards/role/role.decorator';
 import { Role } from '../../auth/guards/role/role.enum';
 import { CategoryUpdateRequestDto } from '../../category/dto/category.update.request.dto';
 import { UserResponseDto } from '../../users/dto/users/user.response.dto';
+import { CartResponseDto } from '../../carts/dto/cart.response.dto';
 
 @Controller('api/admin')
 export class AdminController {
   constructor(private readonly AdminService: AdminService) {}
+
+  @Get('carts')
+  @Roles(Role.ADMIN)
+  async findActiveUsersCarts(): Promise<CartResponseDto[]> {
+    return await this.AdminService.findActiveUsersCarts();
+  }
 
   @Post('ban/:userId')
   @Roles(Role.ADMIN)

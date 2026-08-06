@@ -42,7 +42,7 @@ export class UsersService {
     const foundUserWithEmail =
       await this.usersRepo.findActiveUserByEmail(email);
     if (!foundUserWithEmail) {
-      throw new NotFoundException('User with email not found.');
+      throw new NotFoundException('Can not find user.');
     }
     return foundUserWithEmail;
   }

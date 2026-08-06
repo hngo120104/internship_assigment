@@ -63,7 +63,7 @@ export class ProductsRepository {
     });
   }
 
-  async findActiveProductById(productId: string): Promise<Product> {
+  async findActiveProductById(productId: string): Promise<Product | null> {
     const foundProduct = await this.productsRepo.findOne({
       where: {
         id: productId,
@@ -78,9 +78,6 @@ export class ProductsRepository {
         },
       },
     });
-    if (!foundProduct) {
-      throw new NotFoundException('Product does not exist.');
-    }
     return foundProduct;
   }
 
@@ -89,13 +86,8 @@ export class ProductsRepository {
     shopId: string,
     productUpdateDto: ProductUpdateDto,
   ): Promise<Product> {
-    await this.productsRepo
-      .createQueryBuilder()
-      .update(Product)
-      .set(productUpdateDto)
-      .where('id = :productId', { productId })
-      .andWhere('shop_id = :shopId', { shopId })
-      .execute();
+    await this.productsRepo.update({ id: productId }, productUpdateDto);
+
     return this.productsRepo.findOneOrFail({
       where: {
         id: productId,

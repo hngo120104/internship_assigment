@@ -15,6 +15,7 @@ import {
 import { Transactional } from 'typeorm-transactional';
 import { plainToInstance } from 'class-transformer';
 import { UserRolesRepository } from '../repositories/user.roles.repository';
+import { UserShopUpdateDto } from '../dto/user.shop/user.shop.update.dto';
 
 @Injectable()
 export class UserShopService {
@@ -100,10 +101,31 @@ export class UserShopService {
     return this.toUserShopResponseDto(foundShop);
   }
 
+  async findShopEntityByUserId(userId: string): Promise<Shop> {
+    const foundShop = await this.userShopRepo.findActiveShopByUserId(userId);
+
+    if (!foundShop) {
+      throw new NotFoundException('User does not have shop');
+    }
+
+    return foundShop;
+  }
+
   // async findManyActiveShops(pagination: number): Promise<UserShopResponseDto> {
   //   const foundActiveShops = await this.userShopRepo.findManyActiveShops(pagination);
   //   return to
   // }
+
+  async updateShopDetails(
+    userId: string,
+    userShopUpdateDto: UserShopUpdateDto,
+  ): Promise<UserShopResponseDto> {
+    const updatedShop = await this.userShopRepo.updateShopDetails(
+      userId,
+      userShopUpdateDto,
+    );
+    return this.toUserShopResponseDto(updatedShop);
+  }
 
   private toUserShopCreateResponseDto(
     user: User,

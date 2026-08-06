@@ -5,7 +5,7 @@ import { ShopStatus } from '../../entities/shop.entity';
 @Exclude()
 export class UserShopCreateResponseDto {
   @Type(() => UserResponseDto)
-  @Expose()
+  // @Expose()
   user!: UserResponseDto;
 
   @Expose()

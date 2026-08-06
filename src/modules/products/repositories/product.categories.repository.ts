@@ -1,6 +1,7 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductCategories } from '../entities/product.categories.entity';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
+import { BadRequestException } from '@nestjs/common';
 
 export class ProductCategoriesRepository {
   constructor(
@@ -20,5 +21,25 @@ export class ProductCategoriesRepository {
     });
 
     return await this.productCategoriesRepo.save(createdProductCategories);
+  }
+
+  async updateProductCategories(productId: string, categoryIds: string[]) {
+    const updatedProductCategories = categoryIds.map((categoryId) => {
+      return {
+        productId: productId,
+        categoryId: categoryId,
+      };
+    });
+    try {
+      await this.productCategoriesRepo.upsert(updatedProductCategories, [
+        'productId',
+        'categoryId',
+      ]);
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        throw new BadRequestException('Wrong product or category ids.');
+      }
+      throw error;
+    }
   }
 }

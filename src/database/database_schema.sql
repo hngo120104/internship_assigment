@@ -20,7 +20,7 @@ CREATE TABLE
         `password_hashed` varchar(255) NOT NULL,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-        `userStatus` enum ('ACITVE', 'BANNED') NOT NULL DEFAULT 'ACTIVE',
+        `userStatus` enum ('ACTIVE', 'BANNED') NOT NULL DEFAULT 'ACTIVE',
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         UNIQUE KEY `UQ_users_email` (`email`)
@@ -187,7 +187,6 @@ CREATE TABLE
         `quantity` int NOT NULL DEFAULT 1,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-        `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         UNIQUE KEY `UQ_cart_items_cart_product` (`cart_id`, `product_id`),
         KEY `IDX_cart_items_product_id` (`product_id`),
