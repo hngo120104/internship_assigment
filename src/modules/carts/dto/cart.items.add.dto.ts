@@ -1,12 +1,12 @@
 import { Expose } from 'class-transformer';
 import { IsInt, IsUUID, Min } from 'class-validator';
 
-export class CartItemsUpdateRequestDto {
-  @Expose({ name: 'product_id' })
+export class CartItemsAddDto {
   @IsUUID()
+  @Expose({ name: 'product_id' })
   productId!: string;
 
-  @Min(1)
   @IsInt()
+  @Min(1)
   quantity!: number;
 }

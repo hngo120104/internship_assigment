@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserRoles } from '../entities/user.roles.entity';
 import { Repository } from 'typeorm';
@@ -22,21 +22,12 @@ export class UserRolesRepository {
     return await this.userRolesRepo.save(createdUserRoles);
   }
 
-  async deleteUserRole(userId: string, roleId: string): Promise<UserRoles> {
+  async deleteUserRole(userId: string, roleId: string): Promise<boolean> {
     const deletedResult = await this.userRolesRepo.update(
       { userId: userId, roleId: roleId },
       { isDeleted: true },
     );
 
-    if (deletedResult.affected === 0) {
-      throw new NotFoundException('User role does not exist');
-    }
-
-    return this.userRolesRepo.findOneOrFail({
-      where: {
-        userId: userId,
-        roleId: roleId,
-      },
-    });
+    return deletedResult.affected !== 0;
   }
 }

@@ -20,7 +20,7 @@ CREATE TABLE
         `password_hashed` varchar(255) NOT NULL,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-        `userStatus` enum ('ACTIVE', 'BANNED') NOT NULL DEFAULT 'ACTIVE',
+        `user_status` enum ('ACTIVE', 'BANNED') NOT NULL DEFAULT 'ACTIVE',
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         UNIQUE KEY `UQ_users_email` (`email`)
@@ -135,7 +135,7 @@ CREATE Table
         `category_id` BINARY(16) NOT NULL,
         `is_deleted` tinyint (1) DEFAULT NULL,
         PRIMARY KEY (`product_id`, `category_id`),
-        KEY `IDX_prodcut_categories_category_id` (`category_id`),
+        KEY `IDX_product_categories_category_id` (`category_id`),
         CONSTRAINT `FK_product_categories_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `FK_product_categories_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
@@ -193,4 +193,54 @@ CREATE TABLE
         CONSTRAINT `FK_cart_items_cart` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `FK_cart_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `CHK_cart_items_quantity_positive` CHECK (`quantity` > 0)
+    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE
+    `orders` (
+        `id` BINARY(16) NOT NULL DEFAULT (UUID_TO_BIN (UUID (), 1)),
+        `user_id` BINARY(16) NOT NULL,
+        `shop_id` BINARY(16) NOT NULL,
+        `recipient_address_id` BINARY(16) NOT NULL,
+        `order_code` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `order_status` enum (
+            'PENDING',
+            'CONFIRMED',
+            'PROCESSING',
+            'SHIPPING',
+            'DELIVERED',
+            'CANCELLED'
+        ) NOT NULL DEFAULT 'PENDING',
+        `payment_status` enum ('PENDING', 'PAID', 'FAILED', 'REFUNDED') NOT NULL DEFAULT 'PENDING',
+        `discount` DECIMAL(12, 2) NOT NULL DEFAULT 0,
+        `shipping_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0,
+        `note` varchar(1000) DEFAULT NULL,
+        `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `UQ_orders_order_code` (`order_code`),
+        CONSTRAINT `FK_orders_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+        CONSTRAINT `FK_orders_shop` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`id`) ON DELETE RESTRICT,
+        CONSTRAINT `FK_orders_ship_address` FOREIGN KEY (`recipient_address_id`) REFERENCES `user_addresses` (`id`) ON DELETE RESTRICT,
+        CONSTRAINT `CHK_orders_discount_non_negative` CHECK (`discount` >= 0),
+        CONSTRAINT `CHK_orders_shipping_fee_non_negative` CHECK (`shipping_fee` >= 0),
+        KEY `IDX_orders_shop_id` (`shop_id`)
+    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE
+    `order_items` (
+        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
+        `order_id` BINARY(16) NOT NULL,
+        `product_id` BINARY(16) NOT NULL,
+        `product_name` varchar(255) NOT NULL,
+        `unit_price` DECIMAL(12, 2) NOT NULL,
+        `quantity` int NOT NULL DEFAULT 1,
+        `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `UQ_order_items_order_product` (`order_id`, `product_id`),
+        CONSTRAINT `FK_order_items_order_id` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
+        CONSTRAINT `FK_order_items_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
+        CONSTRAINT `CHK_order_items_quantity_positive` CHECK (`quantity` > 0),
+        CONSTRAINT `CHK_order_items_unit_price_non_negative` CHECK (`unit_price` >= 0),
+        KEY `IDX_order_items_product_id` (`product_id`)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;

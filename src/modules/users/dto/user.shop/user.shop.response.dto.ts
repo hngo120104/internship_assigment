@@ -18,7 +18,7 @@ export class UserShopResponseDto {
   @Expose()
   address?: string;
 
-  @Expose({ name: 'userStatus' })
+  @Expose({ name: 'shopStatus' })
   shop_status!: ShopStatus;
 
   @Expose({ name: 'createdAt' })

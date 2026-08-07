@@ -1,7 +1,7 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Shop, ShopStatus } from '../entities/shop.entity';
 import { User } from '../entities/user.entity';
-import { UserShopCreateRequestDto } from '../dto/user.shop/user.shop.create.request.dto';
+import { UserShopCreateDto } from '../dto/user.shop/user.shop.create.dto';
 import { Repository } from 'typeorm';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
@@ -15,15 +15,15 @@ export class UserShopRepository {
 
   async createShop(
     user: User,
-    userShopCreateRequestDto: UserShopCreateRequestDto,
+    userShopCreateDto: UserShopCreateDto,
   ): Promise<Shop> {
     const newUserShop = this.userShopRepo.create({
       id: randomUUID(),
       user,
       userId: user.id,
-      shopName: userShopCreateRequestDto.shopName,
-      description: userShopCreateRequestDto.description,
-      address: userShopCreateRequestDto.address,
+      shopName: userShopCreateDto.shopName,
+      description: userShopCreateDto.description,
+      address: userShopCreateDto.address,
     });
 
     return this.userShopRepo.save(newUserShop);
@@ -59,13 +59,21 @@ export class UserShopRepository {
     userId: string,
     userShopUpdateDto: UserShopUpdateDto,
   ): Promise<Shop> {
-    const result = await this.userShopRepo.update(
-      { userId: userId },
+    const updateResult = await this.userShopRepo.update(
+      { userId: userId, isDeleted: false },
       userShopUpdateDto,
     );
-    if (result.affected === 0)
+    if (updateResult.affected === 0)
       throw new NotFoundException('You do not have a shop. Create one.');
 
     return this.userShopRepo.findOneByOrFail({ userId: userId });
+  }
+
+  async softDeleteShop(userId: string): Promise<boolean> {
+    const deleteResult = await this.userShopRepo.update(
+      { userId: userId, isDeleted: false },
+      { isDeleted: true },
+    );
+    return deleteResult.affected !== 0;
   }
 }

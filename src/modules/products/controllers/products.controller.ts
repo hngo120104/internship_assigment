@@ -6,9 +6,12 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ProductsService } from '../services/products.service';
-import { ProductCreateRequestDto } from '../dto/products/product.create.dto';
+import { ProductCreateDto } from '../dto/products/product.create.dto';
 import { ProductUpdateDto } from '../dto/products/product.update.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { Role } from '../../auth/guards/role/role.enum';
@@ -25,21 +28,26 @@ export class ProductsController {
   @Roles(Role.SELLER)
   async createProducts(
     @CurrentUser() user: CurrentUserPayload,
-    @Body() productCreateDto: ProductCreateRequestDto,
+    @Body() productCreateDto: ProductCreateDto,
   ): Promise<ProductResponseDto> {
-    const newProductResponse = await this.productsService.createProduct(
-      user.sub,
-      productCreateDto,
-    );
-    return newProductResponse;
+    return await this.productsService.createProduct(user.sub, productCreateDto);
   }
 
   @Public()
   @Get()
-  async findManyActiveLatestProducts(): Promise<ProductResponseDto[]> {
-    const foundProductsResponse =
-      await this.productsService.findLatestActiveProducts(1, 20);
-    return foundProductsResponse;
+  async findManyActiveLatestProducts(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ): Promise<ProductResponseDto[]> {
+    return await this.productsService.findLatestActiveProducts(page, limit);
+  }
+
+  @Public()
+  @Get('/:productId')
+  async getProductDetails(
+    @Param('productId') productId: string,
+  ): Promise<ProductResponseDto> {
+    return await this.productsService.findActiveProductById(productId);
   }
 
   @Public()
@@ -47,9 +55,7 @@ export class ProductsController {
   async findLatestActiveProductsByShop(
     @Param('shopId') shopId: string,
   ): Promise<ProductResponseDto[]> {
-    const foundLatestShopProductsResponse =
-      await this.productsService.findLatestActiveShopProducts(shopId);
-    return foundLatestShopProductsResponse;
+    return await this.productsService.findLatestActiveShopProducts(shopId);
   }
 
   @Patch(':productId')
@@ -59,40 +65,34 @@ export class ProductsController {
     @Param('productId') updateProductId: string,
     @Body() updateProductDto: ProductUpdateDto,
   ): Promise<ProductResponseDto> {
-    const updatedProductResponse =
-      await this.productsService.updateShopProductById(
-        updateProductId,
-        user.sub,
-        updateProductDto,
-      );
-    return updatedProductResponse;
+    return await this.productsService.updateShopProductById(
+      updateProductId,
+      user.sub,
+      updateProductDto,
+    );
   }
 
   @Patch('categories/:productId')
   @Roles(Role.SELLER)
   async updateShopProductCategories(
+    @CurrentUser() user: CurrentUserPayload,
     @Param('productId') updateProductId: string,
     @Body() categoryIds: string[],
-  ) {
-    const updatedProductResponse =
-      await this.productsService.updateShopProductCategories(
-        updateProductId,
-        categoryIds,
-      );
-    return updatedProductResponse;
+  ): Promise<ProductResponseDto> {
+    return await this.productsService.updateShopProductCategories(
+      updateProductId,
+      user.sub,
+      categoryIds,
+    );
   }
 
   @Delete(':productId')
   @Roles(Role.SELLER)
+  @HttpCode(HttpStatus.NO_CONTENT)
   async deleteShopProduct(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') deleteProductId: string,
-  ): Promise<ProductResponseDto> {
-    const deletedProductResponse =
-      await this.productsService.deleteShopProductById(
-        deleteProductId,
-        user.sub,
-      );
-    return deletedProductResponse;
+  ): Promise<void> {
+    await this.productsService.deleteShopProductById(deleteProductId, user.sub);
   }
 }

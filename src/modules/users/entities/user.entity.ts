@@ -12,6 +12,7 @@ import { Cart } from '../../carts/entities/cart.entity';
 import { Address } from './user.address.entity';
 import { PrimaryGeneratedBinaryUuidColumn } from '../../../custom.decorators/primary.generated.uuid.binary.column';
 import { UserRoles } from './user.roles.entity';
+import { Order } from '../../orders/entities/order.entity';
 
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
@@ -62,4 +63,7 @@ export class User {
 
   @OneToMany(() => Cart, (cart) => cart.user)
   cart?: Cart[];
+
+  @OneToMany(() => Order, (order) => order.user)
+  orders!: Order[];
 }

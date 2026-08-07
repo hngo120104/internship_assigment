@@ -1,21 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { CategoriesRepository } from '../repositories/categories.repository';
-import { CategoryCreateRequestDto } from '../dto/category.create.request.dto';
+import { CategoryCreateDto } from '../dto/category.create.dto';
 import { CategoryResponseDto } from '../dto/category.response.dto';
 import { Category } from '../entities/category.entity';
 import { plainToInstance } from 'class-transformer';
-import { CategoryUpdateRequestDto } from '../dto/category.update.request.dto';
+import { CategoryUpdateDto } from '../dto/category.update.dto';
 
 @Injectable()
 export class CategoriesService {
   constructor(private readonly categoriesRepo: CategoriesRepository) {}
 
   async createCategory(
-    categoryCreateRequestDto: CategoryCreateRequestDto,
+    categoryCreateDto: CategoryCreateDto,
   ): Promise<CategoryResponseDto> {
-    const createdCategory = await this.categoriesRepo.createCategory(
-      categoryCreateRequestDto,
-    );
+    const createdCategory =
+      await this.categoriesRepo.createCategory(categoryCreateDto);
     return this.toCategoryResponseDto(createdCategory);
   }
 
@@ -38,11 +37,11 @@ export class CategoriesService {
 
   async updateCategory(
     categoryId: string,
-    categoryUpdateRequestDto: CategoryUpdateRequestDto,
+    categoryUpdateDto: CategoryUpdateDto,
   ): Promise<CategoryResponseDto> {
     const updatedCategory = await this.categoriesRepo.updateCategory(
       categoryId,
-      categoryUpdateRequestDto,
+      categoryUpdateDto,
     );
     return this.toCategoryResponseDto(updatedCategory);
   }

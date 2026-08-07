@@ -1,10 +1,8 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 
-import { Public } from '../../auth/public.decorator';
-
 import { UsersService } from '../services/users.service';
 import { UserResponseDto } from '../dto/users/user.response.dto';
-import { UserPasswordUpdateRequestDto } from '../dto/users/user.password.update.request.dto';
+import { UserPasswordUpdateDto } from '../dto/users/user.password.update.dto';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
 
@@ -12,23 +10,23 @@ import type { CurrentUserPayload } from '../../../custom.decorators/current.user
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get()
-  @Public()
-  async findMany(): Promise<UserResponseDto[]> {
-    const foundUsers = await this.usersService.findManyActiveUsers(1, 30);
-    return foundUsers;
+  @Get('profile')
+  async getCurrentUserProfile(
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<UserResponseDto> {
+    return await this.usersService.findActiveUserByUserId(user.sub);
   }
 
   @Post('/update-password')
   async updateUserPassword(
     @CurrentUser() user: CurrentUserPayload,
-    @Body() userPasswordUpdateRequestDto: UserPasswordUpdateRequestDto,
-  ) {
+    @Body() userPasswordUpdateDto: UserPasswordUpdateDto,
+  ): Promise<UserResponseDto> {
     const userId = user.sub;
-    await this.usersService.updateUserPassword(
+    return await this.usersService.updateUserPassword(
       userId,
-      userPasswordUpdateRequestDto.newPassword,
-      userPasswordUpdateRequestDto.oldPassword,
+      userPasswordUpdateDto.newPassword,
+      userPasswordUpdateDto.oldPassword,
     );
   }
 }

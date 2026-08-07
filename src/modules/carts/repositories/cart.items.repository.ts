@@ -71,7 +71,6 @@ export class CartItemsRepository {
     const cartItemToDelete = await this.cartItemsRepo.delete({
       cartId: cartId,
     });
-    console.log(cartItemToDelete.affected !== 0);
     return cartItemToDelete.affected !== 0;
   }
 }

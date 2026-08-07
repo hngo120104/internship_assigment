@@ -3,10 +3,12 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
 import { User } from './user.entity';
+import { Order } from '../../orders/entities/order.entity';
 import {
   BinaryUuidColumn,
   PrimaryGeneratedBinaryUuidColumn,
@@ -50,4 +52,7 @@ export class Address {
   @ManyToOne(() => User, (user) => user.addresses, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })
   user!: User;
+
+  @OneToMany(() => Order, (order) => order.shipAddress)
+  orders!: Order[];
 }

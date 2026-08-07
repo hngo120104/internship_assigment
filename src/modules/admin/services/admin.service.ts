@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { UsersService } from '../../users/services/users.service';
 import { RolesService } from '../../users/services/role.service';
 import { CategoriesService } from '../../category/services/categories.service';
-import { CategoryCreateRequestDto } from '../../category/dto/category.create.request.dto';
+import { CategoryCreateDto } from '../../category/dto/category.create.dto';
 import { CategoryResponseDto } from '../../category/dto/category.response.dto';
 import { UserResponseDto } from '../../users/dto/users/user.response.dto';
-import { CategoryUpdateRequestDto } from '../../category/dto/category.update.request.dto';
+import { CategoryUpdateDto } from '../../category/dto/category.update.dto';
 import { CartResponseDto } from '../../carts/dto/cart.response.dto';
 import { CartsService } from '../../carts/services/carts.service';
 
@@ -18,25 +18,29 @@ export class AdminService {
     private readonly cartsService: CartsService,
   ) {}
 
+  async findActiveUsers(
+    page: number,
+    limit: number,
+  ): Promise<UserResponseDto[]> {
+    return await this.usersService.findManyActiveUsers(page, limit);
+  }
   async findActiveUsersCarts(): Promise<CartResponseDto[]> {
     return await this.cartsService.findActiveCarts();
   }
 
   async createNewCategory(
-    categoryCreateRequestDto: CategoryCreateRequestDto,
+    categoryCreateDto: CategoryCreateDto,
   ): Promise<CategoryResponseDto> {
-    return await this.categoriesService.createCategory(
-      categoryCreateRequestDto,
-    );
+    return await this.categoriesService.createCategory(categoryCreateDto);
   }
 
   async updateCategory(
     categoryId: string,
-    categoryUpdateRequestDto: CategoryUpdateRequestDto,
+    categoryUpdateDto: CategoryUpdateDto,
   ): Promise<CategoryResponseDto> {
     return await this.categoriesService.updateCategory(
       categoryId,
-      categoryUpdateRequestDto,
+      categoryUpdateDto,
     );
   }
 

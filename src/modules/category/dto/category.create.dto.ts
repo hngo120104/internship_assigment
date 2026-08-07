@@ -7,7 +7,7 @@ import {
   IsUUID,
 } from 'class-validator';
 
-export class CategoryCreateRequestDto {
+export class CategoryCreateDto {
   @IsOptional()
   @IsString()
   @Expose({ name: 'icon_url' })

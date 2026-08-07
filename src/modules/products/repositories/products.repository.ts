@@ -1,7 +1,7 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from '../entities/product.entity';
 import { Repository } from 'typeorm';
-import { ProductCreateRequestDto } from '../dto/products/product.create.dto';
+import { ProductCreateDto } from '../dto/products/product.create.dto';
 import { ProductUpdateDto } from '../dto/products/product.update.dto';
 import { NotFoundException } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
@@ -16,12 +16,12 @@ export class ProductsRepository {
 
   async createProduct(
     shopId: string,
-    productCreateRequestDto: ProductCreateRequestDto,
+    productCreateDto: ProductCreateDto,
   ): Promise<Product> {
     const product = this.productsRepo.create({
       id: randomUUID(),
       shop: { id: shopId },
-      ...productCreateRequestDto,
+      ...productCreateDto,
     });
     return this.productsRepo.save(product);
   }
@@ -86,7 +86,14 @@ export class ProductsRepository {
     shopId: string,
     productUpdateDto: ProductUpdateDto,
   ): Promise<Product> {
-    await this.productsRepo.update({ id: productId }, productUpdateDto);
+    const updateResult = await this.productsRepo.update(
+      { id: productId, shopId, isDeleted: false },
+      productUpdateDto,
+    );
+
+    if (updateResult.affected === 0) {
+      throw new NotFoundException('Product does not exist.');
+    }
 
     return this.productsRepo.findOneOrFail({
       where: {
@@ -102,16 +109,11 @@ export class ProductsRepository {
   async softDeleteShopProductById(
     productId: string,
     shopId: string,
-  ): Promise<Product> {
+  ): Promise<boolean> {
     const deletedProduct = await this.productsRepo.update(
       { shopId: shopId, id: productId, isDeleted: false },
       { isDeleted: true },
     );
-    if (deletedProduct.affected === 0) {
-      throw new NotFoundException(
-        'Product does not exist or is already deleted.',
-      );
-    }
-    return this.productsRepo.findOneByOrFail({ id: productId });
+    return deletedProduct.affected !== 0;
   }
 }

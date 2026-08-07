@@ -5,7 +5,7 @@ import { CartItem } from '../entities/cart.item.entity';
 @Exclude()
 export class CartItemResponseDto {
   @Expose()
-  id!: number;
+  id!: string;
 
   @Expose({ name: 'productId' })
   product_id!: string;

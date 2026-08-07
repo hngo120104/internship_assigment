@@ -1,7 +1,7 @@
 import { Expose } from 'class-transformer';
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class UserPasswordUpdateRequestDto {
+export class UserPasswordUpdateDto {
   @IsString()
   @IsNotEmpty()
   @Expose({ name: 'new_password' })

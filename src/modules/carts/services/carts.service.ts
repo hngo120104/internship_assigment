@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CartsRepository } from '../repositories/carts.repository';
 import { Transactional } from 'typeorm-transactional';
-import { CartItemsAddRequestDto } from '../dto/cart.items.add.request.dto';
+import { CartItemsAddDto } from '../dto/cart.items.add.dto';
 import { Cart } from '../entities/cart.entity';
 import { CartResponseDto } from '../dto/cart.response.dto';
 import { plainToInstance } from 'class-transformer';
@@ -52,24 +52,24 @@ export class CartsService {
   @Transactional()
   async addItemToCart(
     owner: { userId?: string; guestId?: string },
-    cartItemsAddRequestDto: CartItemsAddRequestDto,
+    cartItemsAddDto: CartItemsAddDto,
   ): Promise<CartResponseDto> {
     const userCart = await this.cartsRepo.findOrCreateActiveCart(owner);
     const cartItemExist =
       await this.cartItemsRepo.findCartItemByCartIdAndProductId(
         userCart.id,
-        cartItemsAddRequestDto.productId,
+        cartItemsAddDto.productId,
       );
 
     if (!cartItemExist) {
       await this.cartItemsService.createCartItem(
         owner.userId!,
-        cartItemsAddRequestDto,
+        cartItemsAddDto,
       );
     } else {
       await this.cartItemsService.addExistCartItemQuantity(
         cartItemExist.id,
-        cartItemsAddRequestDto,
+        cartItemsAddDto,
       );
     }
 
@@ -78,12 +78,16 @@ export class CartsService {
     return this.toCartResponseDto(updatedCart);
   }
 
-  async deleteCart(userId: string) {
-    const deletedCart = await this.cartsRepo.softDeleteCart(userId);
-    await this.cartItemsService.deleteAllCartItemsInCart(deletedCart.id);
-    if (!deletedCart) {
+  async deleteCart(userId: string): Promise<void> {
+    const activeCart = await this.cartsRepo.findCartByUserId(userId);
+    if (!activeCart) {
       throw new NotFoundException('User cart does not exist.');
     }
+    const isDeleted = await this.cartsRepo.softDeleteCart(userId);
+    if (!isDeleted) {
+      throw new NotFoundException('User cart does not exist.');
+    }
+    await this.cartItemsService.deleteAllCartItemsInCart(activeCart.id);
   }
 
   private toCartResponseDto(cart: Cart): CartResponseDto {

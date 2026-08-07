@@ -3,7 +3,7 @@ import { UserResponseDto } from '../users/user.response.dto';
 import { ShopStatus } from '../../entities/shop.entity';
 
 @Exclude()
-export class UserShopCreateResponseDto {
+export class UserShopResponseDto {
   @Type(() => UserResponseDto)
   // @Expose()
   user!: UserResponseDto;

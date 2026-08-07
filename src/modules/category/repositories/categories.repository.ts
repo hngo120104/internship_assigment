@@ -2,9 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from '../entities/category.entity';
 import { In, Repository } from 'typeorm';
-import { CategoryCreateRequestDto } from '../dto/category.create.request.dto';
+import { CategoryCreateDto } from '../dto/category.create.dto';
 import { randomUUID } from 'crypto';
-import { CategoryUpdateRequestDto } from '../dto/category.update.request.dto';
+import { CategoryUpdateDto } from '../dto/category.update.dto';
 
 @Injectable()
 export class CategoriesRepository {
@@ -14,11 +14,11 @@ export class CategoriesRepository {
   ) {}
 
   async createCategory(
-    categoryCreateRequestDto: CategoryCreateRequestDto,
+    categoryCreateDto: CategoryCreateDto,
   ): Promise<Category> {
     const newCategory = this.categoriesRepo.create({
       id: randomUUID(),
-      ...categoryCreateRequestDto,
+      ...categoryCreateDto,
     });
     return await this.categoriesRepo.save(newCategory);
   }
@@ -56,11 +56,11 @@ export class CategoriesRepository {
 
   async updateCategory(
     categoryId: string,
-    categoryUpdateRequestDto: CategoryUpdateRequestDto,
+    categoryUpdateDto: CategoryUpdateDto,
   ): Promise<Category> {
     const updatedResult = await this.categoriesRepo.update(
       categoryId,
-      categoryUpdateRequestDto,
+      categoryUpdateDto,
     );
 
     if (updatedResult.affected === 0) {

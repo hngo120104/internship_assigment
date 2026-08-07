@@ -14,6 +14,7 @@ import {
   BinaryUuidColumn,
   PrimaryGeneratedBinaryUuidColumn,
 } from '../../../custom.decorators/primary.generated.uuid.binary.column';
+import { Order } from '../../orders/entities/order.entity';
 
 export enum ShopStatus {
   PENDING = 'PENDING',
@@ -65,4 +66,7 @@ export class Shop {
 
   @OneToMany(() => Product, (product) => product.shop, { cascade: true })
   products?: Product[];
+
+  @OneToMany(() => Order, (order) => order.shop)
+  orders!: Order[];
 }

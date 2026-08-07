@@ -1,8 +1,8 @@
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { UserPhoto } from '../entities/user.photo.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
-import { UserPhotosInsertRequestDto } from '../dto/user.photos/user.photos.insert.request.dto';
+import { UserPhotosInsertDto } from '../dto/user.photos/user.photos.insert.dto';
 
 @Injectable()
 export class UserPhotosRepository {
@@ -11,17 +11,28 @@ export class UserPhotosRepository {
     private readonly userPhotosRepo: Repository<UserPhoto>,
   ) {}
 
-  insertPhotosIntoUser(
+  async insertPhotosIntoUser(
     userId: string,
-    UserPhotosInsertRequestDto: UserPhotosInsertRequestDto[],
+    userPhotosInsertDto: UserPhotosInsertDto[],
   ): Promise<UserPhoto[]> {
-    const userPhotos = UserPhotosInsertRequestDto.map((userPhoto) => ({
+    const userPhotos = userPhotosInsertDto.map((userPhoto) => ({
       url: userPhoto.url,
       type: userPhoto.type,
       userId,
       user: { id: userId },
     }));
 
-    return this.userPhotosRepo.save(userPhotos);
+    return await this.userPhotosRepo.save(userPhotos);
+  }
+
+  async softDeleteUserPhotos(
+    userId: string,
+    userPhotoIds: string[],
+  ): Promise<number> {
+    const result = await this.userPhotosRepo.update(
+      { userId: userId, id: In(userPhotoIds), isDeleted: false },
+      { isDeleted: true },
+    );
+    return result.affected ?? 0;
   }
 }

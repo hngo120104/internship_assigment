@@ -15,6 +15,7 @@ import {
   PrimaryGeneratedBinaryUuidColumn,
 } from '../../../custom.decorators/primary.generated.uuid.binary.column';
 import { ProductCategories } from './product.categories.entity';
+import { OrderItem } from '../../orders/entities/order.item.entity';
 
 @Entity('products')
 export class Product {
@@ -58,6 +59,9 @@ export class Product {
     (productCategories) => productCategories.product,
   )
   productCategories!: ProductCategories[];
+
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.product)
+  orderItems!: OrderItem[];
 
   @OneToMany(() => ProductPhoto, (photo) => photo.product)
   photos!: ProductPhoto[];

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProductCreateRequestDto } from '../dto/products/product.create.dto';
+import { ProductCreateDto } from '../dto/products/product.create.dto';
 import { ProductUpdateDto } from '../dto/products/product.update.dto';
 
 import { Product } from '../entities/product.entity';
@@ -7,7 +7,7 @@ import { ProductsRepository } from '../repositories/products.repository';
 import { ProductResponseDto } from '../dto/products/product.response.dto';
 import { plainToInstance } from 'class-transformer';
 import { ProductPhotosRepository } from '../repositories/product.photo.repository';
-import { ProductPhotosInsertRequestDto } from '../dto/product.photos/product.photos.insert.request.dto';
+import { ProductPhotosInsertDto } from '../dto/product.photos/product.photos.insert.dto';
 import { Transactional } from 'typeorm-transactional';
 import { UserShopService } from '../../users/services/user.shop.service';
 import { ProductCategoriesRepository } from '../repositories/product.categories.repository';
@@ -24,34 +24,34 @@ export class ProductsService {
   private async insertPhotosIntoProduct(
     productId: string,
     createdProduct: Product,
-    productPhotosInsertRequestDto: ProductPhotosInsertRequestDto[],
+    productPhotosInsertDto: ProductPhotosInsertDto[],
   ) {
     const insertedPhotos = await this.productPhotosRepo.insertPhotosIntoProduct(
       productId,
-      productPhotosInsertRequestDto,
+      productPhotosInsertDto,
     );
     createdProduct.photos = insertedPhotos;
   }
 
   async proccessCreateProduct(
     userId: string,
-    productCreateRequestDto: ProductCreateRequestDto,
+    productCreateDto: ProductCreateDto,
   ): Promise<Product> {
     const shopId = (await this.userShopService.findShopByUserId(userId)).id;
     const createdProduct = await this.productsRepo.createProduct(
       shopId,
-      productCreateRequestDto,
+      productCreateDto,
     );
 
     const createdProductCategories =
       await this.productCategoriesRepo.saveProductCategories(
         createdProduct.id,
-        productCreateRequestDto.categoryIds,
+        productCreateDto.categoryIds,
       );
 
     createdProduct.productCategories = createdProductCategories;
 
-    const productPhotos = productCreateRequestDto.photos;
+    const productPhotos = productCreateDto.photos;
     await this.insertPhotosIntoProduct(
       createdProduct.id,
       createdProduct,
@@ -64,11 +64,11 @@ export class ProductsService {
   @Transactional()
   async createProduct(
     userId: string,
-    productCreateRequestDto: ProductCreateRequestDto,
+    productCreateDto: ProductCreateDto,
   ): Promise<ProductResponseDto> {
     const createdProduct = await this.proccessCreateProduct(
       userId,
-      productCreateRequestDto,
+      productCreateDto,
     );
     return this.toResponseDto(createdProduct);
   }
@@ -105,11 +105,21 @@ export class ProductsService {
     return foundProduct;
   }
 
-  async updateShopProductCategories(productId: string, categoryIds: string[]) {
-    return await this.productCategoriesRepo.updateProductCategories(
+  async updateShopProductCategories(
+    productId: string,
+    userId: string,
+    categoryIds: string[],
+  ): Promise<ProductResponseDto> {
+    const shopId = (await this.userShopService.findShopByUserId(userId)).id;
+    const product = await this.findActiveProductEntityById(productId);
+    if (product.shopId !== shopId) {
+      throw new NotFoundException('Product does not exist in your shop.');
+    }
+    await this.productCategoriesRepo.updateProductCategories(
       productId,
       categoryIds,
     );
+    return this.findActiveProductById(productId);
   }
 
   async updateShopProductById(
@@ -129,13 +139,17 @@ export class ProductsService {
   async deleteShopProductById(
     productId: string,
     userId: string,
-  ): Promise<ProductResponseDto> {
+  ): Promise<void> {
     const foundShop = await this.userShopService.findShopByUserId(userId);
-    const deletedProduct = await this.productsRepo.softDeleteShopProductById(
+    const isDeleted = await this.productsRepo.softDeleteShopProductById(
       productId,
       foundShop.id,
     );
-    return this.toResponseDto(deletedProduct);
+    if (!isDeleted) {
+      throw new NotFoundException(
+        'Product does not exist or is already deleted.',
+      );
+    }
   }
 
   private toResponseDto(product: Product): ProductResponseDto {

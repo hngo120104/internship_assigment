@@ -7,9 +7,9 @@ import { CartItemsRepository } from '../repositories/cart.items.repository';
 import { CartItemResponseDto } from '../dto/cart.item.response.dto';
 import { CartItem } from '../entities/cart.item.entity';
 import { plainToInstance } from 'class-transformer';
-import { CartItemsAddRequestDto } from '../dto/cart.items.add.request.dto';
+import { CartItemsAddDto } from '../dto/cart.items.add.dto';
 import { ProductsService } from '../../products/services/products.service';
-import { CartItemsUpdateRequestDto } from '../dto/cart.items.update.request.dto';
+import { CartItemsUpdateDto } from '../dto/cart.items.update.dto';
 import { CartsRepository } from '../repositories/carts.repository';
 
 @Injectable()
@@ -72,29 +72,30 @@ export class CartItemsService {
   }
 
   async validateCartItemOfCart(
+    cartItemId: string,
     userId: string,
-    cartId: string,
   ): Promise<boolean> {
     const userCart = await this.cartsRepo.findCartByUserId(userId);
     if (!userCart) throw new NotFoundException('User does not have cart.');
-    return userCart.id === cartId;
+    const cartItemCart = await this.cartsRepo.findCartByCartItemId(cartItemId);
+    return cartItemCart?.id === userCart.id;
   }
 
   async createCartItem(
     userId: string,
-    cartItemsAddRequestDto: CartItemsAddRequestDto,
+    cartItemsAddDto: CartItemsAddDto,
   ): Promise<CartItemResponseDto> {
     await this.validateProductQuantity(
-      cartItemsAddRequestDto.productId,
-      cartItemsAddRequestDto.quantity,
+      cartItemsAddDto.productId,
+      cartItemsAddDto.quantity,
     );
 
     const userCart = await this.cartsRepo.findCartByUserId(userId);
     if (!userCart) throw new NotFoundException('User does not have cart.');
     const createdCartItem = await this.cartItemsRepo.createCartItem(
       userCart.id,
-      cartItemsAddRequestDto.productId,
-      cartItemsAddRequestDto.quantity,
+      cartItemsAddDto.productId,
+      cartItemsAddDto.quantity,
     );
 
     return this.toCartItemResponseDto(createdCartItem);
@@ -102,14 +103,13 @@ export class CartItemsService {
 
   async addExistCartItemQuantity(
     cartItemId: string,
-    cartItemsAddRequestDto: CartItemsAddRequestDto,
+    cartItemsAddDto: CartItemsAddDto,
   ): Promise<CartItemResponseDto> {
     const foundCartItem = await this.findCartItemEntityById(cartItemId);
-    const totalQuantity =
-      foundCartItem.quantity + cartItemsAddRequestDto.quantity;
+    const totalQuantity = foundCartItem.quantity + cartItemsAddDto.quantity;
 
     await this.validateProductQuantity(
-      cartItemsAddRequestDto.productId,
+      cartItemsAddDto.productId,
       totalQuantity,
     );
 
@@ -120,13 +120,21 @@ export class CartItemsService {
 
   async updateExistCartItemQuantity(
     cartItemId: string,
-    cartItemsRequest: CartItemsUpdateRequestDto,
+    userId: string,
+    cartItemsUpdateDto: CartItemsUpdateDto,
   ): Promise<CartItemResponseDto> {
+    const belongsToUserCart = await this.validateCartItemOfCart(
+      cartItemId,
+      userId,
+    );
+    if (!belongsToUserCart) {
+      throw new NotFoundException('Cart item does not exist in user cart.');
+    }
     const foundCartItem = await this.findCartItemEntityById(cartItemId);
-    const updatedQuantity = cartItemsRequest.quantity;
+    const updatedQuantity = cartItemsUpdateDto.quantity;
 
     await this.validateProductQuantity(
-      cartItemsRequest.productId,
+      foundCartItem.productId,
       updatedQuantity,
     );
     foundCartItem.quantity = updatedQuantity;
@@ -151,8 +159,17 @@ export class CartItemsService {
     return this.toCartItemResponseDto(foundCartItem);
   }
 
-  async deleteCartItemInCart(cartItemId: string, userId: string) {
-    await this.validateCartItemOfCart(cartItemId, userId);
+  async deleteCartItemInCart(
+    cartItemId: string,
+    userId: string,
+  ): Promise<void> {
+    const belongsToUserCart = await this.validateCartItemOfCart(
+      cartItemId,
+      userId,
+    );
+    if (!belongsToUserCart) {
+      throw new NotFoundException('Cart item does not exist in user cart.');
+    }
     const cartItemToDelete =
       await this.cartItemsRepo.deleteCartItem(cartItemId);
     if (!cartItemToDelete)

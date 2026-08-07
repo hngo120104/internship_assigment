@@ -1,5 +1,4 @@
-import { UserShopCreateRequestDto } from '../dto/user.shop/user.shop.create.request.dto';
-import { UserShopCreateResponseDto } from '../dto/user.shop/user.shop.create.response.dto';
+import { UserShopCreateDto } from '../dto/user.shop/user.shop.create.dto';
 import { UserShopResponseDto } from '../dto/user.shop/user.shop.response.dto';
 import { Shop } from '../entities/shop.entity';
 import { User } from '../entities/user.entity';
@@ -28,7 +27,7 @@ export class UserShopService {
 
   private async validateShopRegistration(
     userId: string,
-    userShopCreateRequestDto: UserShopCreateRequestDto,
+    userShopCreateDto: UserShopCreateDto,
   ): Promise<User> {
     const foundUser = await this.usersRepo.findActiveUserById(userId);
     if (!foundUser) {
@@ -40,7 +39,7 @@ export class UserShopService {
     }
 
     const existShopName = await this.userShopRepo.findActiveShopByName(
-      userShopCreateRequestDto.shopName,
+      userShopCreateDto.shopName,
     );
     if (existShopName) {
       throw new ConflictException('Shop name already exists.');
@@ -50,11 +49,11 @@ export class UserShopService {
 
   async proccessCreateShop(
     userId: string,
-    userShopCreateRequestDto: UserShopCreateRequestDto,
-  ): Promise<{ existUser: User; createdShop: Shop }> {
+    userShopCreateDto: UserShopCreateDto,
+  ): Promise<Shop> {
     const foundUser = await this.validateShopRegistration(
       userId,
-      userShopCreateRequestDto,
+      userShopCreateDto,
     );
 
     const sellerRole = await this.roleRepo.findByRoleName('SELLER');
@@ -69,26 +68,23 @@ export class UserShopService {
 
     const newShop = await this.userShopRepo.createShop(
       foundUser,
-      userShopCreateRequestDto,
+      userShopCreateDto,
     );
 
-    return {
-      existUser: foundUser,
-      createdShop: newShop,
-    };
+    return newShop;
   }
 
   @Transactional()
   async createShop(
     userId: string,
-    userShopCreateRequestDto: UserShopCreateRequestDto,
-  ): Promise<UserShopCreateResponseDto> {
-    const { existUser, createdShop } = await this.proccessCreateShop(
+    userShopCreateDto: UserShopCreateDto,
+  ): Promise<UserShopResponseDto> {
+    const createdShop = await this.proccessCreateShop(
       userId,
-      userShopCreateRequestDto,
+      userShopCreateDto,
     );
 
-    return this.toUserShopCreateResponseDto(existUser, createdShop);
+    return this.toUserShopResponseDto(createdShop);
   }
 
   async findShopByUserId(userId: string): Promise<UserShopResponseDto> {
@@ -127,20 +123,11 @@ export class UserShopService {
     return this.toUserShopResponseDto(updatedShop);
   }
 
-  private toUserShopCreateResponseDto(
-    user: User,
-    shop: Shop,
-  ): UserShopCreateResponseDto {
-    return plainToInstance(
-      UserShopCreateResponseDto,
-      {
-        ...shop,
-        user,
-      },
-      {
-        excludeExtraneousValues: true,
-      },
-    );
+  async deleteShop(userId: string): Promise<void> {
+    const deleteResult = await this.userShopRepo.softDeleteShop(userId);
+    if (!deleteResult) {
+      throw new NotFoundException('User does not have a shop.');
+    }
   }
 
   private toUserShopResponseDto(shop: Shop): UserShopResponseDto {

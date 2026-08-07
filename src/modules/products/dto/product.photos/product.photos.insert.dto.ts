@@ -1,7 +1,7 @@
 import { Expose } from 'class-transformer';
 import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-export class ProductPhotosInsertRequestDto {
+export class ProductPhotosInsertDto {
   @IsNotEmpty()
   @IsString()
   url!: string;

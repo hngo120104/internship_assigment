@@ -5,6 +5,7 @@ import { UserPhotoResponseDto } from '../user.photos/user.photos.insert.response
 import { UserShopResponseDto } from '../user.shop/user.shop.response.dto';
 import { TransformFnParams } from 'class-transformer';
 import { User, UserStatus } from '../../entities/user.entity';
+import { UserAddressesReponseDto } from '../user.addresses/user.addresses.reponse.dto';
 
 export class UserResponseDto {
   @Expose()
@@ -33,6 +34,10 @@ export class UserResponseDto {
   @Expose()
   @Type(() => UserPhotoResponseDto)
   photos?: UserPhotoResponseDto[];
+
+  @Expose()
+  @Type(() => UserAddressesReponseDto)
+  addresses!: UserAddressesReponseDto[];
 
   @Expose()
   @Type(() => UserShopResponseDto)

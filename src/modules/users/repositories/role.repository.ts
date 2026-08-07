@@ -2,7 +2,7 @@ import { Repository } from 'typeorm';
 import { Role } from '../entities/role.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { RoleCreateRequestDto } from '../dto/role/role.create.request.dto';
+import { RoleCreateDto } from '../dto/role/role.create.dto';
 
 @Injectable()
 export class RolesRepository {
@@ -11,10 +11,10 @@ export class RolesRepository {
     private readonly roleRepo: Repository<Role>,
   ) {}
 
-  async createRole(roleCreateRequestDto: RoleCreateRequestDto): Promise<Role> {
+  async createRole(roleCreateDto: RoleCreateDto): Promise<Role> {
     const newRole = this.roleRepo.create({
-      name: roleCreateRequestDto.name,
-      description: roleCreateRequestDto.description,
+      name: roleCreateDto.name,
+      description: roleCreateDto.description,
     });
     return await this.roleRepo.save(newRole);
   }

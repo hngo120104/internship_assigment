@@ -23,7 +23,10 @@ export class ProductCategoriesRepository {
     return await this.productCategoriesRepo.save(createdProductCategories);
   }
 
-  async updateProductCategories(productId: string, categoryIds: string[]) {
+  async updateProductCategories(
+    productId: string,
+    categoryIds: string[],
+  ): Promise<void> {
     const updatedProductCategories = categoryIds.map((categoryId) => {
       return {
         productId: productId,

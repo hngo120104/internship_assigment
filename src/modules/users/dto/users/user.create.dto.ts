@@ -9,9 +9,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Expose, Type } from 'class-transformer';
-import { UserPhotosInsertRequestDto } from '../user.photos/user.photos.insert.request.dto';
+import { UserPhotosInsertDto } from '../user.photos/user.photos.insert.dto';
 
-export class UserCreateRequestDto {
+export class UserCreateDto {
   @IsString()
   @IsNotEmpty()
   @Expose({ name: 'user_name' })
@@ -32,6 +32,6 @@ export class UserCreateRequestDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => UserPhotosInsertRequestDto)
-  photos?: UserPhotosInsertRequestDto[];
+  @Type(() => UserPhotosInsertDto)
+  photos?: UserPhotosInsertDto[];
 }

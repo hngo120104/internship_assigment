@@ -13,9 +13,9 @@ import {
   ArrayUnique,
 } from 'class-validator';
 import { Expose, Type } from 'class-transformer';
-import { ProductPhotosInsertRequestDto } from '../product.photos/product.photos.insert.request.dto';
+import { ProductPhotosInsertDto } from '../product.photos/product.photos.insert.dto';
 
-export class ProductCreateRequestDto {
+export class ProductCreateDto {
   @IsString()
   @IsNotEmpty()
   @Length(10, 500, { message: 'Name must be between 10 and 500 characters.' })
@@ -30,9 +30,9 @@ export class ProductCreateRequestDto {
 
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ProductPhotosInsertRequestDto)
+  @Type(() => ProductPhotosInsertDto)
   @IsNotEmpty()
-  photos!: ProductPhotosInsertRequestDto[];
+  photos!: ProductPhotosInsertDto[];
 
   @IsOptional()
   @IsString()

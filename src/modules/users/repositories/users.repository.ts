@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserCreateRequestDto } from '../dto/users/user.create.request.dto';
+import { UserCreateDto } from '../dto/users/user.create.dto';
 import { User, UserStatus } from '../entities/user.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,13 +10,13 @@ export class UsersRepository {
   constructor(@InjectRepository(User) private userRepo: Repository<User>) {}
 
   async createUser(
-    userCreateRequestDto: UserCreateRequestDto,
+    userCreateDto: UserCreateDto,
     passwordHashed: string,
   ): Promise<User> {
     const newUser = this.userRepo.create({
       id: randomUUID(),
-      userName: userCreateRequestDto.userName,
-      email: userCreateRequestDto.email,
+      userName: userCreateDto.userName,
+      email: userCreateDto.email,
       passwordHashed: passwordHashed,
     });
     return this.userRepo.save(newUser);
@@ -59,20 +59,37 @@ export class UsersRepository {
   findActiveUserById(userId: string): Promise<User | null> {
     return this.userRepo.findOne({
       where: { id: userId, isDeleted: false, userStatus: UserStatus.ACTIVE },
-      relations: { userRoles: { role: true }, shop: true },
+      relations: { userRoles: { role: true }, shop: true, addresses: true },
     });
   }
 
   findActiveUserByEmail(email: string): Promise<User | null> {
     return this.userRepo.findOne({
       where: { email: email, isDeleted: false, userStatus: UserStatus.ACTIVE },
-      relations: { userRoles: { role: true }, shop: true },
+      relations: { userRoles: { role: true }, shop: true, addresses: true },
     });
   }
 
   findManyActiveUsers(page: number, limit: number): Promise<User[]> {
     return this.userRepo.find({
       where: { isDeleted: false, userStatus: UserStatus.ACTIVE },
+      relations: {
+        userRoles: { role: true },
+        photos: true,
+        shop: true,
+        addresses: true,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+      order: {
+        userName: 'ASC',
+      },
+    });
+  }
+
+  findManyUsers(page: number, limit: number): Promise<User[]> {
+    return this.userRepo.find({
+      where: { isDeleted: false },
       relations: { userRoles: { role: true }, photos: true, shop: true },
       skip: (page - 1) * limit,
       take: limit,
@@ -86,16 +103,12 @@ export class UsersRepository {
     return await this.userRepo.save(user);
   }
 
-  async softDeleteUser(userId: string): Promise<User> {
+  async softDeleteUser(userId: string): Promise<boolean> {
     const result = await this.userRepo.update(
       { id: userId, isDeleted: false },
       { isDeleted: true },
     );
 
-    if (result.affected === 0) {
-      throw new NotFoundException('User does not exist or is already deleted.');
-    }
-
-    return this.userRepo.findOneByOrFail({ id: userId });
+    return result.affected !== 0;
   }
 }

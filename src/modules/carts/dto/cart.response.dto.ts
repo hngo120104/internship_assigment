@@ -34,7 +34,7 @@ export class CartResponseDto {
       0,
     );
   })
-  subtotal!: number;
+  sub_total!: number;
 
   @Expose({ name: 'createdAt' })
   created_at!: Date;

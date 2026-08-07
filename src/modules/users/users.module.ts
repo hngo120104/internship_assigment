@@ -19,6 +19,9 @@ import { UserRolesRepository } from './repositories/user.roles.repository';
 import { UserRolesServce } from './services/user.roles.service';
 import { RolesService } from './services/role.service';
 import { ShopsController } from './controllers/user.shops.controller';
+import { UserAddressesController } from './controllers/user.addresses.controller';
+import { UserAddressesService } from './services/user.addresses.service';
+import { UserAddressesRepository } from './repositories/user.addresses.repository';
 
 @Module({
   imports: [
@@ -44,8 +47,10 @@ import { ShopsController } from './controllers/user.shops.controller';
     UserRolesRepository,
     RolesService,
     RolesRepository,
+    UserAddressesService,
+    UserAddressesRepository,
   ],
-  controllers: [UsersController, ShopsController],
+  controllers: [UsersController, ShopsController, UserAddressesController],
   exports: [
     UsersService,
     UserShopService,

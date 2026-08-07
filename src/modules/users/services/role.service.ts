@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RolesRepository } from '../repositories/role.repository';
-import { RoleCreateRequestDto } from '../dto/role/role.create.request.dto';
+import { RoleCreateDto } from '../dto/role/role.create.dto';
 import { Role } from '../entities/role.entity';
 import { RoleResponseDto } from '../dto/role/role.response.dto';
 import { plainToInstance } from 'class-transformer';
@@ -9,10 +9,8 @@ import { plainToInstance } from 'class-transformer';
 export class RolesService {
   constructor(private readonly rolesRepo: RolesRepository) {}
 
-  async createRole(
-    roleCreateRequestDto: RoleCreateRequestDto,
-  ): Promise<RoleResponseDto> {
-    const createdRole = await this.rolesRepo.createRole(roleCreateRequestDto);
+  async createRole(roleCreateDto: RoleCreateDto): Promise<RoleResponseDto> {
+    const createdRole = await this.rolesRepo.createRole(roleCreateDto);
     return this.toResponse(createdRole);
   }
 

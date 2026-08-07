@@ -109,14 +109,11 @@ export class CartsRepository {
     return this.cartsRepo.save(newCart);
   }
 
-  async softDeleteCart(userId: string): Promise<Cart> {
-    await this.cartsRepo.update(
+  async softDeleteCart(userId: string): Promise<boolean> {
+    const deleteResult = await this.cartsRepo.update(
       { userId: userId, isDeleted: false, cartStatus: CartStatus.ACTIVE },
       { isDeleted: true, cartStatus: CartStatus.EXPIRED },
     );
-    return await this.cartsRepo.findOneByOrFail({
-      userId: userId,
-      isDeleted: true,
-    });
+    return deleteResult.affected !== 0;
   }
 }

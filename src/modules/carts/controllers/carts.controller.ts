@@ -10,7 +10,7 @@ import {
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
 import { CartsService } from '../services/carts.service';
-import { CartItemsAddRequestDto } from '../dto/cart.items.add.request.dto';
+import { CartItemsAddDto } from '../dto/cart.items.add.dto';
 
 import { CartResponseDto } from '../dto/cart.response.dto';
 import { CartItemsService } from '../services/cart.items.service';
@@ -36,18 +36,18 @@ export class CartsController {
   @Post('me')
   async addItem(
     @CurrentUser() user: CurrentUserPayload,
-    @Body() cartItemsAddRequestDto: CartItemsAddRequestDto,
+    @Body() cartItemsAddDto: CartItemsAddDto,
   ): Promise<CartResponseDto> {
     const cart = await this.cartsService.addItemToCart(
       { userId: user.sub },
-      cartItemsAddRequestDto,
+      cartItemsAddDto,
     );
     return cart;
   }
 
   @Delete('me/clear')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteCart(@CurrentUser() user: CurrentUserPayload) {
+  async deleteCart(@CurrentUser() user: CurrentUserPayload): Promise<void> {
     await this.cartsService.deleteCart(user.sub);
   }
 }
