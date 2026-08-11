@@ -9,7 +9,6 @@ import { Transactional } from 'typeorm-transactional';
 import { OrderItemCreateDto } from '../dto/order.item.create.dto';
 import { ProductsService } from '../../products/services/products.service';
 import { OrderItem } from '../entities/order.item.entity';
-import { Order } from '../entities/order.entity';
 import { Product } from '../../products/entities/product.entity';
 import { BuyNowRequestDto } from '../dto/buynow.request.dto';
 import { OrderResponseDto } from '../dto/order.response.dto';
@@ -49,14 +48,14 @@ export class OrdersService {
     return toResponseDto(OrderResponseDto, foundPendingOrder);
   }
 
-  @Transactional()
-  async createOrder(
-    userId: string,
-    shopId: string,
-    shipAddressId: string,
-  ): Promise<Order> {
-    return await this.ordersRepo.createOrder(userId, shopId, shipAddressId);
-  }
+  // @Transactional()
+  // async createOrder(
+  //   userId: string,
+  //   shopId: string,
+  //   shipAddressId: string,
+  // ): Promise<Order> {
+  //   return await this.ordersRepo.createOrder(userId, shopId, shipAddressId);
+  // }
 
   @Transactional()
   async createOrderItem(
@@ -92,6 +91,7 @@ export class OrdersService {
         buyNowRequestDto.quantity,
       );
 
+    // create order with product snap shot and return order id
     const orderId = await this.createOrderWithItemsForShop(
       userId,
       reservedProduct.shopId,
@@ -112,12 +112,17 @@ export class OrdersService {
         userId,
         checkoutRequestDto.shipAddressId,
       );
-    const activeCartItems = await this.getActiveUserCartItemsOrThrow(userId);
+    const activeCartItems =
+      await this.cartItemsService.findAllUserActiveCartItemEntitiesByUserIdOrThrow(
+        userId,
+      );
+    // sort items to avoid race condition when 2 requests lock each other's resources
     const requestedItems = this.sortItemsByProductIdForLocking(
       checkoutRequestDto.items,
     );
 
     this.validateCheckoutItemsMatchActiveCart(activeCartItems, requestedItems);
+    // reserve product's stock and group order item by shop
     const reservedItemsByShop =
       await this.reserveProductsAndGroupItemsByShop(requestedItems);
     const createdOrderIds = await this.createOrdersForEachShop(
@@ -133,14 +138,6 @@ export class OrdersService {
     return await this.getCreatedOrderResponsesOrThrow(createdOrderIds);
   }
 
-  private async getActiveUserCartItemsOrThrow(
-    userId: string,
-  ): Promise<CartItem[]> {
-    return await this.cartItemsService.findAllUserActiveCartItemEntitiesByUserIdOrThrow(
-      userId,
-    );
-  }
-
   private sortItemsByProductIdForLocking(
     requestedItems: OrderItemCreateDto[],
   ): OrderItemCreateDto[] {
@@ -153,12 +150,15 @@ export class OrdersService {
     cartItems: CartItem[],
     requestedItems: OrderItemCreateDto[],
   ): void {
+    // validate cart items length !== 0
     this.validateCartContainsItems(cartItems);
     this.validateCheckoutIncludesEveryCartItem(cartItems, requestedItems);
 
+    // map for grouping cart item by shop
     const cartItemByProductId = new Map(
       cartItems.map((cartItem) => [cartItem.productId, cartItem]),
     );
+    // validate each request item match all items in user's cart
     for (const requestedItem of requestedItems) {
       this.validateRequestedItemMatchesCart(
         requestedItem,
