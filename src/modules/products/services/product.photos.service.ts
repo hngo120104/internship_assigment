@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ProductPhotosInsertDto } from '../dto/product.photos/product.photos.insert.dto';
 import { ProductPhotosResponseDto } from '../dto/product.photos/product.photos.response.dto';
 import { ProductPhotosRepository } from '../repositories/product.photo.repository';
-import { plainToInstance } from 'class-transformer';
+import { toListResponseDtos } from '../../../utils/to.dto.response';
 
 @Injectable()
 export class ProductPhotosService {
@@ -21,11 +21,11 @@ export class ProductPhotosService {
     return insertedPhotos;
   }
 
-  toProductPhotosInsertResponse(
-    productPhotos: ProductPhoto[],
-  ): ProductPhotosResponseDto[] {
-    return plainToInstance(ProductPhotosResponseDto, productPhotos, {
-      excludeExtraneousValues: true,
-    });
+  async findProductPhotosByProductId(
+    productId: string,
+  ): Promise<ProductPhotosResponseDto[]> {
+    const foundPhotos =
+      await this.productPhotosRepo.findProductPhotosByProductId(productId);
+    return toListResponseDtos(ProductPhotosResponseDto, foundPhotos);
   }
 }

@@ -15,11 +15,10 @@ import { BuyNowRequestDto } from '../dto/buynow.request.dto';
 import { OrderResponseDto } from '../dto/order.response.dto';
 import { UsersService } from '../../users/services/users.service';
 import { UserAddressesService } from '../../users/services/user.addresses.service';
-import { plainToInstance } from 'class-transformer';
 import { CheckoutRequestDto } from '../dto/checkout.request.dto';
-import { CartsService } from '../../carts/services/carts.service';
-import { Cart } from '../../carts/entities/cart.entity';
 import { CartItem } from '../../carts/entities/cart.item.entity';
+import { CartItemsService } from '../../carts/services/cart.items.service';
+import { toResponseDto } from '../../../utils/to.dto.response';
 
 interface ReservedOrderItem {
   request: OrderItemCreateDto;
@@ -36,8 +35,19 @@ export class OrdersService {
     private readonly productsService: ProductsService,
     private readonly usersService: UsersService,
     private readonly userAddressesService: UserAddressesService,
-    private readonly cartsService: CartsService,
+    private readonly cartItemsService: CartItemsService,
   ) {}
+
+  async findUserPendingOrderByUserId(
+    userId: string,
+  ): Promise<OrderResponseDto> {
+    const foundPendingOrder =
+      await this.ordersRepo.findPendingOrderByUserId(userId);
+    if (!foundPendingOrder) {
+      throw new NotFoundException('User does not have pending order.');
+    }
+    return toResponseDto(OrderResponseDto, foundPendingOrder);
+  }
 
   @Transactional()
   async createOrder(
@@ -53,10 +63,11 @@ export class OrdersService {
     orderId: string,
     orderItemCreateDto: OrderItemCreateDto,
   ): Promise<OrderItem> {
-    const lockedProduct = await this.productsService.reserveProductStock(
-      orderItemCreateDto.productId,
-      orderItemCreateDto.quantity,
-    );
+    const lockedProduct =
+      await this.productsService.validateAndReserveProductStock(
+        orderItemCreateDto.productId,
+        orderItemCreateDto.quantity,
+      );
 
     return await this.createOrderItemSnapshot(
       orderId,
@@ -70,20 +81,21 @@ export class OrdersService {
     userId: string,
     buyNowRequestDto: BuyNowRequestDto,
   ): Promise<OrderResponseDto> {
-    await this.validateActiveUserExists(userId);
-    const shippingAddressId = await this.getOwnedShippingAddressIdOrThrow(
-      userId,
-      buyNowRequestDto.shipAddressId,
-    );
-    const reservedProduct = await this.productsService.reserveProductStock(
-      buyNowRequestDto.productId,
-      buyNowRequestDto.quantity,
-    );
+    const shippingAddress =
+      await this.userAddressesService.findActiveUserAddressEntityByIdOfUserOrThrow(
+        userId,
+        buyNowRequestDto.shipAddressId,
+      );
+    const reservedProduct =
+      await this.productsService.validateAndReserveProductStock(
+        buyNowRequestDto.productId,
+        buyNowRequestDto.quantity,
+      );
 
     const orderId = await this.createOrderWithItemsForShop(
       userId,
       reservedProduct.shopId,
-      shippingAddressId,
+      shippingAddress.id,
       [{ request: buyNowRequestDto, product: reservedProduct }],
     );
 
@@ -95,50 +107,38 @@ export class OrdersService {
     userId: string,
     checkoutRequestDto: CheckoutRequestDto,
   ): Promise<OrderResponseDto[]> {
-    await this.validateActiveUserExists(userId);
-    const shippingAddressId = await this.getOwnedShippingAddressIdOrThrow(
-      userId,
-      checkoutRequestDto.shipAddressId,
-    );
-    const activeCart = await this.getActiveUserCartOrThrow(userId);
+    const shippingAddress =
+      await this.userAddressesService.findActiveUserAddressEntityByIdOfUserOrThrow(
+        userId,
+        checkoutRequestDto.shipAddressId,
+      );
+    const activeCartItems = await this.getActiveUserCartItemsOrThrow(userId);
     const requestedItems = this.sortItemsByProductIdForLocking(
       checkoutRequestDto.items,
     );
 
-    this.validateCheckoutItemsMatchActiveCart(
-      activeCart.cartItems ?? [],
-      requestedItems,
-    );
+    this.validateCheckoutItemsMatchActiveCart(activeCartItems, requestedItems);
     const reservedItemsByShop =
       await this.reserveProductsAndGroupItemsByShop(requestedItems);
     const createdOrderIds = await this.createOrdersForEachShop(
       userId,
-      shippingAddressId,
+      shippingAddress.id,
       reservedItemsByShop,
     );
 
-    await this.cartsService.markCartAsOrdered(activeCart);
+    await this.cartItemsService.markAllUserCartItemsAsOrderedOrThrow(
+      userId,
+      activeCartItems.length,
+    );
     return await this.getCreatedOrderResponsesOrThrow(createdOrderIds);
   }
 
-  private async validateActiveUserExists(userId: string): Promise<void> {
-    await this.usersService.findActiveUserByUserId(userId);
-  }
-
-  private async getOwnedShippingAddressIdOrThrow(
+  private async getActiveUserCartItemsOrThrow(
     userId: string,
-    shippingAddressId: string,
-  ): Promise<string> {
-    const shippingAddress =
-      await this.userAddressesService.findActiveUserAddressById(
-        userId,
-        shippingAddressId,
-      );
-    return shippingAddress.id;
-  }
-
-  private async getActiveUserCartOrThrow(userId: string): Promise<Cart> {
-    return await this.cartsService.getCurrentUserActiveCartEntity({ userId });
+  ): Promise<CartItem[]> {
+    return await this.cartItemsService.findAllUserActiveCartItemEntitiesByUserIdOrThrow(
+      userId,
+    );
   }
 
   private sortItemsByProductIdForLocking(
@@ -206,10 +206,11 @@ export class OrdersService {
     const reservedItemsByShop: ReservedItemsByShop = new Map();
 
     for (const requestedItem of requestedItems) {
-      const reservedProduct = await this.productsService.reserveProductStock(
-        requestedItem.productId,
-        requestedItem.quantity,
-      );
+      const reservedProduct =
+        await this.productsService.validateAndReserveProductStock(
+          requestedItem.productId,
+          requestedItem.quantity,
+        );
       const shopItems = reservedItemsByShop.get(reservedProduct.shopId) ?? [];
       shopItems.push({ request: requestedItem, product: reservedProduct });
       reservedItemsByShop.set(reservedProduct.shopId, shopItems);
@@ -272,7 +273,7 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException('Created order not found.');
     }
-    return this.toOrderResponseDto(order);
+    return toResponseDto(OrderResponseDto, order);
   }
 
   private async createOrderItemSnapshot(
@@ -286,12 +287,6 @@ export class OrdersService {
       quantity: orderItemCreateDto.quantity,
       unitPrice: Number(product.price),
       note: orderItemCreateDto.note,
-    });
-  }
-
-  private toOrderResponseDto(order: Order): OrderResponseDto {
-    return plainToInstance(OrderResponseDto, order, {
-      excludeExtraneousValues: true,
     });
   }
 }

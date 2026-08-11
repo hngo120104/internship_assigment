@@ -16,9 +16,12 @@ import { RolesRepository } from '../repositories/role.repository';
 import { UserShopResponseDto } from '../dto/user.shop/user.shop.response.dto';
 
 import { UserResponseDto } from '../dto/users/user.response.dto';
-import { plainToInstance } from 'class-transformer';
 import { UserCreateResponseDto } from '../dto/users/user.create.response.dto';
 import { UserRolesRepository } from '../repositories/user.roles.repository';
+import {
+  toListResponseDtos,
+  toResponseDto,
+} from '../../../utils/to.dto.response';
 
 @Injectable()
 export class UsersService {
@@ -35,22 +38,24 @@ export class UsersService {
     limit: number,
   ): Promise<UserResponseDto[]> {
     const foundUsers = await this.usersRepo.findManyActiveUsers(page, limit);
-    return this.toUserArrayResponseDto(foundUsers);
+    return toListResponseDtos(UserResponseDto, foundUsers);
   }
 
-  async findActiveUserByUserId(userId: string): Promise<UserResponseDto> {
+  async findActiveUserEntityByUserIdOrThrow(
+    userId: string,
+  ): Promise<UserResponseDto> {
     const foundUser = await this.usersRepo.findActiveUserById(userId);
     if (!foundUser) {
       throw new NotFoundException('User not found.');
     }
-    return this.toUserResponseDto(foundUser);
+    return toResponseDto(UserResponseDto, foundUser);
   }
 
-  async findActiveUserByEmail(email: string): Promise<User> {
+  async findActiveUserByEmailOrThrow(email: string): Promise<User> {
     const foundUserWithEmail =
       await this.usersRepo.findActiveUserByEmail(email);
     if (!foundUserWithEmail) {
-      throw new NotFoundException(`User with email ${email}.`);
+      throw new NotFoundException(`User with email ${email} does not exist.`);
     }
     return foundUserWithEmail;
   }
@@ -122,7 +127,7 @@ export class UsersService {
       );
     }
 
-    return this.toUserCreateResponseDto(newUserWithPasswordHashed);
+    return toResponseDto(UserCreateResponseDto, newUserWithPasswordHashed);
   }
 
   async updateUser(
@@ -130,7 +135,7 @@ export class UsersService {
     updateData: Partial<User>,
   ): Promise<UserResponseDto> {
     const updatedUser = await this.usersRepo.updateUser(userId, updateData);
-    return this.toUserResponseDto(updatedUser);
+    return toResponseDto(UserResponseDto, updatedUser);
   }
 
   async updateUserPassword(
@@ -155,7 +160,7 @@ export class UsersService {
       user,
       newPassowrdHashed,
     );
-    return this.toUserResponseDto(updatedUser);
+    return toResponseDto(UserResponseDto, updatedUser);
   }
 
   @Transactional()
@@ -173,24 +178,6 @@ export class UsersService {
 
   async banUser(userId: string): Promise<UserResponseDto> {
     const bannedUser = await this.usersRepo.banUser(userId);
-    return this.toUserResponseDto(bannedUser);
-  }
-
-  toUserCreateResponseDto(user: User): UserCreateResponseDto {
-    return plainToInstance(UserCreateResponseDto, user, {
-      excludeExtraneousValues: true,
-    });
-  }
-
-  toUserResponseDto(user: User): UserResponseDto {
-    return plainToInstance(UserResponseDto, user, {
-      excludeExtraneousValues: true,
-    });
-  }
-
-  toUserArrayResponseDto(users: User[]): UserResponseDto[] {
-    return plainToInstance(UserResponseDto, users, {
-      excludeExtraneousValues: true,
-    });
+    return toResponseDto(UserResponseDto, bannedUser);
   }
 }

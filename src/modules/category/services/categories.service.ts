@@ -1,10 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CategoriesRepository } from '../repositories/categories.repository';
 import { CategoryCreateDto } from '../dto/category.create.dto';
 import { CategoryResponseDto } from '../dto/category.response.dto';
 import { Category } from '../entities/category.entity';
-import { plainToInstance } from 'class-transformer';
 import { CategoryUpdateDto } from '../dto/category.update.dto';
+import { In } from 'typeorm';
+import {
+  toListResponseDtos,
+  toResponseDto,
+} from '../../../utils/to.dto.response';
 
 @Injectable()
 export class CategoriesService {
@@ -15,7 +23,7 @@ export class CategoriesService {
   ): Promise<CategoryResponseDto> {
     const createdCategory =
       await this.categoriesRepo.createCategory(categoryCreateDto);
-    return this.toCategoryResponseDto(createdCategory);
+    return toResponseDto(CategoryResponseDto, createdCategory);
   }
 
   async findActiveCategoryEntitiesByIds(
@@ -32,7 +40,7 @@ export class CategoriesService {
   ): Promise<CategoryResponseDto[]> {
     const foundActiveCategories =
       await this.categoriesRepo.findManyActiveCategories(page, limit);
-    return this.toCategoriesArrayResponseDto(foundActiveCategories);
+    return toListResponseDtos(CategoryResponseDto, foundActiveCategories);
   }
 
   async updateCategory(
@@ -43,18 +51,25 @@ export class CategoriesService {
       categoryId,
       categoryUpdateDto,
     );
-    return this.toCategoryResponseDto(updatedCategory);
+    return toResponseDto(CategoryResponseDto, updatedCategory);
   }
 
-  toCategoryResponseDto(category: Category): CategoryResponseDto {
-    return plainToInstance(CategoryResponseDto, category, {
-      excludeExtraneousValues: true,
+  async deleteCategories(
+    categoryIds: string[],
+  ): Promise<CategoryResponseDto[]> {
+    if (categoryIds.length === 0) {
+      throw new BadRequestException(
+        'Categories to be deleted must not be empty.',
+      );
+    }
+    const deletedCategoriesNumber =
+      await this.categoriesRepo.softDeleteCategoriesByIds(categoryIds);
+    if (deletedCategoriesNumber != categoryIds.length) {
+      throw new NotFoundException('Some categories might already be deleted.');
+    }
+    const deletedCategories = await this.categoriesRepo.findManyWithOptions({
+      where: { id: In(categoryIds), isActive: false },
     });
-  }
-
-  toCategoriesArrayResponseDto(category: Category[]): CategoryResponseDto[] {
-    return plainToInstance(CategoryResponseDto, category, {
-      excludeExtraneousValues: true,
-    });
+    return toListResponseDtos(CategoryResponseDto, deletedCategories);
   }
 }

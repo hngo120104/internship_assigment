@@ -49,6 +49,9 @@ export class UserAddressesController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() addressIds: string[],
   ): Promise<void> {
-    await this.userAddressesService.deleteUserAddresses(user.sub, addressIds);
+    await this.userAddressesService.deleteUserAddressesOrThrow(
+      user.sub,
+      addressIds,
+    );
   }
 }

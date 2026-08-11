@@ -1,12 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserCreateDto } from '../dto/users/user.create.dto';
 import { User, UserStatus } from '../entities/user.entity';
-import { Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class UsersRepository {
   constructor(@InjectRepository(User) private userRepo: Repository<User>) {}
+
+  async findOneWithOptions(
+    options: FindOneOptions<User>,
+  ): Promise<User | null> {
+    return await this.userRepo.findOne(options);
+  }
+
+  async findManyWithOptions(options: FindManyOptions<User>): Promise<User[]> {
+    return await this.userRepo.find(options);
+  }
 
   async createUser(
     userCreateDto: UserCreateDto,

@@ -1,32 +1,27 @@
 import { Exclude, Expose, Transform, Type } from 'class-transformer';
 import { CartItemResponseDto } from './cart.item.response.dto';
-import { Cart } from '../entities/cart.entity';
 
-export enum CartStatus {
-  ACTIVE = 'ACTIVE',
-  ORDERED = 'ORDERED',
-  EXPIRED = 'EXPIRED',
+interface UserCartLike {
+  userId: string;
+  cartItems: Array<{
+    quantity: number;
+    product?: { price: number };
+  }>;
 }
 
 @Exclude()
-export class CartResponseDto {
-  @Expose()
-  id!: string;
-
+export class UserCartResponseDto {
   @Expose({ name: 'userId' })
   user_id?: string;
-
-  @Expose({ name: 'cartStatus' })
-  cart_status!: CartStatus;
 
   @Expose({ name: 'cartItems' })
   @Type(() => CartItemResponseDto)
   cart_items!: CartItemResponseDto[];
 
   @Expose()
-  @Transform(({ obj }) => {
-    const cart = obj as Cart;
-    return (cart.cartItems ?? []).reduce(
+  @Transform(({ obj }: { obj: UserCartLike }) => {
+    const items = obj.cartItems;
+    return items.reduce(
       (
         total: number,
         item: { quantity: number; product?: { price: number } },
@@ -35,10 +30,4 @@ export class CartResponseDto {
     );
   })
   sub_total!: number;
-
-  @Expose({ name: 'createdAt' })
-  created_at!: Date;
-
-  @Expose({ name: 'updatedAt' })
-  updated_at!: Date;
 }

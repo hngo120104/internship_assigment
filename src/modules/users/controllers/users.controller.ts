@@ -14,7 +14,9 @@ export class UsersController {
   async getCurrentUserProfile(
     @CurrentUser() user: CurrentUserPayload,
   ): Promise<UserResponseDto> {
-    return await this.usersService.findActiveUserByUserId(user.sub);
+    return await this.usersService.findActiveUserEntityByUserIdOrThrow(
+      user.sub,
+    );
   }
 
   @Post('/update-password')

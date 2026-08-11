@@ -11,7 +11,6 @@ import { UserPhoto } from '../../modules/users/entities/user.photo.entity';
 import { ShopPhoto } from '../../modules/users/entities/shop.photos.entity';
 import { Product } from '../../modules/products/entities/product.entity';
 import { Category } from '../../modules/category/entities/category.entity';
-import { Cart } from '../../modules/carts/entities/cart.entity';
 import { CartItem } from '../../modules/carts/entities/cart.item.entity';
 import { ProductPhoto } from '../../modules/products/entities/product.photo.entity';
 import { SeederService } from './services/seeder.service';
@@ -27,7 +26,6 @@ import { SeederService } from './services/seeder.service';
       ShopPhoto,
       Product,
       Category,
-      Cart,
       CartItem,
       ProductPhoto,
     ]),

@@ -5,10 +5,10 @@ import { LoginDto } from '../dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginResponseDto } from '../dto/login.response.dto';
 import { User } from '../../users/entities/user.entity';
-import { plainToInstance } from 'class-transformer';
 import { UserCreateDto } from '../../users/dto/users/user.create.dto';
 import { UserCreateResponseDto } from '../../users/dto/users/user.create.response.dto';
 import { RoleResponseDto } from '../../users/dto/role/role.response.dto';
+import { toResponseDto } from '../../../utils/to.dto.response';
 
 @Injectable()
 export class AuthService {
@@ -18,9 +18,8 @@ export class AuthService {
   ) {}
 
   private async validateLoginUser(loginDto: LoginDto): Promise<User> {
-    const userWithEmailExist = await this.usersService.findActiveUserByEmail(
-      loginDto.email,
-    );
+    const userWithEmailExist =
+      await this.usersService.findActiveUserByEmailOrThrow(loginDto.email);
 
     if (!userWithEmailExist) {
       throw new UnauthorizedException('Invalid credentials');
@@ -54,10 +53,8 @@ export class AuthService {
       createdUserResponse.id,
       createdUserResponse.roles,
     );
-    return {
-      ...createdUserResponse,
-      access_token: accessToken,
-    };
+    createdUserResponse.access_token = accessToken;
+    return createdUserResponse;
   }
 
   async login(loginDto: LoginDto): Promise<LoginResponseDto> {
@@ -66,14 +63,8 @@ export class AuthService {
       validatedUser.id,
       validatedUser.userRoles.map((userRoles) => userRoles.role),
     );
-    const loginResponse = this.toLoginResponseDto(validatedUser);
+    const loginResponse = toResponseDto(LoginResponseDto, validatedUser);
     loginResponse.access_token = validatedUserAccessToken;
     return loginResponse;
-  }
-
-  private toLoginResponseDto(user: User): LoginResponseDto {
-    return plainToInstance(LoginResponseDto, user, {
-      excludeExtraneousValues: true,
-    });
   }
 }

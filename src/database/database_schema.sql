@@ -156,43 +156,21 @@ CREATE TABLE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
-    `carts` (
+    `cart_items` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
-        `guest_id` varchar(50) DEFAULT NULL,
-        `user_id` varchar(36) DEFAULT NULL,
-        `cart_status` enum ('ACTIVE', 'ORDERED', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE',
+        `user_id` varchar(36) NOT NULL,
+        `cart_item_status` enum ('ACTIVE', 'ORDERED', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE',
+        `product_id` varchar(36) NOT NULL,
+        `quantity` INT NOT NULL DEFAULT 1,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
-        UNIQUE KEY `UQ_cart_guest` (`guest_id`),
-        CONSTRAINT `FK_carts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
-        CONSTRAINT `CHK_carts_exactly_one_owner` CHECK (
-            (
-                `user_id` IS NOT NULL
-                AND `guest_id` IS NULL
-            )
-            OR (
-                `user_id` IS NULL
-                AND `guest_id` IS NOT NULL
-            )
-        )
-    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-CREATE TABLE
-    `cart_items` (
-        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
-        `cart_id` varchar(36) NOT NULL,
-        `product_id` varchar(36) NOT NULL,
-        `quantity` int NOT NULL DEFAULT 1,
-        `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-        `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-        PRIMARY KEY (`id`),
-        UNIQUE KEY `UQ_cart_items_cart_product` (`cart_id`, `product_id`),
+        KEY `IDX_cart_items_user_status` (`user_id`, `cart_item_status`, `is_deleted`),
         KEY `IDX_cart_items_product_id` (`product_id`),
-        CONSTRAINT `FK_cart_items_cart` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`id`) ON DELETE RESTRICT,
+        CONSTRAINT `FK_cart_items_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `FK_cart_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
-        CONSTRAINT `CHK_cart_items_quantity_positive` CHECK (`quantity` > 0)
+        CONSTRAINT `CHK_cart_items_quantity_non_negative` CHECK (`quantity` > 0)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE

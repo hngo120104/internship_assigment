@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { OrdersService } from '../services/orders.service';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
@@ -9,6 +9,13 @@ import { BuyNowRequestDto } from '../dto/buynow.request.dto';
 @Controller('api/orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  @Get('my-order')
+  async getUserPendingOrderByUserId(
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<OrderResponseDto> {
+    return await this.ordersService.findUserPendingOrderByUserId(user.sub);
+  }
 
   @Post('checkout')
   async checkoutCart(

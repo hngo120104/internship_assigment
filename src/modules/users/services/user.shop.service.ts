@@ -12,9 +12,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Transactional } from 'typeorm-transactional';
-import { plainToInstance } from 'class-transformer';
 import { UserRolesRepository } from '../repositories/user.roles.repository';
 import { UserShopUpdateDto } from '../dto/user.shop/user.shop.update.dto';
+import { toResponseDto } from '../../../utils/to.dto.response';
 
 @Injectable()
 export class UserShopService {
@@ -81,20 +81,20 @@ export class UserShopService {
   ): Promise<UserShopResponseDto> {
     const createdShop = await this.processCreateShop(userId, userShopCreateDto);
 
-    return this.toUserShopResponseDto(createdShop);
+    return toResponseDto(UserShopResponseDto, createdShop);
   }
 
-  async findShopByUserId(userId: string): Promise<UserShopResponseDto> {
+  async findShopByUserIdOrThrow(userId: string): Promise<UserShopResponseDto> {
     const foundShop = await this.userShopRepo.findActiveShopByUserId(userId);
 
     if (!foundShop) {
       throw new NotFoundException('User does not have shop');
     }
 
-    return this.toUserShopResponseDto(foundShop);
+    return toResponseDto(UserShopResponseDto, foundShop);
   }
 
-  async findShopEntityByUserId(userId: string): Promise<Shop> {
+  async findShopEntityByUserIdOrThrow(userId: string): Promise<Shop> {
     const foundShop = await this.userShopRepo.findActiveShopByUserId(userId);
 
     if (!foundShop) {
@@ -117,19 +117,14 @@ export class UserShopService {
       userId,
       userShopUpdateDto,
     );
-    return this.toUserShopResponseDto(updatedShop);
+    return toResponseDto(UserShopResponseDto, updatedShop);
   }
 
-  async deleteShop(userId: string): Promise<void> {
-    const deleteResult = await this.userShopRepo.softDeleteShop(userId);
-    if (!deleteResult) {
+  async deleteShopOrThrow(userId: string): Promise<number> {
+    const deletedCount = await this.userShopRepo.softDeleteShop(userId);
+    if (deletedCount !== 1) {
       throw new NotFoundException('User does not have a shop.');
     }
-  }
-
-  private toUserShopResponseDto(shop: Shop): UserShopResponseDto {
-    return plainToInstance(UserShopResponseDto, shop, {
-      excludeExtraneousValues: true,
-    });
+    return deletedCount;
   }
 }

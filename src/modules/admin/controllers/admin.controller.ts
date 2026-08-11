@@ -14,7 +14,7 @@ import { Roles } from '../../auth/guards/role/role.decorator';
 import { Role } from '../../auth/guards/role/role.enum';
 import { CategoryUpdateDto } from '../../category/dto/category.update.dto';
 import { UserResponseDto } from '../../users/dto/users/user.response.dto';
-import { CartResponseDto } from '../../carts/dto/cart.response.dto';
+import { UserCartResponseDto } from '../../carts/dto/cart.response.dto';
 
 @Controller('api/admin')
 export class AdminController {
@@ -30,7 +30,7 @@ export class AdminController {
   }
   @Get('carts')
   @Roles(Role.ADMIN)
-  async findActiveUsersCarts(): Promise<CartResponseDto[]> {
+  async findActiveUsersCarts(): Promise<UserCartResponseDto[]> {
     return await this.AdminService.findActiveUsersCarts();
   }
 

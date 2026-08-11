@@ -1,9 +1,8 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from '../entities/product.entity';
-import { Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { ProductCreateDto } from '../dto/products/product.create.dto';
 import { ProductUpdateDto } from '../dto/products/product.update.dto';
-import { NotFoundException } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 import { Shop } from '../../users/entities/shop.entity';
 
@@ -13,6 +12,18 @@ export class ProductsRepository {
     @InjectRepository(Product)
     private readonly productsRepo: Repository<Product>,
   ) {}
+
+  async findOneWithOptions(
+    options: FindOneOptions<Product>,
+  ): Promise<Product | null> {
+    return await this.productsRepo.findOne(options);
+  }
+
+  async findManyWithOptions(
+    options: FindManyOptions<Product>,
+  ): Promise<Product[]> {
+    return await this.productsRepo.find(options);
+  }
 
   async findProductByIdAndLock(productId: string): Promise<Product | null> {
     return await this.productsRepo
@@ -109,35 +120,22 @@ export class ProductsRepository {
     productId: string,
     shopId: string,
     productUpdateDto: ProductUpdateDto,
-  ): Promise<Product> {
+  ): Promise<boolean> {
     const updateResult = await this.productsRepo.update(
       { id: productId, shopId, isDeleted: false },
       productUpdateDto,
     );
-
-    if (updateResult.affected === 0) {
-      throw new NotFoundException('Product does not exist.');
-    }
-
-    return this.productsRepo.findOneOrFail({
-      where: {
-        id: productId,
-        shopId,
-      },
-      relations: {
-        shop: true,
-      },
-    });
+    return updateResult.affected === 1;
   }
 
   async softDeleteShopProductById(
     productId: string,
     shopId: string,
-  ): Promise<boolean> {
+  ): Promise<number> {
     const deletedProduct = await this.productsRepo.update(
       { shopId: shopId, id: productId, isDeleted: false },
       { isDeleted: true },
     );
-    return deletedProduct.affected !== 0;
+    return deletedProduct.affected ?? 0;
   }
 }

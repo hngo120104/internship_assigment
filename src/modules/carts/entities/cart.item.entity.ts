@@ -1,28 +1,32 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
-  Index,
   ManyToOne,
   PrimaryGeneratedColumn,
-  CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Cart } from './cart.entity';
+import { User } from '../../users/entities/user.entity';
 import { Product } from '../../products/entities/product.entity';
 
+export enum CartItemStatus {
+  ACTIVE = 'ACTIVE',
+  ORDERED = 'ORDERED',
+  EXPIRED = 'EXPIRED',
+}
+
 @Entity('cart_items')
-@Index('UQ_cart_item_cart_product', ['cartId', 'productId'], { unique: true })
 export class CartItem {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'cart_id', type: 'varchar', length: 36 })
-  cartId!: string;
+  @Column({ name: 'user_id', type: 'varchar', length: 36 })
+  userId!: string;
 
-  @ManyToOne(() => Cart, (cart) => cart.cartItems, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'cart_id' })
-  cart!: Cart;
+  @ManyToOne(() => User, (user) => user.cartItems, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'user_id' })
+  user?: User;
 
   @Column({ name: 'product_id', type: 'varchar', length: 36 })
   productId!: string;
@@ -34,8 +38,15 @@ export class CartItem {
   product!: Product;
 
   @Column({
-    type: 'int',
-    default: 1,
+    name: 'cart_item_status',
+    type: 'enum',
+    enum: CartItemStatus,
+    default: CartItemStatus.ACTIVE,
+  })
+  cartItemStatus!: CartItemStatus;
+
+  @Column({
+    type: 'integer',
   })
   quantity!: number;
 
@@ -44,4 +55,7 @@ export class CartItem {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'datetime', precision: 6 })
   updatedAt!: Date;
+
+  @Column({ name: 'is_deleted', type: 'tinyint', default: 0 })
+  isDeleted!: boolean;
 }

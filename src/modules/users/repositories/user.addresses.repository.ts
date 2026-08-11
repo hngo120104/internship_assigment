@@ -1,6 +1,6 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Address } from '../entities/user.address.entity';
-import { In, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { UserAddressesCreateDto } from '../dto/user.addresses/user.addresses.create.dto';
 import { UserAddressesUpdateDto } from '../dto/user.addresses/user.addresses.update.dto';
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -11,6 +11,18 @@ export class UserAddressesRepository {
     @InjectRepository(Address)
     private readonly userAddressesRepo: Repository<Address>,
   ) {}
+
+  async findOneWithOptions(
+    options: FindOneOptions<Address>,
+  ): Promise<Address | null> {
+    return await this.userAddressesRepo.findOne(options);
+  }
+
+  async findManyWithOptions(
+    options: FindManyOptions<Address>,
+  ): Promise<Address[]> {
+    return await this.userAddressesRepo.find(options);
+  }
 
   async findPrimaryUserAddressByUserId(
     userId: string,

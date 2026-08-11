@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { Shop } from './shop.entity';
 import { UserPhoto } from './user.photo.entity';
-import { Cart } from '../../carts/entities/cart.entity';
+import { CartItem } from '../../carts/entities/cart.item.entity';
 import { Address } from './user.address.entity';
 import { UserRoles } from './user.roles.entity';
 import { Order } from '../../orders/entities/order.entity';
@@ -61,8 +61,8 @@ export class User {
   @OneToMany(() => UserPhoto, (photos) => photos.user)
   photos?: UserPhoto[];
 
-  @OneToMany(() => Cart, (cart) => cart.user)
-  cart?: Cart[];
+  @OneToMany(() => CartItem, (cartItem) => cartItem.user)
+  cartItems?: CartItem[];
 
   @OneToMany(() => Order, (order) => order.user)
   orders!: Order[];

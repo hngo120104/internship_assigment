@@ -44,6 +44,6 @@ export class ShopsController {
   @Roles(Role.SELLER)
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteShop(@CurrentUser() user: CurrentUserPayload): Promise<void> {
-    await this.userShopService.deleteShop(user.sub);
+    await this.userShopService.deleteShopOrThrow(user.sub);
   }
 }

@@ -6,8 +6,7 @@ import { ProductsService } from '../products/services/products.service';
 import { UsersService } from '../users/services/users.service';
 import { UserAddressesService } from '../users/services/user.addresses.service';
 import { OrderStatus, PaymentStatus } from './entities/order.entity';
-import { CartsService } from '../carts/services/carts.service';
-import { CartStatus } from '../carts/entities/cart.entity';
+import { CartItemsService } from '../carts/services/cart.items.service';
 
 jest.mock('typeorm-transactional', () => ({
   Transactional:
@@ -21,22 +20,26 @@ describe('OrdersService', () => {
   let ordersRepo: { createOrder: jest.Mock; findOrderById: jest.Mock };
   let orderItemsRepo: { createOrderItem: jest.Mock };
   let productsService: { reserveProductStock: jest.Mock };
-  let usersService: { findActiveUserByUserId: jest.Mock };
-  let userAddressesService: { findActiveUserAddressById: jest.Mock };
-  let cartsService: {
-    getCurrentUserActiveCartEntity: jest.Mock;
-    markCartAsOrdered: jest.Mock;
+  let usersService: { findActiveUserEntityByUserIdOrThrow: jest.Mock };
+  let userAddressesService: {
+    findActiveUserAddressEntityByIdOrThrow: jest.Mock;
+  };
+  let cartItemsService: {
+    findAllUserActiveCartItemEntitiesByUserIdOrThrow: jest.Mock;
+    markAllUserCartItemsAsOrderedOrThrow: jest.Mock;
   };
 
   beforeEach(async () => {
     ordersRepo = { createOrder: jest.fn(), findOrderById: jest.fn() };
     orderItemsRepo = { createOrderItem: jest.fn() };
     productsService = { reserveProductStock: jest.fn() };
-    usersService = { findActiveUserByUserId: jest.fn() };
-    userAddressesService = { findActiveUserAddressById: jest.fn() };
-    cartsService = {
-      getCurrentUserActiveCartEntity: jest.fn(),
-      markCartAsOrdered: jest.fn(),
+    usersService = { findActiveUserEntityByUserIdOrThrow: jest.fn() };
+    userAddressesService = {
+      findActiveUserAddressEntityByIdOrThrow: jest.fn(),
+    };
+    cartItemsService = {
+      findAllUserActiveCartItemEntitiesByUserIdOrThrow: jest.fn(),
+      markAllUserCartItemsAsOrderedOrThrow: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -47,7 +50,7 @@ describe('OrdersService', () => {
         { provide: ProductsService, useValue: productsService },
         { provide: UsersService, useValue: usersService },
         { provide: UserAddressesService, useValue: userAddressesService },
-        { provide: CartsService, useValue: cartsService },
+        { provide: CartItemsService, useValue: cartItemsService },
       ],
     }).compile();
 
@@ -138,8 +141,12 @@ describe('OrdersService', () => {
       shipAddress: address,
     };
 
-    usersService.findActiveUserByUserId.mockResolvedValue({ id: 'user-id' });
-    userAddressesService.findActiveUserAddressById.mockResolvedValue(address);
+    usersService.findActiveUserEntityByUserIdOrThrow.mockResolvedValue({
+      id: 'user-id',
+    });
+    userAddressesService.findActiveUserAddressEntityByIdOrThrow.mockResolvedValue(
+      address,
+    );
     productsService.reserveProductStock.mockResolvedValue(product);
     ordersRepo.createOrder.mockResolvedValue(order);
     orderItemsRepo.createOrderItem.mockResolvedValue(orderItem);
@@ -152,10 +159,9 @@ describe('OrdersService', () => {
       note: 'Gift wrap',
     });
 
-    expect(userAddressesService.findActiveUserAddressById).toHaveBeenCalledWith(
-      'user-id',
-      address.id,
-    );
+    expect(
+      userAddressesService.findActiveUserAddressEntityByIdOrThrow,
+    ).toHaveBeenCalledWith('user-id', address.id);
     expect(ordersRepo.createOrder).toHaveBeenCalledWith(
       'user-id',
       product.shopId,
@@ -178,15 +184,10 @@ describe('OrdersService', () => {
 
   it('creates one order per shop from the active cart', async () => {
     const address = { id: 'address-id', userId: 'user-id' };
-    const cart = {
-      id: 'cart-id',
-      userId: 'user-id',
-      cartStatus: CartStatus.ACTIVE,
-      cartItems: [
-        { productId: 'product-a', quantity: 2 },
-        { productId: 'product-b', quantity: 1 },
-      ],
-    };
+    const cartItems = [
+      { productId: 'product-a', quantity: 2 },
+      { productId: 'product-b', quantity: 1 },
+    ];
     const products = {
       'product-a': {
         id: 'product-a',
@@ -203,9 +204,15 @@ describe('OrdersService', () => {
     };
     const createdItems = new Map<string, object[]>();
 
-    usersService.findActiveUserByUserId.mockResolvedValue({ id: 'user-id' });
-    userAddressesService.findActiveUserAddressById.mockResolvedValue(address);
-    cartsService.getCurrentUserActiveCartEntity.mockResolvedValue(cart);
+    usersService.findActiveUserEntityByUserIdOrThrow.mockResolvedValue({
+      id: 'user-id',
+    });
+    userAddressesService.findActiveUserAddressEntityByIdOrThrow.mockResolvedValue(
+      address,
+    );
+    cartItemsService.findAllUserActiveCartItemEntitiesByUserIdOrThrow.mockResolvedValue(
+      cartItems,
+    );
     productsService.reserveProductStock.mockImplementation(
       (productId: keyof typeof products) =>
         Promise.resolve(products[productId]),
@@ -242,9 +249,7 @@ describe('OrdersService', () => {
         shipAddress: address,
       });
     });
-    cartsService.markCartAsOrdered.mockImplementation((orderedCart: object) =>
-      Promise.resolve(orderedCart),
-    );
+    cartItemsService.markAllUserCartItemsAsOrderedOrThrow.mockResolvedValue(2);
 
     const result = await service.checkoutCart('user-id', {
       shipAddressId: address.id,
@@ -265,7 +270,9 @@ describe('OrdersService', () => {
       'shop-b',
       address.id,
     );
-    expect(cartsService.markCartAsOrdered).toHaveBeenCalledWith(cart);
+    expect(
+      cartItemsService.markAllUserCartItemsAsOrderedOrThrow,
+    ).toHaveBeenCalledWith('user-id', 2);
     expect(result).toHaveLength(2);
   });
 });

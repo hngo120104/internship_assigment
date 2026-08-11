@@ -1,4 +1,4 @@
-import { In, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { ProductPhoto } from '../entities/product.photo.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
@@ -11,7 +11,21 @@ export class ProductPhotosRepository {
     private readonly ProductPhotosRepo: Repository<ProductPhoto>,
   ) {}
 
-  async findProductPhotos(productId: string): Promise<ProductPhoto[]> {
+  async findOneWithOptions(
+    options: FindOneOptions<ProductPhoto>,
+  ): Promise<ProductPhoto | null> {
+    return await this.ProductPhotosRepo.findOne(options);
+  }
+
+  async findManyWithOptions(
+    options: FindManyOptions<ProductPhoto>,
+  ): Promise<ProductPhoto[]> {
+    return await this.ProductPhotosRepo.find(options);
+  }
+
+  async findProductPhotosByProductId(
+    productId: string,
+  ): Promise<ProductPhoto[]> {
     return await this.ProductPhotosRepo.find({
       where: { productId: productId, isDeleted: false },
     });

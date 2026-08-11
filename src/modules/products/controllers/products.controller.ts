@@ -47,7 +47,7 @@ export class ProductsController {
   async getProductDetails(
     @Param('productId') productId: string,
   ): Promise<ProductResponseDto> {
-    return await this.productsService.findActiveProductById(productId);
+    return await this.productsService.findActiveProductByIdOrThrow(productId);
   }
 
   @Public()
@@ -93,6 +93,9 @@ export class ProductsController {
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') deleteProductId: string,
   ): Promise<void> {
-    await this.productsService.deleteShopProductById(deleteProductId, user.sub);
+    await this.productsService.deleteShopProductByIdOrThrow(
+      deleteProductId,
+      user.sub,
+    );
   }
 }

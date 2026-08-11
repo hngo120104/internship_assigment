@@ -11,49 +11,33 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
-import { CartsService } from '../services/carts.service';
 import { CartItemsAddDto } from '../dto/cart.items.add.dto';
 
-import { CartResponseDto } from '../dto/cart.response.dto';
+import { UserCartResponseDto } from '../dto/cart.response.dto';
 import { CartItemsService } from '../services/cart.items.service';
 import { CartItemResponseDto } from '../dto/cart.item.response.dto';
 import { CartItemsUpdateDto } from '../dto/cart.items.update.dto';
 
 @Controller('api/carts')
 export class CartsController {
-  constructor(
-    private readonly cartsService: CartsService,
-    private readonly cartItemsService: CartItemsService,
-  ) {}
+  constructor(private readonly cartItemsService: CartItemsService) {}
 
-  @Get('me')
-  async getUserActiveCart(
+  @Get()
+  async getAllUserActiveCartItems(
     @CurrentUser() user: CurrentUserPayload,
-  ): Promise<CartResponseDto> {
-    const owner = {
-      userId: user.sub,
-      guestId: undefined,
-    };
-    return this.cartsService.getCurrentUserActiveCart(owner);
-  }
-
-  @Post('me')
-  async addItem(
-    @CurrentUser() user: CurrentUserPayload,
-    @Body() cartItemsAddDto: CartItemsAddDto,
-  ): Promise<CartResponseDto> {
-    const cart = await this.cartsService.addItemToCart(
-      { userId: user.sub },
-      cartItemsAddDto,
-    );
-    return cart;
+  ): Promise<UserCartResponseDto> {
+    return this.cartItemsService.getUserActiveCart(user.sub);
   }
 
   @Get('items/:cartItemId')
   async getCartItem(
+    @CurrentUser() user: CurrentUserPayload,
     @Param('cartItemId') cartItemId: string,
   ): Promise<CartItemResponseDto> {
-    return this.cartItemsService.findCartItemById(cartItemId);
+    return this.cartItemsService.findActiveCartItemByUserIdAndCartItemIdOrThrow(
+      user.sub,
+      cartItemId,
+    );
   }
 
   @Post('items')
@@ -61,7 +45,10 @@ export class CartsController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() cartItemsAddDto: CartItemsAddDto,
   ): Promise<CartItemResponseDto> {
-    return this.cartItemsService.createCartItem(user.sub, cartItemsAddDto);
+    return this.cartItemsService.createNewCartItemOrAddQuantity(
+      user.sub,
+      cartItemsAddDto,
+    );
   }
 
   @Patch('items/:cartItemId')
@@ -83,12 +70,12 @@ export class CartsController {
     @Param('cartItemId') cartItemId: string,
     @CurrentUser() user: CurrentUserPayload,
   ): Promise<void> {
-    await this.cartItemsService.deleteCartItemInCart(cartItemId, user.sub);
+    await this.cartItemsService.deleteUserCartItemOrThrow(cartItemId, user.sub);
   }
 
-  @Delete('me/clear')
+  @Delete('clear')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteCart(@CurrentUser() user: CurrentUserPayload): Promise<void> {
-    await this.cartsService.deleteCart(user.sub);
+    await this.cartItemsService.deleteAllUserCartItemsOrThrow(user.sub);
   }
 }

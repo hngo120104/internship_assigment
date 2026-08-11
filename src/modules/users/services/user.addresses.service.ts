@@ -7,14 +7,16 @@ import { UserAddressesRepository } from '../repositories/user.addresses.reposito
 import { UserAddressesCreateDto } from '../dto/user.addresses/user.addresses.create.dto';
 import { UserAddressesResponseDto } from '../dto/user.addresses/user.addresses.response.dto';
 import { Address } from '../entities/user.address.entity';
-import { plainToInstance } from 'class-transformer';
 import { UserAddressesUpdateDto } from '../dto/user.addresses/user.addresses.update.dto';
+import { toResponseDto } from '../../../utils/to.dto.response';
 
 @Injectable()
 export class UserAddressesService {
   constructor(private readonly userAddressesRepo: UserAddressesRepository) {}
 
-  async findPrimaryUserAddressByUserId(userId: string): Promise<Address> {
+  async findPrimaryUserAddressEntityByUserIdOrThrow(
+    userId: string,
+  ): Promise<Address> {
     const foundAddress =
       await this.userAddressesRepo.findPrimaryUserAddressByUserId(userId);
     if (!foundAddress) {
@@ -23,7 +25,7 @@ export class UserAddressesService {
     return foundAddress;
   }
 
-  async findActiveUserAddressById(
+  async findActiveUserAddressEntityByIdOfUserOrThrow(
     userId: string,
     addressId: string,
   ): Promise<Address> {
@@ -45,7 +47,7 @@ export class UserAddressesService {
       userId,
       userAddressesCreateDto,
     );
-    return this.toUserAddressResponseDto(newUserAddress);
+    return toResponseDto(UserAddressesResponseDto, newUserAddress);
   }
 
   async updateUserAddress(
@@ -58,13 +60,13 @@ export class UserAddressesService {
       addressId,
       userAddressesUpdateDto,
     );
-    return this.toUserAddressResponseDto(updatedAddresses);
+    return toResponseDto(UserAddressesResponseDto, updatedAddresses);
   }
 
-  async deleteUserAddresses(
+  async deleteUserAddressesOrThrow(
     userId: string,
     addressIds: string[],
-  ): Promise<void> {
+  ): Promise<number> {
     if (addressIds.length === 0) {
       throw new BadRequestException('Addresses must not be empty.');
     }
@@ -75,13 +77,6 @@ export class UserAddressesService {
     if (deleteResult !== addressIds.length) {
       throw new NotFoundException('Some addresses might already be deleted.');
     }
-  }
-
-  private toUserAddressResponseDto(
-    userAddress: Address,
-  ): UserAddressesResponseDto {
-    return plainToInstance(UserAddressesResponseDto, userAddress, {
-      excludeExtraneousValues: true,
-    });
+    return deleteResult;
   }
 }

@@ -2,106 +2,169 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CartItemsRepository } from '../repositories/cart.items.repository';
 import { CartItemResponseDto } from '../dto/cart.item.response.dto';
 import { CartItem } from '../entities/cart.item.entity';
-import { plainToInstance } from 'class-transformer';
 import { CartItemsAddDto } from '../dto/cart.items.add.dto';
 import { ProductsService } from '../../products/services/products.service';
 import { CartItemsUpdateDto } from '../dto/cart.items.update.dto';
-import { CartsRepository } from '../repositories/carts.repository';
+import { UserCartResponseDto } from '../dto/cart.response.dto';
+import { Transactional } from 'typeorm-transactional';
+import {
+  toListResponseDtos,
+  toResponseDto,
+} from '../../../utils/to.dto.response';
 
 @Injectable()
 export class CartItemsService {
   constructor(
     private readonly cartItemsRepo: CartItemsRepository,
     private readonly productsService: ProductsService,
-    private readonly cartsRepo: CartsRepository,
   ) {}
 
-  async findCartItemById(cartItemId: string): Promise<CartItemResponseDto> {
-    const foundCartItem = await this.cartItemsRepo.findCartItemById(cartItemId);
-    if (!foundCartItem) throw new NotFoundException('Cart item not found.');
-    return this.toCartItemResponseDto(foundCartItem);
+  async getUserActiveCart(userId: string): Promise<UserCartResponseDto> {
+    const foundUserActiveCartItems =
+      await this.findAllUserActiveCartItemEntitiesByUserIdOrThrow(userId);
+    const userCartObj = {
+      userId: userId,
+      cartItems: foundUserActiveCartItems,
+    };
+    return toResponseDto(UserCartResponseDto, userCartObj);
   }
 
-  async findCartItemEntityById(cartItemId: string): Promise<CartItem> {
-    const foundCartItem = await this.cartItemsRepo.findCartItemById(cartItemId);
+  async findAllUserActiveCartItemsByUserIdOrThrow(
+    userId: string,
+  ): Promise<CartItemResponseDto[]> {
+    const foundCartItems =
+      await this.cartItemsRepo.findAllUserActiveCartItemsByUserId(userId);
+    if (foundCartItems.length === 0) {
+      throw new NotFoundException('Cart items not found.');
+    }
+    return toListResponseDtos(CartItemResponseDto, foundCartItems);
+  }
+
+  async findAllUserActiveCartItemEntitiesByUserIdOrThrow(
+    userId: string,
+  ): Promise<CartItem[]> {
+    const foundCartItems =
+      await this.cartItemsRepo.findAllUserActiveCartItemsByUserId(userId);
+    if (foundCartItems.length === 0) {
+      throw new NotFoundException('Cart items not found.');
+    }
+    return foundCartItems;
+  }
+
+  async findActiveCartItemByUserIdAndCartItemIdOrThrow(
+    userId: string,
+    cartItemId: string,
+  ): Promise<CartItemResponseDto> {
+    const foundCartItem =
+      await this.cartItemsRepo.findActiveCartItemByUserIdAndCartItemId(
+        userId,
+        cartItemId,
+      );
     if (!foundCartItem) throw new NotFoundException('Cart item not found.');
+    return toResponseDto(CartItemResponseDto, foundCartItem);
+  }
+
+  async findActiveCartItemEntityByUserIdAndCartItemIdOrThrow(
+    userId: string,
+    cartItemId: string,
+  ): Promise<CartItem> {
+    const foundCartItem =
+      await this.cartItemsRepo.findActiveCartItemByUserIdAndCartItemId(
+        userId,
+        cartItemId,
+      );
+    if (!foundCartItem)
+      throw new NotFoundException(`User's cart item not found.`);
     return foundCartItem;
   }
 
-  async findCartItemEntityByCartIdAndProductIdOrThrow(
-    cartId: string,
+  async findActiveCartItemEntityByUserIdAndProductIdOrThrow(
+    userId: string,
     productId: string,
   ): Promise<CartItem> {
     const foundCartItem =
-      await this.cartItemsRepo.findCartItemByCartIdAndProductId(
-        cartId,
+      await this.cartItemsRepo.findActiveCartItemByUserIdAndProductId(
+        userId,
         productId,
       );
     if (!foundCartItem) throw new NotFoundException('Cart item not found.');
     return foundCartItem;
   }
 
-  async findCartItemEntityByCartIdAndProductId(
-    cartId: string,
+  async findActiveCartItemEntityByUserIdAndProductId(
+    userId: string,
     productId: string,
   ): Promise<CartItem | null> {
-    return await this.cartItemsRepo.findCartItemByCartIdAndProductId(
-      cartId,
+    return await this.cartItemsRepo.findActiveCartItemByUserIdAndProductId(
+      userId,
       productId,
     );
   }
 
-  async getCartItemEntityById(cartItemId: string): Promise<CartItem> {
-    const foundCartItem = await this.cartItemsRepo.findCartItemById(cartItemId);
-    if (!foundCartItem) throw new NotFoundException('Cart item not found.');
-    return foundCartItem;
+  async findAllActiveUserCarts(): Promise<UserCartResponseDto[]> {
+    const activeCartItems = await this.cartItemsRepo.findAllActiveCartItems();
+    const itemsByUserId = new Map<string, CartItem[]>();
+
+    for (const cartItem of activeCartItems) {
+      const userCartItems = itemsByUserId.get(cartItem.userId) ?? [];
+      userCartItems.push(cartItem);
+      itemsByUserId.set(cartItem.userId, userCartItems);
+    }
+
+    return [...itemsByUserId].map(([userId, cartItems]) =>
+      toResponseDto(UserCartResponseDto, { userId, cartItems }),
+    );
   }
 
-  async validateCartItemOfCart(
-    cartItemId: string,
-    userId: string,
-  ): Promise<boolean> {
-    const userCart = await this.cartsRepo.findCartByUserId(userId);
-    if (!userCart) throw new NotFoundException('User does not have cart.');
-    const cartItemCart = await this.cartsRepo.findCartByCartItemId(cartItemId);
-    return cartItemCart?.id === userCart.id;
-  }
-
-  async createCartItem(
+  @Transactional()
+  async createNewCartItemOrAddQuantity(
     userId: string,
     cartItemsAddDto: CartItemsAddDto,
   ): Promise<CartItemResponseDto> {
+    const createdCartItemExist =
+      await this.findActiveCartItemEntityByUserIdAndProductId(
+        userId,
+        cartItemsAddDto.productId,
+      );
+
+    if (createdCartItemExist) {
+      return await this.addExistCartItemQuantity(
+        cartItemsAddDto,
+        createdCartItemExist,
+      );
+    }
     await this.productsService.validateProductQuantity(
       cartItemsAddDto.productId,
       cartItemsAddDto.quantity,
     );
-
-    const userCart = await this.cartsRepo.findCartByUserId(userId);
-    if (!userCart) throw new NotFoundException('User does not have cart.');
-    const createdCartItem = await this.cartItemsRepo.createCartItem(
-      userCart.id,
+    await this.cartItemsRepo.createCartItem(
+      userId,
       cartItemsAddDto.productId,
       cartItemsAddDto.quantity,
     );
 
-    return this.toCartItemResponseDto(createdCartItem);
+    const newCartItem =
+      await this.findActiveCartItemEntityByUserIdAndProductIdOrThrow(
+        userId,
+        cartItemsAddDto.productId,
+      );
+    return toResponseDto(CartItemResponseDto, newCartItem);
   }
 
   async addExistCartItemQuantity(
-    cartItemId: string,
     cartItemsAddDto: CartItemsAddDto,
+    cartItem: CartItem,
   ): Promise<CartItemResponseDto> {
-    const foundCartItem = await this.findCartItemEntityById(cartItemId);
-    const totalQuantity = foundCartItem.quantity + cartItemsAddDto.quantity;
+    const totalQuantity = cartItem.quantity + cartItemsAddDto.quantity;
 
     await this.productsService.validateProductQuantity(
       cartItemsAddDto.productId,
       totalQuantity,
     );
 
-    foundCartItem.quantity = totalQuantity;
-    await this.cartItemsRepo.saveCartItem(foundCartItem);
-    return this.toCartItemResponseDto(foundCartItem);
+    cartItem.quantity = totalQuantity;
+    await this.cartItemsRepo.saveCartItem(cartItem);
+    return toResponseDto(CartItemResponseDto, cartItem);
   }
 
   async updateExistCartItemQuantity(
@@ -109,73 +172,72 @@ export class CartItemsService {
     userId: string,
     cartItemsUpdateDto: CartItemsUpdateDto,
   ): Promise<CartItemResponseDto> {
-    const belongsToUserCart = await this.validateCartItemOfCart(
-      cartItemId,
-      userId,
-    );
-    if (!belongsToUserCart) {
-      throw new NotFoundException('Cart item does not exist in user cart.');
-    }
-    const foundCartItem = await this.findCartItemEntityById(cartItemId);
+    const foundCartItemBelongsToUser =
+      await this.findActiveCartItemEntityByUserIdAndCartItemIdOrThrow(
+        userId,
+        cartItemId,
+      );
     const updatedQuantity = cartItemsUpdateDto.quantity;
 
     await this.productsService.validateProductQuantity(
-      foundCartItem.productId,
+      foundCartItemBelongsToUser.productId,
       updatedQuantity,
     );
-    foundCartItem.quantity = updatedQuantity;
+    foundCartItemBelongsToUser.quantity = updatedQuantity;
 
-    const updatedCartItem =
-      await this.cartItemsRepo.saveCartItem(foundCartItem);
-    return this.toCartItemResponseDto(updatedCartItem);
+    const updatedCartItem = await this.cartItemsRepo.saveCartItem(
+      foundCartItemBelongsToUser,
+    );
+    return toResponseDto(CartItemResponseDto, updatedCartItem);
   }
 
-  async getCartItemInCart(
-    cartId: string,
+  async findUserActiveCartItemOrThrow(
+    userId: string,
     productId: string,
   ): Promise<CartItemResponseDto> {
     const foundCartItem =
-      await this.cartItemsRepo.findCartItemByCartIdAndProductId(
-        cartId,
+      await this.findActiveCartItemEntityByUserIdAndProductIdOrThrow(
+        userId,
         productId,
       );
 
-    if (!foundCartItem) throw new NotFoundException('Cart item not found.');
-
-    return this.toCartItemResponseDto(foundCartItem);
+    return toResponseDto(CartItemResponseDto, foundCartItem);
   }
 
-  async deleteCartItemInCart(
+  async deleteUserCartItemOrThrow(
     cartItemId: string,
     userId: string,
-  ): Promise<void> {
-    const belongsToUserCart = await this.validateCartItemOfCart(
-      cartItemId,
+  ): Promise<number> {
+    const deletedCount = await this.cartItemsRepo.softDeleteCartItem(
       userId,
+      cartItemId,
     );
-    if (!belongsToUserCart) {
-      throw new NotFoundException('Cart item does not exist in user cart.');
+    if (deletedCount !== 1) {
+      throw new NotFoundException(
+        'Cart item does not exist or is already deleted.',
+      );
     }
-    const cartItemToDelete =
-      await this.cartItemsRepo.deleteCartItem(cartItemId);
-    if (!cartItemToDelete)
-      throw new NotFoundException('Cart item does not exists.');
+    return deletedCount;
   }
 
-  async deleteAllCartItemsInCart(cartId: string): Promise<boolean> {
-    const deleteSuccess = await this.cartItemsRepo.deleteAllCartItems(cartId);
-    return deleteSuccess === true;
+  async deleteAllUserCartItemsOrThrow(userId: string): Promise<number> {
+    const deletedCount =
+      await this.cartItemsRepo.softDeleteAllCartItemsOfUser(userId);
+    if (deletedCount === 0) {
+      throw new NotFoundException('Cart items do not exist or are deleted.');
+    }
+    return deletedCount;
   }
 
-  private toCartItemResponseDto(cartItem: CartItem): CartItemResponseDto {
-    return plainToInstance(CartItemResponseDto, cartItem, {
-      excludeExtraneousValues: true,
-    });
-  }
-
-  private toCartItemsResponseDto(cartItems: CartItem[]): CartItemResponseDto[] {
-    return plainToInstance(CartItemResponseDto, cartItems, {
-      excludeExtraneousValues: true,
-    });
+  async markAllUserCartItemsAsOrderedOrThrow(
+    userId: string,
+    expectedCount: number,
+  ): Promise<number> {
+    const updatedCount =
+      await this.cartItemsRepo.markAllActiveCartItemsOfUserAsOrdered(userId);
+    if (updatedCount !== expectedCount) {
+      throw new NotFoundException('Some cart items are no longer active.');
+    }
+    return updatedCount;
   }
 }

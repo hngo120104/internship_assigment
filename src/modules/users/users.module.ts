@@ -22,6 +22,7 @@ import { ShopsController } from './controllers/user.shops.controller';
 import { UserAddressesController } from './controllers/user.addresses.controller';
 import { UserAddressesService } from './services/user.addresses.service';
 import { UserAddressesRepository } from './repositories/user.addresses.repository';
+import { ShopPhotosRepository } from './repositories/shop.photos.repository';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { UserAddressesRepository } from './repositories/user.addresses.repositor
     RolesRepository,
     UserAddressesService,
     UserAddressesRepository,
+    ShopPhotosRepository,
   ],
   controllers: [UsersController, ShopsController, UserAddressesController],
   exports: [

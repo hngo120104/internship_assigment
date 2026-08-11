@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from '../entities/category.entity';
-import { In, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { CategoryCreateDto } from '../dto/category.create.dto';
 import { CategoryUpdateDto } from '../dto/category.update.dto';
 
@@ -11,6 +11,18 @@ export class CategoriesRepository {
     @InjectRepository(Category)
     private readonly categoriesRepo: Repository<Category>,
   ) {}
+
+  async findOneWithOptions(
+    options: FindOneOptions<Category>,
+  ): Promise<Category | null> {
+    return await this.categoriesRepo.findOne(options);
+  }
+
+  async findManyWithOptions(
+    options: FindManyOptions<Category>,
+  ): Promise<Category[]> {
+    return await this.categoriesRepo.find(options);
+  }
 
   async createCategory(
     categoryCreateDto: CategoryCreateDto,
@@ -66,5 +78,13 @@ export class CategoriesRepository {
     }
 
     return this.categoriesRepo.findOneByOrFail({ id: categoryId });
+  }
+
+  async softDeleteCategoriesByIds(categoryIds: string[]): Promise<number> {
+    const deleteResult = await this.categoriesRepo.update(
+      { id: In(categoryIds), isActive: true },
+      { isActive: false },
+    );
+    return deleteResult.affected ?? 0;
   }
 }

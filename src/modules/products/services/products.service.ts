@@ -5,13 +5,16 @@ import { BadRequestException } from '@nestjs/common';
 import { Product } from '../entities/product.entity';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ProductResponseDto } from '../dto/products/product.response.dto';
-import { plainToInstance } from 'class-transformer';
 import { ProductPhotosRepository } from '../repositories/product.photo.repository';
 import { ProductPhotosInsertDto } from '../dto/product.photos/product.photos.insert.dto';
 import { Transactional } from 'typeorm-transactional';
 import { UserShopService } from '../../users/services/user.shop.service';
 import { ProductCategoriesRepository } from '../repositories/product.categories.repository';
 import { Shop } from '../../users/entities/shop.entity';
+import {
+  toListResponseDtos,
+  toResponseDto,
+} from '../../../utils/to.dto.response';
 
 @Injectable()
 export class ProductsService {
@@ -22,7 +25,7 @@ export class ProductsService {
     private readonly productCategoriesRepo: ProductCategoriesRepository,
   ) {}
 
-  async findProductEntityByIdAndLockForUpdate(
+  async findProductEntityByIdAndLockForUpdateOrThrow(
     productId: string,
   ): Promise<Product> {
     const foundLockedProduct =
@@ -33,7 +36,7 @@ export class ProductsService {
     return foundLockedProduct;
   }
 
-  async findShopEntityByProductId(productId: string): Promise<Shop> {
+  async findShopEntityByProductIdOrThrow(productId: string): Promise<Shop> {
     const foundShop =
       await this.productsRepo.findActiveShopByProductId(productId);
 
@@ -45,16 +48,17 @@ export class ProductsService {
   }
 
   async validateProductQuantity(productId: string, quantity: number) {
-    const product = await this.findActiveProductEntityById(productId);
+    const product = await this.findActiveProductEntityByIdOrThrow(productId);
     this.validateRequestedQuantityIsPositiveInteger(quantity);
     this.validateProductHasSufficientStock(product, quantity);
   }
 
-  async reserveProductStock(
+  async validateAndReserveProductStock(
     productId: string,
     quantity: number,
   ): Promise<Product> {
-    const product = await this.findProductEntityByIdAndLockForUpdate(productId);
+    const product =
+      await this.findProductEntityByIdAndLockForUpdateOrThrow(productId);
 
     this.validateRequestedQuantityIsPositiveInteger(quantity);
     this.validateProductHasSufficientStock(product, quantity);
@@ -102,18 +106,17 @@ export class ProductsService {
     userId: string,
     productCreateDto: ProductCreateDto,
   ): Promise<Product> {
-    const shopId = (await this.userShopService.findShopByUserId(userId)).id;
+    const shopId = (await this.userShopService.findShopByUserIdOrThrow(userId))
+      .id;
     const createdProduct = await this.productsRepo.createProduct(
       shopId,
       productCreateDto,
     );
-
     const createdProductCategories =
       await this.productCategoriesRepo.saveProductCategories(
         createdProduct.id,
         productCreateDto.categoryIds,
       );
-
     createdProduct.productCategories = createdProductCategories;
 
     const productPhotos = productCreateDto.photos;
@@ -135,7 +138,7 @@ export class ProductsService {
       userId,
       productCreateDto,
     );
-    return this.toResponseDto(createdProduct);
+    return toResponseDto(ProductResponseDto, createdProduct);
   }
 
   async findLatestActiveProducts(
@@ -144,7 +147,7 @@ export class ProductsService {
   ): Promise<ProductResponseDto[]> {
     const foundLatestProducts =
       await this.productsRepo.findManyLatestActiveProducts(page, limit);
-    return this.toArrayResponseDto(foundLatestProducts);
+    return toListResponseDtos(ProductResponseDto, foundLatestProducts);
   }
 
   async findLatestActiveShopProducts(
@@ -152,17 +155,21 @@ export class ProductsService {
   ): Promise<ProductResponseDto[]> {
     const foundShopLatestProducts =
       await this.productsRepo.findLatestActiveShopProducts(shopId);
-    return this.toArrayResponseDto(foundShopLatestProducts);
+    return toListResponseDtos(ProductResponseDto, foundShopLatestProducts);
   }
 
-  async findActiveProductById(productId: string): Promise<ProductResponseDto> {
+  async findActiveProductByIdOrThrow(
+    productId: string,
+  ): Promise<ProductResponseDto> {
     const foundProduct =
       await this.productsRepo.findActiveProductById(productId);
     if (!foundProduct) throw new NotFoundException('Product not found.');
-    return this.toResponseDto(foundProduct);
+    return toResponseDto(ProductResponseDto, foundProduct);
   }
 
-  async findActiveProductEntityById(productId: string): Promise<Product> {
+  async findActiveProductEntityByIdOrThrow(
+    productId: string,
+  ): Promise<Product> {
     const foundProduct =
       await this.productsRepo.findActiveProductById(productId);
     if (!foundProduct) throw new NotFoundException('Product not found.');
@@ -175,8 +182,9 @@ export class ProductsService {
     userId: string,
     categoryIds: string[],
   ): Promise<ProductResponseDto> {
-    const shopId = (await this.userShopService.findShopByUserId(userId)).id;
-    const product = await this.findActiveProductEntityById(productId);
+    const shopId = (await this.userShopService.findShopByUserIdOrThrow(userId))
+      .id;
+    const product = await this.findActiveProductEntityByIdOrThrow(productId);
     if (product.shopId !== shopId) {
       throw new NotFoundException('Product does not exist in your shop.');
     }
@@ -184,7 +192,7 @@ export class ProductsService {
       productId,
       categoryIds,
     );
-    return this.findActiveProductById(productId);
+    return this.findActiveProductByIdOrThrow(productId);
   }
 
   async updateShopProductById(
@@ -192,40 +200,39 @@ export class ProductsService {
     userId: string,
     updateProductDto: ProductUpdateDto,
   ): Promise<ProductResponseDto> {
-    const shopId = (await this.userShopService.findShopByUserId(userId)).id;
-    const updatedProduct = await this.productsRepo.updateShopProductById(
+    const shopId = (await this.userShopService.findShopByUserIdOrThrow(userId))
+      .id;
+    const updateResult = await this.productsRepo.updateShopProductById(
       productId,
       shopId,
       updateProductDto,
     );
-    return this.toResponseDto(updatedProduct);
+    if (!updateResult) {
+      throw new NotFoundException('Product not found.');
+    }
+    const updatedProduct =
+      await this.productsRepo.findActiveProductById(productId);
+    if (!updatedProduct) {
+      throw new NotFoundException('Updated product not found.');
+    }
+    return toResponseDto(ProductResponseDto, updatedProduct);
   }
 
-  async deleteShopProductById(
+  async deleteShopProductByIdOrThrow(
     productId: string,
     userId: string,
-  ): Promise<void> {
-    const foundShop = await this.userShopService.findShopByUserId(userId);
-    const isDeleted = await this.productsRepo.softDeleteShopProductById(
+  ): Promise<number> {
+    const foundShop =
+      await this.userShopService.findShopByUserIdOrThrow(userId);
+    const deletedCount = await this.productsRepo.softDeleteShopProductById(
       productId,
       foundShop.id,
     );
-    if (!isDeleted) {
+    if (deletedCount !== 1) {
       throw new NotFoundException(
         'Product does not exist or is already deleted.',
       );
     }
-  }
-
-  private toResponseDto(product: Product): ProductResponseDto {
-    return plainToInstance(ProductResponseDto, product, {
-      excludeExtraneousValues: true,
-    });
-  }
-
-  private toArrayResponseDto(products: Product[]): ProductResponseDto[] {
-    return plainToInstance(ProductResponseDto, products, {
-      excludeExtraneousValues: true,
-    });
+    return deletedCount;
   }
 }
