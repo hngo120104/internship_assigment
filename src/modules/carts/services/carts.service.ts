@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CartsRepository } from '../repositories/carts.repository';
 import { Transactional } from 'typeorm-transactional';
 import { CartItemsAddDto } from '../dto/cart.items.add.dto';
-import { Cart } from '../entities/cart.entity';
+import { Cart, CartStatus } from '../entities/cart.entity';
 import { CartResponseDto } from '../dto/cart.response.dto';
 import { plainToInstance } from 'class-transformer';
 import { CartItemsService } from './cart.items.service';
@@ -88,6 +88,11 @@ export class CartsService {
       throw new NotFoundException('User cart does not exist.');
     }
     await this.cartItemsService.deleteAllCartItemsInCart(activeCart.id);
+  }
+
+  async markCartAsOrdered(cart: Cart): Promise<Cart> {
+    cart.cartStatus = CartStatus.ORDERED;
+    return await this.cartsRepo.saveCart(cart);
   }
 
   private toCartResponseDto(cart: Cart): CartResponseDto {

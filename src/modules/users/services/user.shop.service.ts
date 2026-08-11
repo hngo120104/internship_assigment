@@ -47,7 +47,7 @@ export class UserShopService {
     return foundUser;
   }
 
-  async proccessCreateShop(
+  async processCreateShop(
     userId: string,
     userShopCreateDto: UserShopCreateDto,
   ): Promise<Shop> {
@@ -79,10 +79,7 @@ export class UserShopService {
     userId: string,
     userShopCreateDto: UserShopCreateDto,
   ): Promise<UserShopResponseDto> {
-    const createdShop = await this.proccessCreateShop(
-      userId,
-      userShopCreateDto,
-    );
+    const createdShop = await this.processCreateShop(userId, userShopCreateDto);
 
     return this.toUserShopResponseDto(createdShop);
   }

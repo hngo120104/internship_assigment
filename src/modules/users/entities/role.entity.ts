@@ -1,10 +1,9 @@
-import { Entity, Column, OneToMany } from 'typeorm';
-import { PrimaryGeneratedBinaryUuidColumn } from '../../../custom.decorators/primary.generated.uuid.binary.column';
+import { Entity, Column, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { UserRoles } from './user.roles.entity';
 
 @Entity('roles')
 export class Role {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @OneToMany(() => UserRoles, (userRoles) => userRoles.role)

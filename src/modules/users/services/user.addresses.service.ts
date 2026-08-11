@@ -14,6 +14,29 @@ import { UserAddressesUpdateDto } from '../dto/user.addresses/user.addresses.upd
 export class UserAddressesService {
   constructor(private readonly userAddressesRepo: UserAddressesRepository) {}
 
+  async findPrimaryUserAddressByUserId(userId: string): Promise<Address> {
+    const foundAddress =
+      await this.userAddressesRepo.findPrimaryUserAddressByUserId(userId);
+    if (!foundAddress) {
+      throw new NotFoundException('User address not found.');
+    }
+    return foundAddress;
+  }
+
+  async findActiveUserAddressById(
+    userId: string,
+    addressId: string,
+  ): Promise<Address> {
+    const address = await this.userAddressesRepo.findActiveUserAddressById(
+      userId,
+      addressId,
+    );
+    if (!address) {
+      throw new NotFoundException('User address not found.');
+    }
+    return address;
+  }
+
   async createNewUserAddress(
     userId: string,
     userAddressesCreateDto: UserAddressesCreateDto,

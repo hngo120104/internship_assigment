@@ -3,7 +3,6 @@ import { UserCreateDto } from '../dto/users/user.create.dto';
 import { User, UserStatus } from '../entities/user.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { randomUUID } from 'crypto';
 
 @Injectable()
 export class UsersRepository {
@@ -14,7 +13,6 @@ export class UsersRepository {
     passwordHashed: string,
   ): Promise<User> {
     const newUser = this.userRepo.create({
-      id: randomUUID(),
       userName: userCreateDto.userName,
       email: userCreateDto.email,
       passwordHashed: passwordHashed,

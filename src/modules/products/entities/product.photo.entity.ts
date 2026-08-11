@@ -5,18 +5,16 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Product } from './product.entity';
-import {
-  BinaryUuidColumn,
-  PrimaryGeneratedBinaryUuidColumn,
-} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 @Entity('product_photos')
 export class ProductPhoto {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
-  @BinaryUuidColumn('product_id')
+
+  @Column({ name: 'product_id', type: 'varchar', length: 36 })
   productId!: string;
 
   @Column({ type: 'varchar', length: 2048 })

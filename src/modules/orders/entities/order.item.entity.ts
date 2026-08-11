@@ -5,14 +5,11 @@ import {
   JoinColumn,
   Index,
   ManyToOne,
+  PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Product } from '../../products/entities/product.entity';
-import {
-  BinaryUuidColumn,
-  PrimaryGeneratedBinaryUuidColumn,
-} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 import { Order } from './order.entity';
 
 @Entity('order_items')
@@ -22,17 +19,17 @@ import { Order } from './order.entity';
 @Check('CHK_order_items_quantity_positive', '`quantity` > 0')
 @Check('CHK_order_items_unit_price_non_negative', '`unit_price` >= 0')
 export class OrderItem {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @BinaryUuidColumn('order_id')
+  @Column({ name: 'order_id', type: 'varchar', length: 36 })
   orderId!: string;
 
   @ManyToOne(() => Order, (order) => order.orderItems)
   @JoinColumn({ name: 'order_id' })
   order!: Order;
 
-  @BinaryUuidColumn('product_id')
+  @Column({ name: 'product_id', type: 'varchar', length: 36 })
   productId!: string;
 
   @ManyToOne(() => Product, (product) => product.orderItems, {
@@ -52,6 +49,9 @@ export class OrderItem {
 
   @Column({ type: 'decimal', precision: 12, scale: 2, name: 'unit_price' })
   unitPrice!: number;
+
+  @Column({ type: 'varchar', length: 1000, nullable: true })
+  note?: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
   createdAt!: Date;

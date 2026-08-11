@@ -4,13 +4,10 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity';
-import {
-  BinaryUuidColumn,
-  PrimaryGeneratedBinaryUuidColumn,
-} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 export enum PhotoType {
   AVATAR = 'AVATAR',
@@ -19,10 +16,10 @@ export enum PhotoType {
 
 @Entity('user_photos')
 export class UserPhoto {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @BinaryUuidColumn('user_id')
+  @Column({ name: 'user_id', type: 'varchar', length: 36 })
   userId!: string;
 
   @Column({ type: 'enum', enum: PhotoType })

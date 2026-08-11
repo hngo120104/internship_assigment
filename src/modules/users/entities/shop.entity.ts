@@ -5,15 +5,12 @@ import {
   JoinColumn,
   OneToMany,
   CreateDateColumn,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 import { ShopPhoto } from './shop.photos.entity';
 import { Product } from '../../products/entities/product.entity';
-import {
-  BinaryUuidColumn,
-  PrimaryGeneratedBinaryUuidColumn,
-} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 import { Order } from '../../orders/entities/order.entity';
 
 export enum ShopStatus {
@@ -25,7 +22,7 @@ export enum ShopStatus {
 
 @Entity('shops')
 export class Shop {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ name: 'shop_name', unique: true })
@@ -37,7 +34,7 @@ export class Shop {
   @Column({ nullable: true })
   address!: string;
 
-  @BinaryUuidColumn('user_id')
+  @Column({ name: 'user_id', type: 'varchar', length: 36 })
   userId!: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })

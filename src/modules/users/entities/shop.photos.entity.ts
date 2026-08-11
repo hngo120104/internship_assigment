@@ -5,20 +5,17 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Shop } from './shop.entity';
 import { PhotoType } from './user.photo.entity';
-import {
-  BinaryUuidColumn,
-  PrimaryGeneratedBinaryUuidColumn,
-} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 @Entity('shop_photos')
 export class ShopPhoto {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @BinaryUuidColumn('shop_id')
+  @Column({ name: 'shop_id', type: 'varchar', length: 36 })
   shopId!: string;
 
   @Column({ type: 'enum', enum: PhotoType })

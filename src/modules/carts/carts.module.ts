@@ -10,14 +10,13 @@ import { CartsRepository } from './repositories/carts.repository';
 import { Cart } from './entities/cart.entity';
 import { ProductsModule } from '../products/products.module';
 import { CartItemsService } from './services/cart.items.service';
-import { CartItemsController } from './controllers/cart.items.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([CartItem, Cart, Product]),
     ProductsModule,
   ],
-  controllers: [CartsController, CartItemsController],
+  controllers: [CartsController],
   providers: [
     CartsService,
     CartItemsService,

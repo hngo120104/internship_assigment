@@ -4,30 +4,27 @@ import {
   JoinColumn,
   Index,
   ManyToOne,
+  PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Cart } from './cart.entity';
 import { Product } from '../../products/entities/product.entity';
-import {
-  BinaryUuidColumn,
-  PrimaryGeneratedBinaryUuidColumn,
-} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 @Entity('cart_items')
 @Index('UQ_cart_item_cart_product', ['cartId', 'productId'], { unique: true })
 export class CartItem {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @BinaryUuidColumn('cart_id')
+  @Column({ name: 'cart_id', type: 'varchar', length: 36 })
   cartId!: string;
 
   @ManyToOne(() => Cart, (cart) => cart.cartItems, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'cart_id' })
   cart!: Cart;
 
-  @BinaryUuidColumn('product_id')
+  @Column({ name: 'product_id', type: 'varchar', length: 36 })
   productId!: string;
 
   @ManyToOne(() => Product, (product) => product.cartItems, {

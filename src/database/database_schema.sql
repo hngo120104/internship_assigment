@@ -6,7 +6,7 @@ USE `internship_assignment`;
 
 CREATE TABLE
     `roles` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `name` varchar(255) NOT NULL DEFAULT 'CUSTOMER' UNIQUE,
         `description` VARCHAR(255) DEFAULT NULL,
         PRIMARY KEY (`id`)
@@ -14,7 +14,7 @@ CREATE TABLE
 
 CREATE TABLE
     `users` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `user_name` varchar(255) NOT NULL,
         `email` varchar(255) NOT NULL,
         `password_hashed` varchar(255) NOT NULL,
@@ -28,8 +28,8 @@ CREATE TABLE
 
 CREATE TABLE
     IF NOT EXISTS `user_roles` (
-        `user_id` BINARY(16) NOT NULL,
-        `role_id` BINARY(16) NOT NULL,
+        `user_id` varchar(36) NOT NULL,
+        `role_id` varchar(36) NOT NULL,
         `is_deleted` tinyint (1) DEFAULT NULL,
         PRIMARY KEY (`user_id`, `role_id`), -- Tránh 1 user bị gán trùng 1 role nhiều lần
         CONSTRAINT `FK_user_roles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
@@ -38,8 +38,8 @@ CREATE TABLE
 
 CREATE TABLE
     `user_addresses` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
-        `user_id` BINARY(16) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `user_id` varchar(36) NOT NULL,
         `recipient_name` varchar(255) NOT NULL,
         `phone_number` varchar(10) NOT NULL,
         `province` varchar(255) NOT NULL,
@@ -55,8 +55,8 @@ CREATE TABLE
 
 CREATE TABLE
     `user_photos` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
-        `user_id` BINARY(16) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `user_id` varchar(36) NOT NULL,
         `type` enum ('AVATAR', 'BACKGROUND') NOT NULL,
         `url` varchar(2048) NOT NULL,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -69,8 +69,8 @@ CREATE TABLE
 
 CREATE TABLE
     `shops` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
-        `user_id` BINARY(16) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `user_id` varchar(36) NOT NULL,
         `shop_name` varchar(255) NOT NULL,
         `description` varchar(255) DEFAULT NULL,
         `address` varchar(255) DEFAULT NULL,
@@ -86,8 +86,8 @@ CREATE TABLE
 
 CREATE TABLE
     `shop_photos` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
-        `shop_id` BINARY(16) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `shop_id` varchar(36) NOT NULL,
         `type` enum ('AVATAR', 'BACKGROUND') NOT NULL,
         `url` varchar(2048) NOT NULL,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -100,11 +100,11 @@ CREATE TABLE
 
 CREATE TABLE
     `categories` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `icon_url` varchar(2048) DEFAULT NULL,
         `name` varchar(255) NOT NULL,
         `description` text DEFAULT NULL,
-        `parent_id` BINARY(16) DEFAULT NULL,
+        `parent_id` varchar(36) DEFAULT NULL,
         `is_active` tinyint (1) NOT NULL DEFAULT 1,
         PRIMARY KEY (`id`),
         CONSTRAINT `FK_parent_category` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL
@@ -112,8 +112,8 @@ CREATE TABLE
 
 CREATE TABLE
     `products` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
-        `shop_id` BINARY(16) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `shop_id` varchar(36) NOT NULL,
         `name` varchar(255) NOT NULL,
         `description` text DEFAULT NULL,
         `amount` int NOT NULL DEFAULT 0,
@@ -131,8 +131,8 @@ CREATE TABLE
 
 CREATE Table
     `product_categories` (
-        `product_id` BINARY(16) NOT NULL,
-        `category_id` BINARY(16) NOT NULL,
+        `product_id` varchar(36) NOT NULL,
+        `category_id` varchar(36) NOT NULL,
         `is_deleted` tinyint (1) DEFAULT NULL,
         PRIMARY KEY (`product_id`, `category_id`),
         KEY `IDX_product_categories_category_id` (`category_id`),
@@ -142,8 +142,8 @@ CREATE Table
 
 CREATE TABLE
     `product_photos` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
-        `product_id` BINARY(16) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `product_id` varchar(36) NOT NULL,
         `url` varchar(2048) NOT NULL,
         `description` text DEFAULT NULL,
         `is_primary` tinyint (1) DEFAULT 0,
@@ -157,9 +157,9 @@ CREATE TABLE
 
 CREATE TABLE
     `carts` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `guest_id` varchar(50) DEFAULT NULL,
-        `user_id` BINARY(16) DEFAULT NULL,
+        `user_id` varchar(36) DEFAULT NULL,
         `cart_status` enum ('ACTIVE', 'ORDERED', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE',
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -181,9 +181,9 @@ CREATE TABLE
 
 CREATE TABLE
     `cart_items` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
-        `cart_id` BINARY(16) NOT NULL,
-        `product_id` BINARY(16) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `cart_id` varchar(36) NOT NULL,
+        `product_id` varchar(36) NOT NULL,
         `quantity` int NOT NULL DEFAULT 1,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -197,10 +197,10 @@ CREATE TABLE
 
 CREATE TABLE
     `orders` (
-        `id` BINARY(16) NOT NULL DEFAULT (UUID_TO_BIN (UUID (), 1)),
-        `user_id` BINARY(16) NOT NULL,
-        `shop_id` BINARY(16) NOT NULL,
-        `recipient_address_id` BINARY(16) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `user_id` varchar(36) NOT NULL,
+        `shop_id` varchar(36) NOT NULL,
+        `recipient_address_id` varchar(36) NOT NULL,
         `order_code` varchar(36) NOT NULL DEFAULT (UUID ()),
         `order_status` enum (
             'PENDING',
@@ -213,7 +213,6 @@ CREATE TABLE
         `payment_status` enum ('PENDING', 'PAID', 'FAILED', 'REFUNDED') NOT NULL DEFAULT 'PENDING',
         `discount` DECIMAL(12, 2) NOT NULL DEFAULT 0,
         `shipping_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0,
-        `note` varchar(1000) DEFAULT NULL,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         PRIMARY KEY (`id`),
@@ -228,12 +227,13 @@ CREATE TABLE
 
 CREATE TABLE
     `order_items` (
-        `id` BINARY(16) DEFAULT (UUID_TO_BIN (UUID (), 1)) NOT NULL,
-        `order_id` BINARY(16) NOT NULL,
-        `product_id` BINARY(16) NOT NULL,
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `order_id` varchar(36) NOT NULL,
+        `product_id` varchar(36) NOT NULL,
         `product_name` varchar(255) NOT NULL,
         `unit_price` DECIMAL(12, 2) NOT NULL,
         `quantity` int NOT NULL DEFAULT 1,
+        `note` varchar(1000) DEFAULT NULL,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         PRIMARY KEY (`id`),

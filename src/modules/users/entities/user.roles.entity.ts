@@ -1,15 +1,13 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { User } from './user.entity';
 import { Role } from './role.entity';
-import { UuidBinaryTransformer } from '../../transformer/uuid.binary.transformer';
 
 @Entity('user_roles')
 export class UserRoles {
   @PrimaryColumn({
     name: 'user_id',
-    type: 'binary',
-    length: 16,
-    transformer: UuidBinaryTransformer,
+    type: 'varchar',
+    length: 36,
   })
   userId!: string;
 
@@ -19,9 +17,8 @@ export class UserRoles {
 
   @PrimaryColumn({
     name: 'role_id',
-    type: 'binary',
-    length: 16,
-    transformer: UuidBinaryTransformer,
+    type: 'varchar',
+    length: 36,
   })
   roleId!: string;
 

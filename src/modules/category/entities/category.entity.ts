@@ -4,19 +4,13 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
-  PrimaryColumn,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
-import { UuidBinaryTransformer } from '../../transformer/uuid.binary.transformer';
-import { BinaryUuidColumn } from '../../../custom.decorators/primary.generated.uuid.binary.column';
 import { ProductCategories } from '../../products/entities/product.categories.entity';
 
 @Entity('categories')
 export class Category {
-  @PrimaryColumn({
-    type: 'binary',
-    length: 16,
-    transformer: UuidBinaryTransformer,
-  })
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ name: 'icon_url', type: 'varchar', length: 2048, nullable: true })
@@ -28,8 +22,8 @@ export class Category {
   @Column({ type: 'text', nullable: true })
   description!: string;
 
-  @BinaryUuidColumn('parent_id')
-  parentId!: string;
+  @Column({ name: 'parent_id', type: 'varchar', length: 36, nullable: true })
+  parentId?: string;
 
   @Column({ name: 'is_active', type: 'tinyint', default: 1 })
   isActive!: boolean;
@@ -39,7 +33,7 @@ export class Category {
     onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'parent_id' })
-  parent!: Category;
+  parent?: Category;
 
   @OneToMany(() => Category, (category) => category.parent)
   children!: Category[];

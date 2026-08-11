@@ -7,13 +7,10 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import {
-  BinaryUuidColumn,
-  PrimaryGeneratedBinaryUuidColumn,
-} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 import { Shop } from '../../users/entities/shop.entity';
 import { OrderItem } from './order.item.entity';
 import { Address } from '../../users/entities/user.address.entity';
@@ -39,25 +36,25 @@ export enum PaymentStatus {
 @Check('CHK_orders_shipping_fee_non_negative', '`shipping_fee` >= 0')
 @Entity('orders')
 export class Order {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @BinaryUuidColumn('user_id')
+  @Column({ name: 'user_id', type: 'varchar', length: 36 })
   userId!: string;
 
-  @BinaryUuidColumn('shop_id')
+  @Column({ name: 'shop_id', type: 'varchar', length: 36 })
   shopId!: string;
 
-  @BinaryUuidColumn('recipient_address_id')
+  @Column({ name: 'recipient_address_id', type: 'varchar', length: 36 })
   shipAddressId!: string;
 
   @Column({
     name: 'order_code',
     unique: true,
     length: 36,
-    default: () => '(UUID())',
+    nullable: true,
   })
-  orderCode!: string;
+  orderCode?: string;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   discount!: number;
@@ -109,7 +106,4 @@ export class Order {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'datetime', precision: 6 })
   updatedAt!: Date;
-
-  @Column({ type: 'varchar', length: 1000, nullable: true })
-  note?: string;
 }

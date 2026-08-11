@@ -1,7 +1,7 @@
-import { Expose, Transform, Type } from 'class-transformer';
-import { ProductResponseDto } from '../../products/dto/products/product.response.dto';
+import { Exclude, Expose, Transform } from 'class-transformer';
 import { OrderItem } from '../entities/order.item.entity';
 
+@Exclude()
 export class OrderItemResponseDto {
   @Expose()
   id!: string;
@@ -12,10 +12,6 @@ export class OrderItemResponseDto {
   @Expose({ name: 'productId' })
   product_id!: string;
 
-  @Expose()
-  @Type(() => ProductResponseDto)
-  product!: ProductResponseDto;
-
   @Expose({ name: 'productName' })
   product_name!: string;
 
@@ -23,12 +19,25 @@ export class OrderItemResponseDto {
   quantity!: number;
 
   @Expose({ name: 'unitPrice' })
+  @Transform(({ value }) => Number(value), { toClassOnly: true })
   unit_price!: number;
 
   @Expose()
-  @Transform(({ obj }) => {
-    const item = obj as OrderItem;
-    return Number(item.quantity * item.unitPrice);
-  })
+  note?: string;
+
+  @Expose()
+  @Transform(
+    ({ obj }) => {
+      const item = obj as OrderItem;
+      return item.quantity * Number(item.unitPrice);
+    },
+    { toClassOnly: true },
+  )
   line_total!: number;
+
+  @Expose({ name: 'createdAt' })
+  created_at!: Date;
+
+  @Expose({ name: 'updatedAt' })
+  updated_at!: Date;
 }

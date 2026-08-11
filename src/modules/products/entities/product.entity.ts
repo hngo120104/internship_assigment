@@ -6,23 +6,20 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Shop } from '../../users/entities/shop.entity';
 import { CartItem } from '../../carts/entities/cart.item.entity';
 import { ProductPhoto } from './product.photo.entity';
-import {
-  BinaryUuidColumn,
-  PrimaryGeneratedBinaryUuidColumn,
-} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 import { ProductCategories } from './product.categories.entity';
 import { OrderItem } from '../../orders/entities/order.item.entity';
 
 @Entity('products')
 export class Product {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @BinaryUuidColumn('shop_id')
+  @Column({ name: 'shop_id', type: 'varchar', length: 36 })
   shopId!: string;
 
   @Column({ type: 'varchar', length: 255 })

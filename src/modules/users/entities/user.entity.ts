@@ -4,13 +4,13 @@ import {
   OneToOne,
   OneToMany,
   CreateDateColumn,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Shop } from './shop.entity';
 import { UserPhoto } from './user.photo.entity';
 import { Cart } from '../../carts/entities/cart.entity';
 import { Address } from './user.address.entity';
-import { PrimaryGeneratedBinaryUuidColumn } from '../../../custom.decorators/primary.generated.uuid.binary.column';
 import { UserRoles } from './user.roles.entity';
 import { Order } from '../../orders/entities/order.entity';
 
@@ -21,7 +21,7 @@ export enum UserStatus {
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ name: 'user_name', type: 'varchar', length: 255 })

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProductCreateDto } from '../dto/products/product.create.dto';
 import { ProductUpdateDto } from '../dto/products/product.update.dto';
-
+import { BadRequestException } from '@nestjs/common';
 import { Product } from '../entities/product.entity';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ProductResponseDto } from '../dto/products/product.response.dto';
@@ -11,6 +11,7 @@ import { ProductPhotosInsertDto } from '../dto/product.photos/product.photos.ins
 import { Transactional } from 'typeorm-transactional';
 import { UserShopService } from '../../users/services/user.shop.service';
 import { ProductCategoriesRepository } from '../repositories/product.categories.repository';
+import { Shop } from '../../users/entities/shop.entity';
 
 @Injectable()
 export class ProductsService {
@@ -20,6 +21,70 @@ export class ProductsService {
     private readonly userShopService: UserShopService,
     private readonly productCategoriesRepo: ProductCategoriesRepository,
   ) {}
+
+  async findProductEntityByIdAndLockForUpdate(
+    productId: string,
+  ): Promise<Product> {
+    const foundLockedProduct =
+      await this.productsRepo.findProductByIdAndLock(productId);
+    if (!foundLockedProduct) {
+      throw new NotFoundException('Locked product not found.');
+    }
+    return foundLockedProduct;
+  }
+
+  async findShopEntityByProductId(productId: string): Promise<Shop> {
+    const foundShop =
+      await this.productsRepo.findActiveShopByProductId(productId);
+
+    if (!foundShop) {
+      throw new NotFoundException('User does not have shop');
+    }
+
+    return foundShop;
+  }
+
+  async validateProductQuantity(productId: string, quantity: number) {
+    const product = await this.findActiveProductEntityById(productId);
+    this.validateRequestedQuantityIsPositiveInteger(quantity);
+    this.validateProductHasSufficientStock(product, quantity);
+  }
+
+  async reserveProductStock(
+    productId: string,
+    quantity: number,
+  ): Promise<Product> {
+    const product = await this.findProductEntityByIdAndLockForUpdate(productId);
+
+    this.validateRequestedQuantityIsPositiveInteger(quantity);
+    this.validateProductHasSufficientStock(product, quantity);
+    this.decreaseProductStock(product, quantity);
+
+    return await this.productsRepo.saveProduct(product);
+  }
+
+  private validateRequestedQuantityIsPositiveInteger(quantity: number): void {
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      throw new BadRequestException(
+        'Product quantity must be a positive integer.',
+      );
+    }
+  }
+
+  private validateProductHasSufficientStock(
+    product: Product,
+    requestedQuantity: number,
+  ): void {
+    if (product.amount < requestedQuantity) {
+      throw new BadRequestException(
+        `Your amount: ${requestedQuantity}. Product amount is not enough: ${product.amount}`,
+      );
+    }
+  }
+
+  private decreaseProductStock(product: Product, quantity: number): void {
+    product.amount -= quantity;
+  }
 
   private async insertPhotosIntoProduct(
     productId: string,
@@ -33,7 +98,7 @@ export class ProductsService {
     createdProduct.photos = insertedPhotos;
   }
 
-  async proccessCreateProduct(
+  async processCreateProduct(
     userId: string,
     productCreateDto: ProductCreateDto,
   ): Promise<Product> {
@@ -66,7 +131,7 @@ export class ProductsService {
     userId: string,
     productCreateDto: ProductCreateDto,
   ): Promise<ProductResponseDto> {
-    const createdProduct = await this.proccessCreateProduct(
+    const createdProduct = await this.processCreateProduct(
       userId,
       productCreateDto,
     );

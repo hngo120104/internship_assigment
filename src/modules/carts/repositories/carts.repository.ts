@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart } from '../entities/cart.entity';
 import { CartStatus } from '../entities/cart.entity';
-import { randomUUID } from 'crypto';
 import { CartItemsRepository } from './cart.items.repository';
 
 @Injectable()
@@ -37,7 +36,6 @@ export class CartsRepository {
     }
 
     const newCart = this.cartsRepo.create({
-      id: randomUUID(),
       userId: owner.userId ?? undefined,
       guestId: owner.userId ? undefined : owner.guestId,
       cartStatus: CartStatus.ACTIVE,

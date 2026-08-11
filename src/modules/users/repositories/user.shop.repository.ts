@@ -4,7 +4,6 @@ import { User } from '../entities/user.entity';
 import { UserShopCreateDto } from '../dto/user.shop/user.shop.create.dto';
 import { Repository } from 'typeorm';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { UserShopUpdateDto } from '../dto/user.shop/user.shop.update.dto';
 
 @Injectable()
@@ -18,7 +17,6 @@ export class UserShopRepository {
     userShopCreateDto: UserShopCreateDto,
   ): Promise<Shop> {
     const newUserShop = this.userShopRepo.create({
-      id: randomUUID(),
       user,
       userId: user.id,
       shopName: userShopCreateDto.shopName,

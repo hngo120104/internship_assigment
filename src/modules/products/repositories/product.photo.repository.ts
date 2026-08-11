@@ -3,7 +3,6 @@ import { ProductPhoto } from '../entities/product.photo.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { ProductPhotosInsertDto } from '../dto/product.photos/product.photos.insert.dto';
-import { randomUUID } from 'crypto';
 
 @Injectable()
 export class ProductPhotosRepository {
@@ -23,7 +22,6 @@ export class ProductPhotosRepository {
     productPhotosInsertDto: ProductPhotosInsertDto[],
   ): Promise<ProductPhoto[]> {
     const productPhotos = productPhotosInsertDto.map((productPhoto) => ({
-      id: randomUUID(),
       url: productPhoto.url,
       description: productPhoto.description,
       isPrimary: productPhoto.isPrimary ?? false,

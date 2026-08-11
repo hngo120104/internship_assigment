@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CartItemsRepository } from '../repositories/cart.items.repository';
 import { CartItemResponseDto } from '../dto/cart.item.response.dto';
 import { CartItem } from '../entities/cart.item.entity';
@@ -61,16 +57,6 @@ export class CartItemsService {
     return foundCartItem;
   }
 
-  async validateProductQuantity(productId: string, quantity: number) {
-    const product =
-      await this.productsService.findActiveProductEntityById(productId);
-    if (product.amount < quantity) {
-      throw new BadRequestException(
-        `Your amount: ${quantity}. Product amount is not enough: ${product.amount}`,
-      );
-    }
-  }
-
   async validateCartItemOfCart(
     cartItemId: string,
     userId: string,
@@ -85,7 +71,7 @@ export class CartItemsService {
     userId: string,
     cartItemsAddDto: CartItemsAddDto,
   ): Promise<CartItemResponseDto> {
-    await this.validateProductQuantity(
+    await this.productsService.validateProductQuantity(
       cartItemsAddDto.productId,
       cartItemsAddDto.quantity,
     );
@@ -108,7 +94,7 @@ export class CartItemsService {
     const foundCartItem = await this.findCartItemEntityById(cartItemId);
     const totalQuantity = foundCartItem.quantity + cartItemsAddDto.quantity;
 
-    await this.validateProductQuantity(
+    await this.productsService.validateProductQuantity(
       cartItemsAddDto.productId,
       totalQuantity,
     );
@@ -133,7 +119,7 @@ export class CartItemsService {
     const foundCartItem = await this.findCartItemEntityById(cartItemId);
     const updatedQuantity = cartItemsUpdateDto.quantity;
 
-    await this.validateProductQuantity(
+    await this.productsService.validateProductQuantity(
       foundCartItem.productId,
       updatedQuantity,
     );

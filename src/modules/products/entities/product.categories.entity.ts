@@ -1,5 +1,4 @@
 import { Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
-import { UuidBinaryTransformer } from '../../transformer/uuid.binary.transformer';
 import { Product } from './product.entity';
 import { Category } from '../../category/entities/category.entity';
 
@@ -7,9 +6,8 @@ import { Category } from '../../category/entities/category.entity';
 export class ProductCategories {
   @PrimaryColumn({
     name: 'product_id',
-    type: 'binary',
-    length: 16,
-    transformer: UuidBinaryTransformer,
+    type: 'varchar',
+    length: 36,
   })
   productId!: string;
 
@@ -19,9 +17,8 @@ export class ProductCategories {
 
   @PrimaryColumn({
     name: 'category_id',
-    type: 'binary',
-    length: 16,
-    transformer: UuidBinaryTransformer,
+    type: 'varchar',
+    length: 36,
   })
   categoryId!: string;
 

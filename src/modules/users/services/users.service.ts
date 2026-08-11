@@ -91,7 +91,7 @@ export class UsersService {
     createdUser.photos = userPhotos;
   }
 
-  async proccessCreateUser(userCreateDto: UserCreateDto): Promise<User> {
+  async processCreateUser(userCreateDto: UserCreateDto): Promise<User> {
     const newUserWithPasswordHashed =
       await this.createUserWithPasswordHashed(userCreateDto);
     const defaultRole = await this.roleRepo.findByRoleName('CUSTOMER');
@@ -112,7 +112,7 @@ export class UsersService {
     await this.validateUserRegistration(userCreateDto);
 
     const newUserWithPasswordHashed =
-      await this.proccessCreateUser(userCreateDto);
+      await this.processCreateUser(userCreateDto);
 
     if (userCreateDto.photos && userCreateDto.photos.length > 0) {
       const userPhotosInsertDto = userCreateDto.photos;

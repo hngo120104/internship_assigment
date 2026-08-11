@@ -1,9 +1,14 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrderItem } from '../entities/order.item.entity';
 import { Repository } from 'typeorm';
-import { OrderItemCreateDto } from '../dto/order.item.create.dto';
-import { randomUUID } from 'crypto';
+import { Injectable } from '@nestjs/common';
 
+export type CreateOrderItemData = Pick<
+  OrderItem,
+  'productId' | 'productName' | 'quantity' | 'unitPrice' | 'note'
+>;
+
+@Injectable()
 export class OrderItemsRepository {
   constructor(
     @InjectRepository(OrderItem)
@@ -12,12 +17,12 @@ export class OrderItemsRepository {
 
   async createOrderItem(
     orderId: string,
-    fullOrderItemCreateDto: any,
+    data: CreateOrderItemData,
   ): Promise<OrderItem> {
     const newOrderItem = this.orderItemsRepo.create({
-        id: randomUUID(),
-        orderId: orderId,
-        ...fullOrderItemCreateDto
+      orderId,
+      ...data,
     });
+    return await this.orderItemsRepo.save(newOrderItem);
   }
 }

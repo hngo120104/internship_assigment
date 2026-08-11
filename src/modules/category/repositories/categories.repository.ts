@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from '../entities/category.entity';
 import { In, Repository } from 'typeorm';
 import { CategoryCreateDto } from '../dto/category.create.dto';
-import { randomUUID } from 'crypto';
 import { CategoryUpdateDto } from '../dto/category.update.dto';
 
 @Injectable()
@@ -17,7 +16,6 @@ export class CategoriesRepository {
     categoryCreateDto: CategoryCreateDto,
   ): Promise<Category> {
     const newCategory = this.categoriesRepo.create({
-      id: randomUUID(),
       ...categoryCreateDto,
     });
     return await this.categoriesRepo.save(newCategory);

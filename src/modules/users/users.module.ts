@@ -57,6 +57,7 @@ import { UserAddressesRepository } from './repositories/user.addresses.repositor
     UserShopRepository,
     UsersRepository,
     RolesService,
+    UserAddressesService,
   ],
 })
 export class UsersModule {}

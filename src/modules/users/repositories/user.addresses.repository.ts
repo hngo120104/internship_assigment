@@ -4,7 +4,6 @@ import { In, Repository } from 'typeorm';
 import { UserAddressesCreateDto } from '../dto/user.addresses/user.addresses.create.dto';
 import { UserAddressesUpdateDto } from '../dto/user.addresses/user.addresses.update.dto';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 
 @Injectable()
 export class UserAddressesRepository {
@@ -13,12 +12,31 @@ export class UserAddressesRepository {
     private readonly userAddressesRepo: Repository<Address>,
   ) {}
 
+  async findPrimaryUserAddressByUserId(
+    userId: string,
+  ): Promise<Address | null> {
+    const foundAddress = await this.userAddressesRepo.findOne({
+      where: { userId: userId, isDeleted: false, isPrimary: true },
+    });
+    return foundAddress;
+  }
+
+  async findActiveUserAddressById(
+    userId: string,
+    addressId: string,
+  ): Promise<Address | null> {
+    return await this.userAddressesRepo.findOneBy({
+      id: addressId,
+      userId,
+      isDeleted: false,
+    });
+  }
+
   async createAddress(
     userId: string,
     userAddressesCreateDto: UserAddressesCreateDto,
   ): Promise<Address> {
     const newUserAddress = this.userAddressesRepo.create({
-      id: randomUUID(),
       userId: userId,
       ...userAddressesCreateDto,
     });

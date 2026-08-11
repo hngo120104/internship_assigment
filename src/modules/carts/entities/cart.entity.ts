@@ -5,14 +5,11 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { CartItem } from './cart.item.entity';
 import { User } from '../../users/entities/user.entity';
-import {
-  BinaryUuidColumn,
-  PrimaryGeneratedBinaryUuidColumn,
-} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 export enum CartStatus {
   ACTIVE = 'ACTIVE',
@@ -22,7 +19,7 @@ export enum CartStatus {
 
 @Entity('carts')
 export class Cart {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({
@@ -34,7 +31,7 @@ export class Cart {
   })
   guestId?: string;
 
-  @BinaryUuidColumn('user_id')
+  @Column({ name: 'user_id', type: 'varchar', length: 36, nullable: true })
   userId?: string;
 
   @ManyToOne(() => User, (user) => user.cart, { onDelete: 'RESTRICT' })

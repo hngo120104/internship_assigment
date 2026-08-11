@@ -6,20 +6,17 @@ import {
   OneToMany,
   ManyToOne,
   JoinColumn,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 import { Order } from '../../orders/entities/order.entity';
-import {
-  BinaryUuidColumn,
-  PrimaryGeneratedBinaryUuidColumn,
-} from '../../../custom.decorators/primary.generated.uuid.binary.column';
 
 @Entity('user_addresses')
 export class Address {
-  @PrimaryGeneratedBinaryUuidColumn()
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @BinaryUuidColumn('user_id')
+  @Column({ name: 'user_id', type: 'varchar', length: 36 })
   userId!: string;
 
   @Column({ name: 'recipient_name', type: 'varchar', length: 255 })

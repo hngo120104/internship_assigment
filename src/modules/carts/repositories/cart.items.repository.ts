@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CartItem } from '../entities/cart.item.entity';
 import { Repository } from 'typeorm';
-import { randomUUID } from 'crypto';
 
 @Injectable()
 export class CartItemsRepository {
@@ -50,7 +49,6 @@ export class CartItemsRepository {
     quantity: number,
   ): Promise<CartItem> {
     const newCartItem = this.cartItemsRepo.create({
-      id: randomUUID(),
       cartId: cartId,
       productId: productId,
       quantity,
