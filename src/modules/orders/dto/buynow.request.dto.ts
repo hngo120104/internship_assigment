@@ -1,6 +1,7 @@
 import { Exclude, Expose } from 'class-transformer';
-import { IsNotEmpty, IsUUID } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsUUID } from 'class-validator';
 import { OrderItemCreateDto } from './order.item.create.dto';
+import { PaymentMethod } from '../entities/order.entity';
 
 @Exclude()
 export class BuyNowRequestDto extends OrderItemCreateDto {
@@ -8,4 +9,9 @@ export class BuyNowRequestDto extends OrderItemCreateDto {
   @IsUUID()
   @IsNotEmpty()
   shipAddressId!: string;
+
+  @IsNotEmpty()
+  @Expose({ name: 'payment_method' })
+  @IsEnum(PaymentMethod)
+  paymentMethod!: PaymentMethod;
 }

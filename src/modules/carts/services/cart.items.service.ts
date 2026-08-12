@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CartItemsRepository } from '../repositories/cart.items.repository';
 import { CartItemResponseDto } from '../dto/cart.item.response.dto';
 import { CartItem } from '../entities/cart.item.entity';
@@ -27,6 +31,21 @@ export class CartItemsService {
       cartItems: foundUserActiveCartItems,
     };
     return toResponseDto(UserCartResponseDto, userCartObj);
+  }
+
+  async findActiveCartItemsEntitiesOfUserByCartItemIdsOrThrow(
+    userId: string,
+    cartItemIds: string[],
+  ): Promise<CartItem[]> {
+    const foundCartItems =
+      await this.cartItemsRepo.findActiveCartItemsOfUserByCartItemIds(
+        userId,
+        cartItemIds,
+      );
+    if (foundCartItems.length !== cartItemIds.length) {
+      throw new BadRequestException('One or more of cart items not found.');
+    }
+    return foundCartItems;
   }
 
   async findAllUserActiveCartItemsByUserIdOrThrow(
@@ -91,14 +110,19 @@ export class CartItemsService {
     return foundCartItem;
   }
 
-  async findActiveCartItemEntityByUserIdAndProductId(
+  async findActiveCartItemsEntitiesByUserIdAndProductIdsOrThrow(
     userId: string,
-    productId: string,
-  ): Promise<CartItem | null> {
-    return await this.cartItemsRepo.findActiveCartItemByUserIdAndProductId(
-      userId,
-      productId,
-    );
+    productIds: string[],
+    expectedCount: number,
+  ): Promise<CartItem[]> {
+    const foundCartItems =
+      await this.cartItemsRepo.findActiveCartItemsByUserIdAndProductIds(
+        userId,
+        productIds,
+      );
+    if (foundCartItems.length !== expectedCount)
+      throw new NotFoundException('One or more cart items not found.');
+    return foundCartItems;
   }
 
   async findAllActiveUserCarts(): Promise<UserCartResponseDto[]> {
@@ -122,7 +146,7 @@ export class CartItemsService {
     cartItemsAddDto: CartItemsAddDto,
   ): Promise<CartItemResponseDto> {
     const createdCartItemExist =
-      await this.findActiveCartItemEntityByUserIdAndProductId(
+      await this.cartItemsRepo.findActiveCartItemByUserIdAndProductId(
         userId,
         cartItemsAddDto.productId,
       );
@@ -227,6 +251,21 @@ export class CartItemsService {
       throw new NotFoundException('Cart items do not exist or are deleted.');
     }
     return deletedCount;
+  }
+
+  async markUserCartItemsAsOrderedOrThrow(
+    userId: string,
+    cartItemIds: string[],
+  ): Promise<number> {
+    const updatedCount =
+      await this.cartItemsRepo.markActiveCartItemsOfUserAsOrdered(
+        userId,
+        cartItemIds,
+      );
+    if (cartItemIds.length !== updatedCount) {
+      throw new NotFoundException('Some cart items are no longer active.');
+    }
+    return updatedCount;
   }
 
   async markAllUserCartItemsAsOrderedOrThrow(

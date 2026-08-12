@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CartItem, CartItemStatus } from '../entities/cart.item.entity';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 
 @Injectable()
 export class CartItemsRepository {
@@ -22,6 +22,21 @@ export class CartItemsRepository {
     return await this.cartItemsRepo.find(options);
   }
 
+  async findActiveCartItemsOfUserByCartItemIds(
+    userId: string,
+    cartItemIds: string[],
+  ): Promise<CartItem[]> {
+    return await this.cartItemsRepo.find({
+      where: {
+        userId: userId,
+        id: In(cartItemIds),
+        cartItemStatus: CartItemStatus.ACTIVE,
+        isDeleted: false,
+      },
+      relations: { product: true },
+    });
+  }
+
   async findActiveCartItemByUserIdAndProductId(
     userId: string,
     productId: string,
@@ -30,6 +45,24 @@ export class CartItemsRepository {
       where: {
         userId: userId,
         productId: productId,
+        cartItemStatus: CartItemStatus.ACTIVE,
+        isDeleted: false,
+      },
+      relations: {
+        product: true,
+        user: true,
+      },
+    });
+  }
+
+  async findActiveCartItemsByUserIdAndProductIds(
+    userId: string,
+    productIds: string[],
+  ): Promise<CartItem[]> {
+    return await this.cartItemsRepo.find({
+      where: {
+        userId: userId,
+        productId: In(productIds),
         cartItemStatus: CartItemStatus.ACTIVE,
         isDeleted: false,
       },
@@ -149,6 +182,22 @@ export class CartItemsRepository {
       { cartItemStatus: CartItemStatus.ORDERED },
     );
     return updateResult.affected !== 0;
+  }
+
+  async markActiveCartItemsOfUserAsOrdered(
+    userId: string,
+    cartItemIds: string[],
+  ): Promise<number> {
+    const updateResult = await this.cartItemsRepo.update(
+      {
+        userId: userId,
+        id: In(cartItemIds),
+        isDeleted: false,
+        cartItemStatus: CartItemStatus.ACTIVE,
+      },
+      { cartItemStatus: CartItemStatus.ORDERED },
+    );
+    return updateResult.affected ?? 0;
   }
 
   async markAllActiveCartItemsOfUserAsOrdered(userId: string): Promise<number> {

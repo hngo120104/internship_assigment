@@ -31,6 +31,11 @@ export enum PaymentStatus {
   REFUNDED = 'REFUNDED',
 }
 
+export enum PaymentMethod {
+  COD = 'COD',
+  BANKING = 'BANKING',
+}
+
 @Index('IDX_orders_shop_id', ['shopId'])
 @Check('CHK_orders_discount_non_negative', '`discount` >= 0')
 @Check('CHK_orders_shipping_fee_non_negative', '`shipping_fee` >= 0')
@@ -91,6 +96,14 @@ export class Order {
     default: PaymentStatus.PENDING,
   })
   paymentStatus!: PaymentStatus;
+
+  @Column({
+    name: 'payment_method',
+    type: 'enum',
+    enum: PaymentMethod,
+    default: PaymentMethod.COD,
+  })
+  paymentMethod!: PaymentMethod;
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   orderItems!: OrderItem[];

@@ -11,13 +11,17 @@ import { ProductsService } from '../../products/services/products.service';
 import { OrderItem } from '../entities/order.item.entity';
 import { Product } from '../../products/entities/product.entity';
 import { BuyNowRequestDto } from '../dto/buynow.request.dto';
-import { OrderResponseDto } from '../dto/order.response.dto';
+import { ShopOrderResponseDto } from '../dto/shop.order.response.dto';
 import { UsersService } from '../../users/services/users.service';
 import { UserAddressesService } from '../../users/services/user.addresses.service';
 import { CheckoutRequestDto } from '../dto/checkout.request.dto';
-import { CartItem } from '../../carts/entities/cart.item.entity';
 import { CartItemsService } from '../../carts/services/cart.items.service';
 import { toResponseDto } from '../../../utils/to.dto.response';
+import { Order, PaymentMethod } from '../entities/order.entity';
+import { CartItem } from '../../carts/entities/cart.item.entity';
+import { CustomerOrderCreateResponseDto } from '../dto/customer.order.response.dto';
+import { plainToInstance } from 'class-transformer';
+import { Address } from '../../users/entities/user.address.entity';
 
 interface ReservedOrderItem {
   request: OrderItemCreateDto;
@@ -37,25 +41,16 @@ export class OrdersService {
     private readonly cartItemsService: CartItemsService,
   ) {}
 
-  async findUserPendingOrderByUserId(
+  async findUserPendingOrderByUserIdOrThrow(
     userId: string,
-  ): Promise<OrderResponseDto> {
+  ): Promise<ShopOrderResponseDto> {
     const foundPendingOrder =
       await this.ordersRepo.findPendingOrderByUserId(userId);
     if (!foundPendingOrder) {
       throw new NotFoundException('User does not have pending order.');
     }
-    return toResponseDto(OrderResponseDto, foundPendingOrder);
+    return toResponseDto(ShopOrderResponseDto, foundPendingOrder);
   }
-
-  // @Transactional()
-  // async createOrder(
-  //   userId: string,
-  //   shopId: string,
-  //   shipAddressId: string,
-  // ): Promise<Order> {
-  //   return await this.ordersRepo.createOrder(userId, shopId, shipAddressId);
-  // }
 
   @Transactional()
   async createOrderItem(
@@ -79,9 +74,9 @@ export class OrdersService {
   async buyNow(
     userId: string,
     buyNowRequestDto: BuyNowRequestDto,
-  ): Promise<OrderResponseDto> {
+  ): Promise<ShopOrderResponseDto> {
     const shippingAddress =
-      await this.userAddressesService.findActiveUserAddressEntityByIdOfUserOrThrow(
+      await this.userAddressesService.findActiveUserAddressEntityByIdOrThrow(
         userId,
         buyNowRequestDto.shipAddressId,
       );
@@ -92,127 +87,153 @@ export class OrdersService {
       );
 
     // create order with product snap shot and return order id
-    const orderId = await this.createOrderWithItemsForShop(
+    const order = await this.createOrderWithItemsForShop(
       userId,
       reservedProduct.shopId,
       shippingAddress.id,
+      shippingAddress,
+      buyNowRequestDto.paymentMethod,
       [{ request: buyNowRequestDto, product: reservedProduct }],
     );
 
-    return await this.getCreatedOrderResponseOrThrow(orderId);
+    return toResponseDto(ShopOrderResponseDto, order, ['customer-order']);
   }
 
   @Transactional()
   async checkoutCart(
     userId: string,
     checkoutRequestDto: CheckoutRequestDto,
-  ): Promise<OrderResponseDto[]> {
+  ): Promise<CustomerOrderCreateResponseDto> {
+    this.validateCheckoutRequestNotEmpty(checkoutRequestDto);
+
     const shippingAddress =
-      await this.userAddressesService.findActiveUserAddressEntityByIdOfUserOrThrow(
+      await this.userAddressesService.findActiveUserAddressEntityByIdOrThrow(
         userId,
         checkoutRequestDto.shipAddressId,
       );
-    const activeCartItems =
-      await this.cartItemsService.findAllUserActiveCartItemEntitiesByUserIdOrThrow(
+
+    const foundActiveUserCartItems =
+      await this.cartItemsService.findActiveCartItemsEntitiesByUserIdAndProductIdsOrThrow(
         userId,
+        checkoutRequestDto.orderItems.map((item) => item.productId),
+        checkoutRequestDto.orderItems.length,
       );
-    // sort items to avoid race condition when 2 requests lock each other's resources
-    const requestedItems = this.sortItemsByProductIdForLocking(
-      checkoutRequestDto.items,
+
+    // use dto here because cart items might hold the older datas
+    const itemsToCheckout = this.sortItemsByProductIdForLocking(
+      checkoutRequestDto.orderItems,
     );
 
-    this.validateCheckoutItemsMatchActiveCart(activeCartItems, requestedItems);
-    // reserve product's stock and group order item by shop
-    const reservedItemsByShop =
-      await this.reserveProductsAndGroupItemsByShop(requestedItems);
-    const createdOrderIds = await this.createOrdersForEachShop(
+    this.validateOrderItemRequestsMatchesUserCartItems(
+      checkoutRequestDto.orderItems,
+      foundActiveUserCartItems,
+    );
+    // obj: { shopId, { orderCreateDto, Product }}
+    // reserve product amount for each order item and group order items by shop
+    const reservedOrderItemsByShop =
+      await this.reserveProductsAndGroupItemsByShop(itemsToCheckout);
+    // create order item snapshots and assign them to order
+    // then assign order to shop by shop id
+    // cart status = PENDING, payment status = PENDING
+    const createdOrders = await this.createOrdersForEachShop(
       userId,
       shippingAddress.id,
-      reservedItemsByShop,
+      shippingAddress,
+      checkoutRequestDto.paymentMethod,
+      reservedOrderItemsByShop,
     );
 
-    await this.cartItemsService.markAllUserCartItemsAsOrderedOrThrow(
+    await this.cartItemsService.markUserCartItemsAsOrderedOrThrow(
       userId,
-      activeCartItems.length,
+      foundActiveUserCartItems.map((item) => item.id),
     );
-    return await this.getCreatedOrderResponsesOrThrow(createdOrderIds);
+
+    const response = this.toCustomerOrderResponse(createdOrders);
+    response.grand_total = this.calculateGrandTotal(createdOrders);
+    return response;
+  }
+
+  private calculateGrandTotal(orders: Order[]): number {
+    const grandTotal: number = orders.reduce((total: number, order: Order) => {
+      const items: OrderItem[] = order.orderItems;
+      const sum = items.reduce(
+        (sum: number, item: OrderItem) =>
+          sum + (item.quantity ?? 0) * Number(item.unitPrice ?? 0),
+        0,
+      );
+      return sum + total;
+    }, 0);
+    return grandTotal;
+  }
+
+  private toCustomerOrderResponse(
+    orders: Order[],
+  ): CustomerOrderCreateResponseDto {
+    return plainToInstance(
+      CustomerOrderCreateResponseDto,
+      { orders: orders },
+      {
+        groups: ['customer-order'],
+        excludeExtraneousValues: true,
+      },
+    );
+  }
+
+  private validateCheckoutRequestNotEmpty(
+    checkoutRequestDto: CheckoutRequestDto,
+  ) {
+    if (
+      !checkoutRequestDto.orderItems ||
+      checkoutRequestDto.orderItems.length === 0
+    ) {
+      throw new BadRequestException('Cart items must not be empty.');
+    }
+  }
+
+  private validateOrderItemRequestsMatchesUserCartItems(
+    orderItemCreateDtos: OrderItemCreateDto[],
+    cartItems: CartItem[],
+  ) {
+    const orderItemsByProductId = new Map(
+      orderItemCreateDtos.map((item) => [item.productId, item]),
+    );
+    for (const cartItem of cartItems) {
+      if (
+        cartItem.quantity !==
+        orderItemsByProductId.get(cartItem.productId)?.quantity
+      ) {
+        throw new BadRequestException(
+          `Quantity of product ${cartItem.productId} has been changed.`,
+        );
+      }
+    }
   }
 
   private sortItemsByProductIdForLocking(
-    requestedItems: OrderItemCreateDto[],
+    orderItemCreateDtos: OrderItemCreateDto[],
   ): OrderItemCreateDto[] {
-    return [...requestedItems].sort((left, right) =>
+    return [...orderItemCreateDtos].sort((left, right) =>
       left.productId.localeCompare(right.productId),
     );
   }
 
-  private validateCheckoutItemsMatchActiveCart(
-    cartItems: CartItem[],
-    requestedItems: OrderItemCreateDto[],
-  ): void {
-    // validate cart items length !== 0
-    this.validateCartContainsItems(cartItems);
-    this.validateCheckoutIncludesEveryCartItem(cartItems, requestedItems);
-
-    // map for grouping cart item by shop
-    const cartItemByProductId = new Map(
-      cartItems.map((cartItem) => [cartItem.productId, cartItem]),
-    );
-    // validate each request item match all items in user's cart
-    for (const requestedItem of requestedItems) {
-      this.validateRequestedItemMatchesCart(
-        requestedItem,
-        cartItemByProductId.get(requestedItem.productId),
-      );
-    }
-  }
-
-  private validateCartContainsItems(cartItems: CartItem[]): void {
-    if (cartItems.length === 0) {
-      throw new BadRequestException('Cart is empty.');
-    }
-  }
-
-  private validateCheckoutIncludesEveryCartItem(
-    cartItems: CartItem[],
-    requestedItems: OrderItemCreateDto[],
-  ): void {
-    if (requestedItems.length !== cartItems.length) {
-      throw new BadRequestException(
-        'Checkout items must include every item in the active cart.',
-      );
-    }
-  }
-
-  private validateRequestedItemMatchesCart(
-    requestedItem: OrderItemCreateDto,
-    cartItem?: CartItem,
-  ): void {
-    if (!cartItem) {
-      throw new BadRequestException(
-        `Product ${requestedItem.productId} does not exist in the active cart.`,
-      );
-    }
-    if (cartItem.quantity !== requestedItem.quantity) {
-      throw new BadRequestException(
-        `Quantity of product ${requestedItem.productId} has changed.`,
-      );
-    }
-  }
-
   private async reserveProductsAndGroupItemsByShop(
-    requestedItems: OrderItemCreateDto[],
+    orderItemCreateDtos: OrderItemCreateDto[],
   ): Promise<ReservedItemsByShop> {
     const reservedItemsByShop: ReservedItemsByShop = new Map();
 
-    for (const requestedItem of requestedItems) {
+    for (const item of orderItemCreateDtos) {
       const reservedProduct =
         await this.productsService.validateAndReserveProductStock(
-          requestedItem.productId,
-          requestedItem.quantity,
+          item.productId,
+          item.quantity,
         );
+      // group item by shop id
       const shopItems = reservedItemsByShop.get(reservedProduct.shopId) ?? [];
-      shopItems.push({ request: requestedItem, product: reservedProduct });
+      shopItems.push({
+        request: item,
+        product: reservedProduct,
+      });
       reservedItemsByShop.set(reservedProduct.shopId, shopItems);
     }
     return reservedItemsByShop;
@@ -221,59 +242,52 @@ export class OrdersService {
   private async createOrdersForEachShop(
     userId: string,
     shippingAddressId: string,
+    shippingAddress: Address,
+    paymentMethod: PaymentMethod,
     reservedItemsByShop: ReservedItemsByShop,
-  ): Promise<string[]> {
-    const createdOrderIds: string[] = [];
+  ): Promise<Order[]> {
+    const createdOrders: Order[] = [];
 
     for (const [shopId, shopItems] of reservedItemsByShop) {
-      const orderId = await this.createOrderWithItemsForShop(
+      const order = await this.createOrderWithItemsForShop(
         userId,
         shopId,
         shippingAddressId,
+        shippingAddress,
+        paymentMethod,
         shopItems,
       );
-      createdOrderIds.push(orderId);
+      createdOrders.push(order);
     }
-    return createdOrderIds;
+    return createdOrders;
   }
 
   private async createOrderWithItemsForShop(
     userId: string,
     shopId: string,
     shippingAddressId: string,
+    shippingAddress: Address,
+    paymentMethod: PaymentMethod,
     reservedItems: ReservedOrderItem[],
-  ): Promise<string> {
+  ): Promise<Order> {
     const order = await this.ordersRepo.createOrder(
       userId,
       shopId,
       shippingAddressId,
+      shippingAddress,
+      paymentMethod,
     );
-
+    const createdOrderItems: OrderItem[] = [];
     for (const { request, product } of reservedItems) {
-      await this.createOrderItemSnapshot(order.id, request, product);
+      const createdOrderItem = await this.createOrderItemSnapshot(
+        order.id,
+        request,
+        product,
+      );
+      createdOrderItems.push(createdOrderItem);
     }
-    return order.id;
-  }
-
-  private async getCreatedOrderResponsesOrThrow(
-    orderIds: string[],
-  ): Promise<OrderResponseDto[]> {
-    const orderResponses: OrderResponseDto[] = [];
-
-    for (const orderId of orderIds) {
-      orderResponses.push(await this.getCreatedOrderResponseOrThrow(orderId));
-    }
-    return orderResponses;
-  }
-
-  private async getCreatedOrderResponseOrThrow(
-    orderId: string,
-  ): Promise<OrderResponseDto> {
-    const order = await this.ordersRepo.findOrderById(orderId);
-    if (!order) {
-      throw new NotFoundException('Created order not found.');
-    }
-    return toResponseDto(OrderResponseDto, order);
+    order.orderItems = createdOrderItems;
+    return order;
   }
 
   private async createOrderItemSnapshot(

@@ -25,7 +25,7 @@ export class UserAddressesService {
     return foundAddress;
   }
 
-  async findActiveUserAddressEntityByIdOfUserOrThrow(
+  async findActiveUserAddressEntityByIdOrThrow(
     userId: string,
     addressId: string,
   ): Promise<Address> {

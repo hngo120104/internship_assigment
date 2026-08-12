@@ -1,10 +1,15 @@
 import { Exclude, Expose, Transform, Type } from 'class-transformer';
-import { Order, OrderStatus, PaymentStatus } from '../entities/order.entity';
+import {
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '../entities/order.entity';
 import { UserAddressesResponseDto } from '../../users/dto/user.addresses/user.addresses.response.dto';
 import { OrderItemResponseDto } from './order.item.response.dto';
 
 @Exclude()
-export class OrderResponseDto {
+export class ShopOrderResponseDto {
   @Expose()
   id!: string;
 
@@ -17,28 +22,31 @@ export class OrderResponseDto {
   @Expose({ name: 'shipAddressId' })
   recipient_address_id!: string;
 
-  @Expose({ name: 'orderCode' })
+  @Expose({ name: 'orderCode', groups: ['customer-order'] })
   order_code?: string;
 
   @Type(() => UserAddressesResponseDto)
-  @Expose({ name: 'shipAddress' })
+  @Expose({ name: 'shipAddress', groups: ['customer-order'] })
   ship_address?: UserAddressesResponseDto;
 
-  @Expose({ name: 'orderStatus' })
+  @Expose({ name: 'orderStatus', groups: ['customer-order'] })
   order_status!: OrderStatus;
 
-  @Expose({ name: 'paymentStatus' })
+  @Expose({ name: 'paymentStatus', groups: ['customer-order'] })
   payment_status!: PaymentStatus;
 
-  @Expose()
+  @Expose({ name: 'paymentMethod', groups: ['customer-order'] })
+  payment_method!: PaymentMethod;
+
+  @Expose({ groups: ['customer-order'] })
   @Transform(({ value }) => Number(value), { toClassOnly: true })
   discount!: number;
 
-  @Expose({ name: 'shippingFee' })
+  @Expose({ name: 'shippingFee', groups: ['customer-order'] })
   @Transform(({ value }) => Number(value), { toClassOnly: true })
   shipping_fee!: number;
 
-  @Expose({ name: 'orderItems' })
+  @Expose({ name: 'orderItems', groups: ['customer-order'] })
   @Type(() => OrderItemResponseDto)
   order_items!: OrderItemResponseDto[];
 
@@ -56,9 +64,9 @@ export class OrderResponseDto {
   )
   sub_total!: number;
 
-  @Expose({ name: 'createdAt' })
+  @Expose({ name: 'createdAt', groups: ['customer-order'] })
   created_at!: Date;
 
-  @Expose({ name: 'updatedAt' })
+  @Expose({ name: 'updatedAt', groups: ['customer-order'] })
   updated_at!: Date;
 }

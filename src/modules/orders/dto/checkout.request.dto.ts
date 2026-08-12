@@ -3,10 +3,12 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsEnum,
   IsNotEmpty,
   IsUUID,
   ValidateNested,
 } from 'class-validator';
+import { PaymentMethod } from '../entities/order.entity';
 import { OrderItemCreateDto } from './order.item.create.dto';
 
 @Exclude()
@@ -16,13 +18,19 @@ export class CheckoutRequestDto {
   @IsNotEmpty()
   shipAddressId!: string;
 
-  @Expose()
+  @Expose({ name: 'order_items' })
+  @IsNotEmpty()
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayUnique((item: OrderItemCreateDto) => item.productId, {
-    message: 'Products in an order cannot be duplicated.',
+    message: 'Product cannot be duplicated.',
   })
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => OrderItemCreateDto)
-  items!: OrderItemCreateDto[];
+  orderItems!: OrderItemCreateDto[];
+
+  @Expose({ name: 'payment_method' })
+  @IsNotEmpty()
+  @IsEnum(PaymentMethod)
+  paymentMethod!: PaymentMethod;
 }

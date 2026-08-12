@@ -1,7 +1,13 @@
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
-import { Order, OrderStatus, PaymentStatus } from '../entities/order.entity';
+import {
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '../entities/order.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
+import { Address } from '../../users/entities/user.address.entity';
 
 @Injectable()
 export class OrdersRepository {
@@ -30,15 +36,19 @@ export class OrdersRepository {
     userId: string,
     shopId: string,
     shipAddressId: string,
+    shippingAddress: Address,
+    paymentMethod: PaymentMethod,
   ): Promise<Order> {
     const createdOrder = this.ordersRepo.create({
       userId,
       shopId,
-      shipAddressId,
+      shipAddressId: shipAddressId,
+      shipAddress: shippingAddress,
       discount: 0,
       shippingFee: 0,
       orderStatus: OrderStatus.PENDING,
       paymentStatus: PaymentStatus.PENDING,
+      paymentMethod: paymentMethod,
     });
     return await this.ordersRepo.save(createdOrder);
   }
