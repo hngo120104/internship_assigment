@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserCreateDto } from '../dto/users/user.create.dto';
+import { UserCreateRequestDto } from '../dto/users/request/user.create.request.dto';
 import { User, UserStatus } from '../entities/user.entity';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,7 +19,7 @@ export class UsersRepository {
   }
 
   async createUser(
-    userCreateDto: UserCreateDto,
+    userCreateDto: UserCreateRequestDto,
     passwordHashed: string,
   ): Promise<User> {
     const newUser = this.userRepo.create({
@@ -117,6 +117,6 @@ export class UsersRepository {
       { isDeleted: true },
     );
 
-    return result.affected !== 0;
+    return result.affected === 1;
   }
 }

@@ -11,9 +11,9 @@ import {
 import { UserAddressesService } from '../services/user.addresses.service';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
-import { UserAddressesCreateDto } from '../dto/user.addresses/user.addresses.create.dto';
-import { UserAddressesResponseDto } from '../dto/user.addresses/user.addresses.response.dto';
-import { UserAddressesUpdateDto } from '../dto/user.addresses/user.addresses.update.dto';
+import { UserAddressCreateRequestDto } from '../dto/user.addresses/request/user.address.create.request.dto';
+import { UserAddressResponseDto } from '../dto/user.addresses/response/user.address.reponse.dto';
+import { UserAddressUpdateRequestDto } from '../dto/user.addresses/request/user.address.update.request.dto';
 
 @Controller('api/users/addresses')
 export class UserAddressesController {
@@ -22,8 +22,8 @@ export class UserAddressesController {
   @Post()
   async createNewUserAddress(
     @CurrentUser() user: CurrentUserPayload,
-    @Body() userAddressesCreateDto: UserAddressesCreateDto,
-  ): Promise<UserAddressesResponseDto> {
+    @Body() userAddressesCreateDto: UserAddressCreateRequestDto,
+  ): Promise<UserAddressResponseDto> {
     return await this.userAddressesService.createNewUserAddress(
       user.sub,
       userAddressesCreateDto,
@@ -34,8 +34,8 @@ export class UserAddressesController {
   async updateUserAddress(
     @CurrentUser() user: CurrentUserPayload,
     @Param('addressId') addressId: string,
-    @Body() userAddressesUpdateDto: UserAddressesUpdateDto,
-  ): Promise<UserAddressesResponseDto> {
+    @Body() userAddressesUpdateDto: UserAddressUpdateRequestDto,
+  ): Promise<UserAddressResponseDto> {
     return await this.userAddressesService.updateUserAddress(
       user.sub,
       addressId,

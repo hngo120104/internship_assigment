@@ -2,7 +2,7 @@ import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { Role } from '../entities/role.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { RoleCreateDto } from '../dto/role/role.create.dto';
+import { RoleCreateRequestDto } from '../dto/role/request/role.create.request.dto';
 
 @Injectable()
 export class RolesRepository {
@@ -21,7 +21,7 @@ export class RolesRepository {
     return await this.roleRepo.find(options);
   }
 
-  async createRole(roleCreateDto: RoleCreateDto): Promise<Role> {
+  async createRole(roleCreateDto: RoleCreateRequestDto): Promise<Role> {
     const newRole = this.roleRepo.create({
       name: roleCreateDto.name,
       description: roleCreateDto.description,

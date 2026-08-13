@@ -8,13 +8,14 @@ import {
   Query,
 } from '@nestjs/common';
 import { AdminService } from '../services/admin.service';
-import { CategoryResponseDto } from '../../category/dto/category.response.dto';
-import { CategoryCreateDto } from '../../category/dto/category.create.dto';
+import { CategoryResponseDto } from '../../category/dto/response/category.response.dto';
+import { CategoryCreateRequestDto } from '../../category/dto/request/category.create.request.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { Role } from '../../auth/guards/role/role.enum';
-import { CategoryUpdateDto } from '../../category/dto/category.update.dto';
-import { UserResponseDto } from '../../users/dto/users/user.response.dto';
-import { UserCartResponseDto } from '../../carts/dto/cart.response.dto';
+import { CategoryUpdateRequestDto } from '../../category/dto/request/category.update.request.dto';
+import { UserResponseDto } from '../../users/dto/users/response/user.response.dto';
+import { UserCartResponseDto } from '../../carts/dto/response/cart.response.dto';
+import { UserShopResponseDto } from '../../users/dto/user.shop/response/user.shop.response.dto';
 
 @Controller('api/admin')
 export class AdminController {
@@ -28,6 +29,16 @@ export class AdminController {
   ): Promise<UserResponseDto[]> {
     return await this.AdminService.findActiveUsers(page, limit);
   }
+
+  @Get('shops/active')
+  @Roles(Role.ADMIN)
+  async finfManyActiveShops(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ): Promise<UserShopResponseDto[]> {
+    return await this.AdminService.findActiveShops(page, limit);
+  }
+
   @Get('carts')
   @Roles(Role.ADMIN)
   async findActiveUsersCarts(): Promise<UserCartResponseDto[]> {
@@ -43,7 +54,7 @@ export class AdminController {
   @Post('categories')
   @Roles(Role.ADMIN)
   async createNewCategory(
-    @Body() categoryCreateDto: CategoryCreateDto,
+    @Body() categoryCreateDto: CategoryCreateRequestDto,
   ): Promise<CategoryResponseDto> {
     return await this.AdminService.createNewCategory(categoryCreateDto);
   }
@@ -52,7 +63,7 @@ export class AdminController {
   @Roles(Role.ADMIN)
   async updateCategory(
     @Param('categoryId') categoryId: string,
-    @Body() categoryUpdateDto: CategoryUpdateDto,
+    @Body() categoryUpdateDto: CategoryUpdateRequestDto,
   ): Promise<CategoryResponseDto> {
     return await this.AdminService.updateCategory(
       categoryId,

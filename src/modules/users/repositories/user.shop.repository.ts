@@ -1,16 +1,31 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Shop, ShopStatus } from '../entities/shop.entity';
 import { User } from '../entities/user.entity';
-import { UserShopCreateDto } from '../dto/user.shop/user.shop.create.dto';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { UserShopCreateRequestDto } from '../dto/user.shop/request/user.shop.create.request.dto';
+import {
+  FindManyOptions,
+  FindOneOptions,
+  FindOptionsSelect,
+  Repository,
+} from 'typeorm';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserShopUpdateDto } from '../dto/user.shop/user.shop.update.dto';
+import { UserShopUpdateRequestDto } from '../dto/user.shop/request/user.shop.update.request.dto';
 
 @Injectable()
 export class UserShopRepository {
   constructor(
     @InjectRepository(Shop) private readonly userShopRepo: Repository<Shop>,
   ) {}
+
+  async findFieldWithOptionByUserId(
+    userId: string,
+    selectedField: FindOptionsSelect<Shop>,
+  ): Promise<Partial<Shop> | null> {
+    return await this.userShopRepo.findOne({
+      where: { userId: userId },
+      select: selectedField,
+    });
+  }
 
   async findOneWithOptions(
     options: FindOneOptions<Shop>,
@@ -22,9 +37,17 @@ export class UserShopRepository {
     return await this.userShopRepo.find(options);
   }
 
+  async findManyActiveShops(page: number, limit: number): Promise<Shop[]> {
+    return await this.userShopRepo.find({
+      where: { shopStatus: ShopStatus.ACTIVE, isDeleted: false },
+      skip: limit * (page - 1),
+      take: limit,
+    });
+  }
+
   async createShop(
     user: User,
-    userShopCreateDto: UserShopCreateDto,
+    userShopCreateDto: UserShopCreateRequestDto,
   ): Promise<Shop> {
     const newUserShop = this.userShopRepo.create({
       user,
@@ -65,7 +88,7 @@ export class UserShopRepository {
 
   async updateShopDetails(
     userId: string,
-    userShopUpdateDto: UserShopUpdateDto,
+    userShopUpdateDto: UserShopUpdateRequestDto,
   ): Promise<Shop> {
     const updateResult = await this.userShopRepo.update(
       { userId: userId, isDeleted: false },

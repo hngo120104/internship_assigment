@@ -4,17 +4,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CartItemsRepository } from '../repositories/cart.items.repository';
-import { CartItemResponseDto } from '../dto/cart.item.response.dto';
+import { CartItemResponseDto } from '../dto/response/cart.item.response.dto';
 import { CartItem } from '../entities/cart.item.entity';
-import { CartItemsAddDto } from '../dto/cart.items.add.dto';
+import { CartItemsAddRequestDto } from '../dto/request/cart.items.add.request.dto';
 import { ProductsService } from '../../products/services/products.service';
-import { CartItemsUpdateDto } from '../dto/cart.items.update.dto';
-import { UserCartResponseDto } from '../dto/cart.response.dto';
+import { CartItemsUpdateRequestDto } from '../dto/request/cart.items.update.request.dto';
+import { UserCartResponseDto } from '../dto/response/cart.response.dto';
 import { Transactional } from 'typeorm-transactional';
 import {
   toListResponseDtos,
   toResponseDto,
 } from '../../../utils/to.dto.response';
+import { CartItemDeleteResponseDto } from '../dto/response/cart.item.delete.response.dto';
 
 @Injectable()
 export class CartItemsService {
@@ -143,7 +144,7 @@ export class CartItemsService {
   @Transactional()
   async createNewCartItemOrAddQuantity(
     userId: string,
-    cartItemsAddDto: CartItemsAddDto,
+    cartItemsAddDto: CartItemsAddRequestDto,
   ): Promise<CartItemResponseDto> {
     const createdCartItemExist =
       await this.cartItemsRepo.findActiveCartItemByUserIdAndProductId(
@@ -176,7 +177,7 @@ export class CartItemsService {
   }
 
   async addExistCartItemQuantity(
-    cartItemsAddDto: CartItemsAddDto,
+    cartItemsAddDto: CartItemsAddRequestDto,
     cartItem: CartItem,
   ): Promise<CartItemResponseDto> {
     const totalQuantity = cartItem.quantity + cartItemsAddDto.quantity;
@@ -194,7 +195,7 @@ export class CartItemsService {
   async updateExistCartItemQuantity(
     cartItemId: string,
     userId: string,
-    cartItemsUpdateDto: CartItemsUpdateDto,
+    cartItemsUpdateDto: CartItemsUpdateRequestDto,
   ): Promise<CartItemResponseDto> {
     const foundCartItemBelongsToUser =
       await this.findActiveCartItemEntityByUserIdAndCartItemIdOrThrow(
@@ -231,7 +232,7 @@ export class CartItemsService {
   async deleteUserCartItemOrThrow(
     cartItemId: string,
     userId: string,
-  ): Promise<number> {
+  ): Promise<CartItemDeleteResponseDto> {
     const deletedCount = await this.cartItemsRepo.softDeleteCartItem(
       userId,
       cartItemId,
@@ -241,16 +242,24 @@ export class CartItemsService {
         'Cart item does not exist or is already deleted.',
       );
     }
-    return deletedCount;
+    return toResponseDto(CartItemDeleteResponseDto, {
+      deletedAmount: deletedCount,
+      message: 'Success',
+    });
   }
 
-  async deleteAllUserCartItemsOrThrow(userId: string): Promise<number> {
+  async deleteAllUserCartItemsOrThrow(
+    userId: string,
+  ): Promise<CartItemDeleteResponseDto> {
     const deletedCount =
       await this.cartItemsRepo.softDeleteAllCartItemsOfUser(userId);
     if (deletedCount === 0) {
       throw new NotFoundException('Cart items do not exist or are deleted.');
     }
-    return deletedCount;
+    return toResponseDto(CartItemDeleteResponseDto, {
+      deletedAmount: deletedCount,
+      message: 'Success',
+    });
   }
 
   async markUserCartItemsAsOrderedOrThrow(

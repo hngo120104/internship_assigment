@@ -2,7 +2,7 @@ import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { UserPhoto } from '../entities/user.photo.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
-import { UserPhotosInsertDto } from '../dto/user.photos/user.photos.insert.dto';
+import { UserPhotosInsertRequestDto } from '../dto/user.photos/request/user.photos.insert.request.dto';
 
 @Injectable()
 export class UserPhotosRepository {
@@ -35,7 +35,7 @@ export class UserPhotosRepository {
 
   async insertPhotosIntoUser(
     userId: string,
-    userPhotosInsertDto: UserPhotosInsertDto[],
+    userPhotosInsertDto: UserPhotosInsertRequestDto[],
   ): Promise<UserPhoto[]> {
     const userPhotos = userPhotosInsertDto.map((userPhoto) => ({
       url: userPhoto.url,

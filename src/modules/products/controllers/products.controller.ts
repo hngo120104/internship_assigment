@@ -11,12 +11,12 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ProductsService } from '../services/products.service';
-import { ProductCreateDto } from '../dto/products/product.create.dto';
-import { ProductUpdateDto } from '../dto/products/product.update.dto';
+import { ProductCreateRequestDto } from '../dto/products/request/product.create.request.dto';
+import { ProductUpdateRequestDto } from '../dto/products/request/product.update.request.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { Role } from '../../auth/guards/role/role.enum';
 import { Public } from '../../auth/public.decorator';
-import { ProductResponseDto } from '../dto/products/product.response.dto';
+import { ProductResponseDto } from '../dto/products/response/product.response.dto';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
 
@@ -28,7 +28,7 @@ export class ProductsController {
   @Roles(Role.SELLER)
   async createProducts(
     @CurrentUser() user: CurrentUserPayload,
-    @Body() productCreateDto: ProductCreateDto,
+    @Body() productCreateDto: ProductCreateRequestDto,
   ): Promise<ProductResponseDto> {
     return await this.productsService.createProduct(user.sub, productCreateDto);
   }
@@ -63,7 +63,7 @@ export class ProductsController {
   async updateShopProduct(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') updateProductId: string,
-    @Body() updateProductDto: ProductUpdateDto,
+    @Body() updateProductDto: ProductUpdateRequestDto,
   ): Promise<ProductResponseDto> {
     return await this.productsService.updateShopProductById(
       updateProductId,

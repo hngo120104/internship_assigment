@@ -1,30 +1,81 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  SerializeOptions,
+} from '@nestjs/common';
 import { OrdersService } from '../services/orders.service';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
-import { ShopOrderResponseDto } from '../dto/shop.order.response.dto';
-import { CheckoutRequestDto } from '../dto/checkout.request.dto';
-import { BuyNowRequestDto } from '../dto/buynow.request.dto';
-import { CustomerOrderCreateResponseDto } from '../dto/customer.order.response.dto';
+import { ShopOrderResponseDto } from '../dto/response/shop.order.response.dto';
+import { CheckoutRequestDto } from '../dto/request/checkout.request.dto';
+import { BuyNowRequestDto } from '../dto/request/buynow.request.dto';
+import { CheckoutResponseDto } from '../dto/response/customer.order.response.dto';
+import { Roles } from '../../auth/guards/role/role.decorator';
+import { Role } from '../../auth/guards/role/role.enum';
 
 @Controller('api/orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get('user')
-  async getUserPendingOrderByUserId(
+  @SerializeOptions({ groups: ['order-details'] })
+  async findAllUserOrders(
     @CurrentUser() user: CurrentUserPayload,
+  ): Promise<ShopOrderResponseDto[]> {
+    return await this.ordersService.findAllUserOrdersByUserIdOrThrow(user.sub);
+  }
+
+  @Get(':orderId')
+  async findUserPendingOrderByUserId(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('orderId') orderId: string,
   ): Promise<ShopOrderResponseDto> {
-    return await this.ordersService.findUserPendingOrderByUserIdOrThrow(
+    const response = await this.ordersService.findUserOrderByUserIdOrThrow(
+      user.sub,
+      orderId,
+    );
+    return response;
+  }
+
+  @Patch('users/:orderId')
+  async userCancelOrder(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('orderId') orderId: string,
+  ) {
+    return await this.ordersService.userCancelOrderOrThrow(user.sub, orderId);
+  }
+
+  @Get('shops/pending')
+  @Roles(Role.SELLER)
+  @SerializeOptions({ groups: ['order-details'] })
+  async findUserShopPendingOrdersByUserId(
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<ShopOrderResponseDto[]> {
+    return await this.ordersService.findUserShopPendingOrderByUserIdOrThrow(
       user.sub,
     );
   }
 
+  @Patch('shops/:orderId/confirm')
+  @SerializeOptions({ groups: ['order-details'] })
+  async shopConfirmOrder(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('orderId') orderId: string,
+  ): Promise<ShopOrderResponseDto> {
+    return await this.ordersService.shopConfirmOrderOrThrow(user.sub, orderId);
+  }
+
+  @Patch('shops/:orderId/confirm')
   @Post('checkout')
+  @SerializeOptions({ groups: ['customer-order'] })
   async checkoutCart(
     @CurrentUser() user: CurrentUserPayload,
     @Body() checkoutRequestDto: CheckoutRequestDto,
-  ): Promise<CustomerOrderCreateResponseDto> {
+  ): Promise<CheckoutResponseDto> {
     return await this.ordersService.checkoutCart(user.sub, checkoutRequestDto);
   }
 

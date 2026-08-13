@@ -11,12 +11,13 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
-import { CartItemsAddDto } from '../dto/cart.items.add.dto';
+import { CartItemsAddRequestDto } from '../dto/request/cart.items.add.request.dto';
 
-import { UserCartResponseDto } from '../dto/cart.response.dto';
+import { UserCartResponseDto } from '../dto/response/cart.response.dto';
 import { CartItemsService } from '../services/cart.items.service';
-import { CartItemResponseDto } from '../dto/cart.item.response.dto';
-import { CartItemsUpdateDto } from '../dto/cart.items.update.dto';
+import { CartItemResponseDto } from '../dto/response/cart.item.response.dto';
+import { CartItemsUpdateRequestDto } from '../dto/request/cart.items.update.request.dto';
+import { CartItemDeleteResponseDto } from '../dto/response/cart.item.delete.response.dto';
 
 @Controller('api/carts')
 export class CartsController {
@@ -29,21 +30,10 @@ export class CartsController {
     return this.cartItemsService.getUserActiveCart(user.sub);
   }
 
-  @Get('items/:cartItemId')
-  async getCartItem(
-    @CurrentUser() user: CurrentUserPayload,
-    @Param('cartItemId') cartItemId: string,
-  ): Promise<CartItemResponseDto> {
-    return this.cartItemsService.findActiveCartItemByUserIdAndCartItemIdOrThrow(
-      user.sub,
-      cartItemId,
-    );
-  }
-
-  @Post('items')
+  @Post()
   async createCartItem(
     @CurrentUser() user: CurrentUserPayload,
-    @Body() cartItemsAddDto: CartItemsAddDto,
+    @Body() cartItemsAddDto: CartItemsAddRequestDto,
   ): Promise<CartItemResponseDto> {
     return this.cartItemsService.createNewCartItemOrAddQuantity(
       user.sub,
@@ -51,11 +41,11 @@ export class CartsController {
     );
   }
 
-  @Patch('items/:cartItemId')
+  @Patch(':cartItemId')
   async updateCartItem(
     @CurrentUser() user: CurrentUserPayload,
     @Param('cartItemId') cartItemId: string,
-    @Body() cartItemsUpdateDto: CartItemsUpdateDto,
+    @Body() cartItemsUpdateDto: CartItemsUpdateRequestDto,
   ): Promise<CartItemResponseDto> {
     return this.cartItemsService.updateExistCartItemQuantity(
       cartItemId,
@@ -64,18 +54,23 @@ export class CartsController {
     );
   }
 
-  @Delete('items/:cartItemId')
+  @Delete(':cartItemId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteCartItem(
     @Param('cartItemId') cartItemId: string,
     @CurrentUser() user: CurrentUserPayload,
-  ): Promise<void> {
-    await this.cartItemsService.deleteUserCartItemOrThrow(cartItemId, user.sub);
+  ): Promise<CartItemDeleteResponseDto> {
+    return await this.cartItemsService.deleteUserCartItemOrThrow(
+      cartItemId,
+      user.sub,
+    );
   }
 
-  @Delete('clear')
+  @Delete()
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteCart(@CurrentUser() user: CurrentUserPayload): Promise<void> {
-    await this.cartItemsService.deleteAllUserCartItemsOrThrow(user.sub);
+  async deleteCart(
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<CartItemDeleteResponseDto> {
+    return await this.cartItemsService.deleteAllUserCartItemsOrThrow(user.sub);
   }
 }

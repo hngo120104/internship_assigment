@@ -1,4 +1,4 @@
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import {
   Order,
   OrderStatus,
@@ -26,9 +26,31 @@ export class OrdersRepository {
     return await this.ordersRepo.find(options);
   }
 
-  async findPendingOrderByUserId(userId: string): Promise<Order | null> {
+  async findAllUserOrders(userId: string): Promise<Order[]> {
+    return await this.ordersRepo.find({
+      where: { userId: userId },
+      relations: { orderItems: true, shipAddress: true },
+    });
+  }
+
+  async findUserShopPendingOrdersByShopId(shopId: string): Promise<Order[]> {
+    return await this.ordersRepo.find({
+      where: {
+        shopId: shopId,
+        orderStatus: OrderStatus.PENDING,
+        paymentStatus: PaymentStatus.PENDING,
+      },
+      relations: { shipAddress: true, orderItems: true },
+    });
+  }
+
+  async findOrderByUserIdAndOrderId(
+    userId: string,
+    orderId: string,
+  ): Promise<Order | null> {
     return await this.ordersRepo.findOne({
-      where: { userId: userId, orderStatus: OrderStatus.PENDING },
+      where: { userId: userId, id: orderId },
+      relations: { shipAddress: true, orderItems: true },
     });
   }
 
@@ -65,5 +87,35 @@ export class OrdersRepository {
         shipAddress: true,
       },
     });
+  }
+
+  async shopConfirmOrderByOrderId(
+    shopId: string,
+    orderId: string,
+  ): Promise<boolean> {
+    const confirmResult = await this.ordersRepo.update(
+      {
+        id: orderId,
+        shopId: shopId,
+        orderStatus: OrderStatus.PENDING,
+        paymentStatus: In([PaymentStatus.PAID, PaymentStatus.PENDING]),
+      },
+      { orderStatus: OrderStatus.CONFIRMED },
+    );
+    return confirmResult.affected === 1;
+  }
+
+  async userCancelOrderByOrderId(
+    userId: string,
+    orderId: string,
+  ): Promise<boolean> {
+    const cancelResult = await this.ordersRepo.update(
+      {
+        userId: userId,
+        id: orderId,
+      },
+      { orderStatus: OrderStatus.CANCELLED },
+    );
+    return cancelResult.affected === 1;
   }
 }

@@ -4,10 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CategoriesRepository } from '../repositories/categories.repository';
-import { CategoryCreateDto } from '../dto/category.create.dto';
-import { CategoryResponseDto } from '../dto/category.response.dto';
+import { CategoryCreateRequestDto } from '../dto/request/category.create.request.dto';
+import { CategoryResponseDto } from '../dto/response/category.response.dto';
 import { Category } from '../entities/category.entity';
-import { CategoryUpdateDto } from '../dto/category.update.dto';
+import { CategoryUpdateRequestDto } from '../dto/request/category.update.request.dto';
 import { In } from 'typeorm';
 import {
   toListResponseDtos,
@@ -19,7 +19,7 @@ export class CategoriesService {
   constructor(private readonly categoriesRepo: CategoriesRepository) {}
 
   async createCategory(
-    categoryCreateDto: CategoryCreateDto,
+    categoryCreateDto: CategoryCreateRequestDto,
   ): Promise<CategoryResponseDto> {
     const createdCategory =
       await this.categoriesRepo.createCategory(categoryCreateDto);
@@ -45,7 +45,7 @@ export class CategoriesService {
 
   async updateCategory(
     categoryId: string,
-    categoryUpdateDto: CategoryUpdateDto,
+    categoryUpdateDto: CategoryUpdateRequestDto,
   ): Promise<CategoryResponseDto> {
     const updatedCategory = await this.categoriesRepo.updateCategory(
       categoryId,

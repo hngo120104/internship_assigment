@@ -2,7 +2,7 @@ import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { ProductPhoto } from '../entities/product.photo.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
-import { ProductPhotosInsertDto } from '../dto/product.photos/product.photos.insert.dto';
+import { ProductPhotosInsertRequestDto } from '../dto/product.photos/request/product.photos.insert.request.dto';
 
 @Injectable()
 export class ProductPhotosRepository {
@@ -33,7 +33,7 @@ export class ProductPhotosRepository {
 
   async insertPhotosIntoProduct(
     productId: string,
-    productPhotosInsertDto: ProductPhotosInsertDto[],
+    productPhotosInsertDto: ProductPhotosInsertRequestDto[],
   ): Promise<ProductPhoto[]> {
     const productPhotos = productPhotosInsertDto.map((productPhoto) => ({
       url: productPhoto.url,

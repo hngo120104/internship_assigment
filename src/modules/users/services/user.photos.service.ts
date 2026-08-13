@@ -3,10 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { UserPhotosInsertDto } from '../dto/user.photos/user.photos.insert.dto';
+import { UserPhotosInsertRequestDto } from '../dto/user.photos/request/user.photos.insert.request.dto';
 import { UserPhotosRepository } from '../repositories/user.photos.repository';
 import { UserPhoto } from '../entities/user.photo.entity';
-import { UserPhotoResponseDto } from '../dto/user.photos/user.photos.insert.response.dto';
+import { UserPhotoResponseDto } from '../dto/user.photos/response/user.photos.insert.response.dto';
 import {
   toListResponseDtos,
   toResponseDto,
@@ -40,7 +40,7 @@ export class UserPhotosService {
 
   async insertPhotosToUser(
     userId: string,
-    userPhotosInsertDto: UserPhotosInsertDto[],
+    userPhotosInsertDto: UserPhotosInsertRequestDto[],
   ): Promise<UserPhoto[]> {
     const insertedPhotos = await this.userPhotosRepository.insertPhotosIntoUser(
       userId,

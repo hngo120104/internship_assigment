@@ -1,5 +1,5 @@
-import { UserShopCreateDto } from '../dto/user.shop/user.shop.create.dto';
-import { UserShopResponseDto } from '../dto/user.shop/user.shop.response.dto';
+import { UserShopCreateRequestDto } from '../dto/user.shop/request/user.shop.create.request.dto';
+import { UserShopResponseDto } from '../dto/user.shop/response/user.shop.response.dto';
 import { Shop } from '../entities/shop.entity';
 import { User } from '../entities/user.entity';
 import { RolesRepository } from '../repositories/role.repository';
@@ -13,8 +13,12 @@ import {
 } from '@nestjs/common';
 import { Transactional } from 'typeorm-transactional';
 import { UserRolesRepository } from '../repositories/user.roles.repository';
-import { UserShopUpdateDto } from '../dto/user.shop/user.shop.update.dto';
-import { toResponseDto } from '../../../utils/to.dto.response';
+import { UserShopUpdateRequestDto } from '../dto/user.shop/request/user.shop.update.request.dto';
+import {
+  toListResponseDtos,
+  toResponseDto,
+} from '../../../utils/to.dto.response';
+import { FindOptionsSelect } from 'typeorm';
 
 @Injectable()
 export class UserShopService {
@@ -25,9 +29,23 @@ export class UserShopService {
     private readonly userRolesRepo: UserRolesRepository,
   ) {}
 
+  async findFieldWithOptionByUserIdOrThrow(
+    userId: string,
+    field: FindOptionsSelect<Shop>,
+  ): Promise<Partial<Shop>> {
+    const foundField = await this.userShopRepo.findFieldWithOptionByUserId(
+      userId,
+      field,
+    );
+    if (!foundField) {
+      throw new NotFoundException('Field not found.');
+    }
+    return foundField;
+  }
+
   private async validateShopRegistration(
     userId: string,
-    userShopCreateDto: UserShopCreateDto,
+    userShopCreateDto: UserShopCreateRequestDto,
   ): Promise<User> {
     const foundUser = await this.usersRepo.findActiveUserById(userId);
     if (!foundUser) {
@@ -49,7 +67,7 @@ export class UserShopService {
 
   async processCreateShop(
     userId: string,
-    userShopCreateDto: UserShopCreateDto,
+    userShopCreateDto: UserShopCreateRequestDto,
   ): Promise<Shop> {
     const foundUser = await this.validateShopRegistration(
       userId,
@@ -77,7 +95,7 @@ export class UserShopService {
   @Transactional()
   async createShop(
     userId: string,
-    userShopCreateDto: UserShopCreateDto,
+    userShopCreateDto: UserShopCreateRequestDto,
   ): Promise<UserShopResponseDto> {
     const createdShop = await this.processCreateShop(userId, userShopCreateDto);
 
@@ -104,14 +122,20 @@ export class UserShopService {
     return foundShop;
   }
 
-  // async findManyActiveShops(pagination: number): Promise<UserShopResponseDto> {
-  //   const foundActiveShops = await this.userShopRepo.findManyActiveShops(pagination);
-  //   return to
-  // }
+  async findManyActiveShops(
+    pages: number,
+    limit: number,
+  ): Promise<UserShopResponseDto[]> {
+    const foundActiveShops = await this.userShopRepo.findManyActiveShops(
+      pages,
+      limit,
+    );
+    return toListResponseDtos(UserShopResponseDto, foundActiveShops);
+  }
 
   async updateShopDetails(
     userId: string,
-    userShopUpdateDto: UserShopUpdateDto,
+    userShopUpdateDto: UserShopUpdateRequestDto,
   ): Promise<UserShopResponseDto> {
     const updatedShop = await this.userShopRepo.updateShopDetails(
       userId,

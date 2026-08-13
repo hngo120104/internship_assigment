@@ -21,7 +21,7 @@ export class ProductPhoto {
   url!: string;
 
   @Column({ type: 'text', nullable: true })
-  description!: string;
+  description?: string;
 
   @Column({ name: 'is_primary', type: 'tinyint', default: 0, nullable: true })
   isPrimary!: boolean;

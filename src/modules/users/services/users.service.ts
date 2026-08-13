@@ -9,19 +9,20 @@ import { UserPhoto } from '../entities/user.photo.entity';
 import { UsersRepository } from '../repositories/users.repository';
 import { UserShopService } from './user.shop.service';
 import { UserPhotosService } from './user.photos.service';
-import { UserCreateDto } from '../dto/users/user.create.dto';
-import { UserShopCreateDto } from '../dto/user.shop/user.shop.create.dto';
-import { UserPhotosInsertDto } from '../dto/user.photos/user.photos.insert.dto';
+import { UserCreateRequestDto } from '../dto/users/request/user.create.request.dto';
+import { UserShopCreateRequestDto } from '../dto/user.shop/request/user.shop.create.request.dto';
+import { UserPhotosInsertRequestDto } from '../dto/user.photos/request/user.photos.insert.request.dto';
 import { RolesRepository } from '../repositories/role.repository';
-import { UserShopResponseDto } from '../dto/user.shop/user.shop.response.dto';
+import { UserShopResponseDto } from '../dto/user.shop/response/user.shop.response.dto';
 
-import { UserResponseDto } from '../dto/users/user.response.dto';
-import { UserCreateResponseDto } from '../dto/users/user.create.response.dto';
+import { UserResponseDto } from '../dto/users/response/user.response.dto';
+import { UserCreateResponseDto } from '../dto/users/response/user.create.response.dto';
 import { UserRolesRepository } from '../repositories/user.roles.repository';
 import {
   toListResponseDtos,
   toResponseDto,
 } from '../../../utils/to.dto.response';
+import { UserDeleteResponseDto } from '../dto/users/response/user.delete.response.dto';
 
 @Injectable()
 export class UsersService {
@@ -60,7 +61,7 @@ export class UsersService {
     return foundUserWithEmail;
   }
 
-  private async validateUserRegistration(userCreateDto: UserCreateDto) {
+  private async validateUserRegistration(userCreateDto: UserCreateRequestDto) {
     const existUserWithEmail = await this.usersRepo.findActiveUserByEmail(
       userCreateDto.email,
     );
@@ -71,7 +72,7 @@ export class UsersService {
   }
 
   private async createUserWithPasswordHashed(
-    userCreateDto: UserCreateDto,
+    userCreateDto: UserCreateRequestDto,
   ): Promise<User> {
     const passwordHashed = await bcrypt.hash(userCreateDto.password, 12);
 
@@ -84,7 +85,7 @@ export class UsersService {
 
   private async insertPhotosIntoUser(
     createdUser: User,
-    userPhotosDto: UserPhotosInsertDto[],
+    userPhotosDto: UserPhotosInsertRequestDto[],
   ) {
     let userPhotos: UserPhoto[] = [];
 
@@ -96,7 +97,7 @@ export class UsersService {
     createdUser.photos = userPhotos;
   }
 
-  async processCreateUser(userCreateDto: UserCreateDto): Promise<User> {
+  async processCreateUser(userCreateDto: UserCreateRequestDto): Promise<User> {
     const newUserWithPasswordHashed =
       await this.createUserWithPasswordHashed(userCreateDto);
     const defaultRole = await this.roleRepo.findByRoleName('CUSTOMER');
@@ -112,7 +113,7 @@ export class UsersService {
 
   @Transactional()
   async createDefaultUser(
-    userCreateDto: UserCreateDto,
+    userCreateDto: UserCreateRequestDto,
   ): Promise<UserCreateResponseDto> {
     await this.validateUserRegistration(userCreateDto);
 
@@ -166,7 +167,7 @@ export class UsersService {
   @Transactional()
   async shopRegister(
     userId: string,
-    userShopCreateDto: UserShopCreateDto,
+    userShopCreateDto: UserShopCreateRequestDto,
   ): Promise<UserShopResponseDto> {
     const userShopRegisterResponse = await this.userShopService.createShop(
       userId,
@@ -179,5 +180,18 @@ export class UsersService {
   async banUser(userId: string): Promise<UserResponseDto> {
     const bannedUser = await this.usersRepo.banUser(userId);
     return toResponseDto(UserResponseDto, bannedUser);
+  }
+
+  async deleteUserByUserIdOrThrow(
+    userId: string,
+  ): Promise<UserDeleteResponseDto> {
+    const deleteResult = await this.usersRepo.softDeleteUser(userId);
+    if (!deleteResult) {
+      throw new NotFoundException('User not found.');
+    }
+    return {
+      amount: deleteResult ? 1 : 0,
+      message: 'Success.',
+    };
   }
 }

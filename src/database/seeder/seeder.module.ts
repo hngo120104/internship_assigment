@@ -8,7 +8,6 @@ import { Role } from '../../modules/users/entities/role.entity';
 import { Address } from '../../modules/users/entities/user.address.entity';
 import { Shop } from '../../modules/users/entities/shop.entity';
 import { UserPhoto } from '../../modules/users/entities/user.photo.entity';
-import { ShopPhoto } from '../../modules/users/entities/shop.photos.entity';
 import { Product } from '../../modules/products/entities/product.entity';
 import { Category } from '../../modules/category/entities/category.entity';
 import { CartItem } from '../../modules/carts/entities/cart.item.entity';
@@ -23,7 +22,6 @@ import { SeederService } from './services/seeder.service';
       Address,
       Shop,
       UserPhoto,
-      ShopPhoto,
       Product,
       Category,
       CartItem,

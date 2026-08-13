@@ -9,7 +9,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity';
-import { ShopPhoto } from './shop.photos.entity';
 import { Product } from '../../products/entities/product.entity';
 import { Order } from '../../orders/entities/order.entity';
 
@@ -57,9 +56,6 @@ export class Shop {
   @OneToOne(() => User, (user) => user.shop, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })
   user!: User;
-
-  @OneToMany(() => ShopPhoto, (photo) => photo.shop)
-  photos?: ShopPhoto[];
 
   @OneToMany(() => Product, (product) => product.shop, { cascade: true })
   products?: Product[];

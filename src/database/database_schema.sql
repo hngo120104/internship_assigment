@@ -85,20 +85,6 @@ CREATE TABLE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
-    `shop_photos` (
-        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
-        `shop_id` varchar(36) NOT NULL,
-        `type` enum ('AVATAR', 'BACKGROUND') NOT NULL,
-        `url` varchar(2048) NOT NULL,
-        `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-        `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-        `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
-        PRIMARY KEY (`id`),
-        KEY `IDX_photos_shop_id` (`shop_id`),
-        CONSTRAINT `FK_shop_photos_shop` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`id`) ON DELETE RESTRICT
-    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-CREATE TABLE
     `categories` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `icon_url` varchar(2048) DEFAULT NULL,

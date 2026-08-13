@@ -4,11 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UserAddressesRepository } from '../repositories/user.addresses.repository';
-import { UserAddressesCreateDto } from '../dto/user.addresses/user.addresses.create.dto';
-import { UserAddressesResponseDto } from '../dto/user.addresses/user.addresses.response.dto';
+import { UserAddressCreateRequestDto } from '../dto/user.addresses/request/user.address.create.request.dto';
+import { UserAddressResponseDto } from '../dto/user.addresses/response/user.address.reponse.dto';
 import { Address } from '../entities/user.address.entity';
-import { UserAddressesUpdateDto } from '../dto/user.addresses/user.addresses.update.dto';
-import { toResponseDto } from '../../../utils/to.dto.response';
+import { UserAddressUpdateRequestDto } from '../dto/user.addresses/request/user.address.update.request.dto';
+import {
+  toListResponseDtos,
+  toResponseDto,
+} from '../../../utils/to.dto.response';
 
 @Injectable()
 export class UserAddressesService {
@@ -23,6 +26,17 @@ export class UserAddressesService {
       throw new NotFoundException('User address not found.');
     }
     return foundAddress;
+  }
+
+  async findActiveUserAddressesByUserIdOrThrow(
+    userId: string,
+  ): Promise<UserAddressResponseDto[]> {
+    const addresses =
+      await this.userAddressesRepo.findActiveUserAddressesByUserId(userId);
+    if (!addresses || addresses.length === 0) {
+      throw new NotFoundException('User addresses not found.');
+    }
+    return toListResponseDtos(UserAddressResponseDto, addresses);
   }
 
   async findActiveUserAddressEntityByIdOrThrow(
@@ -41,26 +55,26 @@ export class UserAddressesService {
 
   async createNewUserAddress(
     userId: string,
-    userAddressesCreateDto: UserAddressesCreateDto,
-  ): Promise<UserAddressesResponseDto> {
+    userAddressesCreateDto: UserAddressCreateRequestDto,
+  ): Promise<UserAddressResponseDto> {
     const newUserAddress = await this.userAddressesRepo.createAddress(
       userId,
       userAddressesCreateDto,
     );
-    return toResponseDto(UserAddressesResponseDto, newUserAddress);
+    return toResponseDto(UserAddressResponseDto, newUserAddress);
   }
 
   async updateUserAddress(
     userId: string,
     addressId: string,
-    userAddressesUpdateDto: UserAddressesUpdateDto,
-  ): Promise<UserAddressesResponseDto> {
+    userAddressesUpdateDto: UserAddressUpdateRequestDto,
+  ): Promise<UserAddressResponseDto> {
     const updatedAddresses = await this.userAddressesRepo.updateUserAddress(
       userId,
       addressId,
       userAddressesUpdateDto,
     );
-    return toResponseDto(UserAddressesResponseDto, updatedAddresses);
+    return toResponseDto(UserAddressResponseDto, updatedAddresses);
   }
 
   async deleteUserAddressesOrThrow(

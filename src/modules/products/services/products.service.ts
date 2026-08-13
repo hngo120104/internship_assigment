@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProductCreateDto } from '../dto/products/product.create.dto';
-import { ProductUpdateDto } from '../dto/products/product.update.dto';
+import { ProductCreateRequestDto } from '../dto/products/request/product.create.request.dto';
+import { ProductUpdateRequestDto } from '../dto/products/request/product.update.request.dto';
 import { BadRequestException } from '@nestjs/common';
 import { Product } from '../entities/product.entity';
 import { ProductsRepository } from '../repositories/products.repository';
-import { ProductResponseDto } from '../dto/products/product.response.dto';
+import { ProductResponseDto } from '../dto/products/response/product.response.dto';
 import { ProductPhotosRepository } from '../repositories/product.photo.repository';
-import { ProductPhotosInsertDto } from '../dto/product.photos/product.photos.insert.dto';
+import { ProductPhotosInsertRequestDto } from '../dto/product.photos/request/product.photos.insert.request.dto';
 import { Transactional } from 'typeorm-transactional';
 import { UserShopService } from '../../users/services/user.shop.service';
 import { ProductCategoriesRepository } from '../repositories/product.categories.repository';
@@ -93,7 +93,7 @@ export class ProductsService {
   private async insertPhotosIntoProduct(
     productId: string,
     createdProduct: Product,
-    productPhotosInsertDto: ProductPhotosInsertDto[],
+    productPhotosInsertDto: ProductPhotosInsertRequestDto[],
   ) {
     const insertedPhotos = await this.productPhotosRepo.insertPhotosIntoProduct(
       productId,
@@ -104,7 +104,7 @@ export class ProductsService {
 
   async processCreateProduct(
     userId: string,
-    productCreateDto: ProductCreateDto,
+    productCreateDto: ProductCreateRequestDto,
   ): Promise<Product> {
     const shopId = (await this.userShopService.findShopByUserIdOrThrow(userId))
       .id;
@@ -132,7 +132,7 @@ export class ProductsService {
   @Transactional()
   async createProduct(
     userId: string,
-    productCreateDto: ProductCreateDto,
+    productCreateDto: ProductCreateRequestDto,
   ): Promise<ProductResponseDto> {
     const createdProduct = await this.processCreateProduct(
       userId,
@@ -198,7 +198,7 @@ export class ProductsService {
   async updateShopProductById(
     productId: string,
     userId: string,
-    updateProductDto: ProductUpdateDto,
+    updateProductDto: ProductUpdateRequestDto,
   ): Promise<ProductResponseDto> {
     const shopId = (await this.userShopService.findShopByUserIdOrThrow(userId))
       .id;

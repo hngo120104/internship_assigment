@@ -72,7 +72,7 @@ describe('CartItemsService', () => {
       2,
     );
     expect(result.quantity).toBe(2);
-    expect(result.line_total).toBe(200);
+    expect(result.lineTotal).toBe(200);
   });
 
   it('adds quantity when the product is already in the active cart', async () => {
@@ -102,19 +102,19 @@ describe('CartItemsService', () => {
     );
     expect(cartItemsRepo.createCartItem).not.toHaveBeenCalled();
     expect(result.quantity).toBe(5);
-    expect(result.line_total).toBe(500);
+    expect(result.lineTotal).toBe(500);
   });
 
-  it('returns the number of deleted cart items', async () => {
+  it('returns the deleted cart items response', async () => {
     cartItemsRepo.softDeleteCartItem.mockResolvedValue(1);
     cartItemsRepo.softDeleteAllCartItemsOfUser.mockResolvedValue(3);
 
     await expect(
       service.deleteUserCartItemOrThrow('cart-item-id', 'user-id'),
-    ).resolves.toBe(1);
+    ).resolves.toEqual({ deletedAmount: 1, message: 'Success' });
     await expect(
       service.deleteAllUserCartItemsOrThrow('user-id'),
-    ).resolves.toBe(3);
+    ).resolves.toEqual({ deletedAmount: 3, message: 'Success' });
   });
 
   it('throws when no active cart item is deleted', async () => {

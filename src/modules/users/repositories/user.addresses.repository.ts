@@ -1,8 +1,8 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Address } from '../entities/user.address.entity';
 import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
-import { UserAddressesCreateDto } from '../dto/user.addresses/user.addresses.create.dto';
-import { UserAddressesUpdateDto } from '../dto/user.addresses/user.addresses.update.dto';
+import { UserAddressCreateRequestDto } from '../dto/user.addresses/request/user.address.create.request.dto';
+import { UserAddressUpdateRequestDto } from '../dto/user.addresses/request/user.address.update.request.dto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 @Injectable()
@@ -43,10 +43,15 @@ export class UserAddressesRepository {
       isDeleted: false,
     });
   }
+  async findActiveUserAddressesByUserId(userId: string): Promise<Address[]> {
+    return await this.userAddressesRepo.find({
+      where: { userId, isDeleted: false },
+    });
+  }
 
   async createAddress(
     userId: string,
-    userAddressesCreateDto: UserAddressesCreateDto,
+    userAddressesCreateDto: UserAddressCreateRequestDto,
   ): Promise<Address> {
     const newUserAddress = this.userAddressesRepo.create({
       userId: userId,
@@ -58,7 +63,7 @@ export class UserAddressesRepository {
   async updateUserAddress(
     userId: string,
     addressId: string,
-    userAddressesUpdateDto: UserAddressesUpdateDto,
+    userAddressesUpdateDto: UserAddressUpdateRequestDto,
   ): Promise<Address> {
     const existingAddress = await this.userAddressesRepo.findOneBy({
       id: addressId,

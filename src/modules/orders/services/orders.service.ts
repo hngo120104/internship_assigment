@@ -6,25 +6,29 @@ import {
 import { OrdersRepository } from '../repositories/orders.repository';
 import { OrderItemsRepository } from '../repositories/order.items.repository';
 import { Transactional } from 'typeorm-transactional';
-import { OrderItemCreateDto } from '../dto/order.item.create.dto';
+import { OrderItemCreateRequestDto } from '../dto/request/order.item.create.request.dto';
 import { ProductsService } from '../../products/services/products.service';
 import { OrderItem } from '../entities/order.item.entity';
 import { Product } from '../../products/entities/product.entity';
-import { BuyNowRequestDto } from '../dto/buynow.request.dto';
-import { ShopOrderResponseDto } from '../dto/shop.order.response.dto';
-import { UsersService } from '../../users/services/users.service';
+import { BuyNowRequestDto } from '../dto/request/buynow.request.dto';
+import { ShopOrderResponseDto } from '../dto/response/shop.order.response.dto';
 import { UserAddressesService } from '../../users/services/user.addresses.service';
-import { CheckoutRequestDto } from '../dto/checkout.request.dto';
+import { CheckoutRequestDto } from '../dto/request/checkout.request.dto';
 import { CartItemsService } from '../../carts/services/cart.items.service';
-import { toResponseDto } from '../../../utils/to.dto.response';
+import {
+  toListResponseDtos,
+  toResponseDto,
+} from '../../../utils/to.dto.response';
 import { Order, PaymentMethod } from '../entities/order.entity';
 import { CartItem } from '../../carts/entities/cart.item.entity';
-import { CustomerOrderCreateResponseDto } from '../dto/customer.order.response.dto';
+import { CheckoutResponseDto } from '../dto/response/customer.order.response.dto';
 import { plainToInstance } from 'class-transformer';
 import { Address } from '../../users/entities/user.address.entity';
+import { UserShopService } from '../../users/services/user.shop.service';
+import { group } from 'console';
 
 interface ReservedOrderItem {
-  request: OrderItemCreateDto;
+  request: OrderItemCreateRequestDto;
   product: Product;
 }
 
@@ -36,38 +40,73 @@ export class OrdersService {
     private readonly ordersRepo: OrdersRepository,
     private readonly orderItemsRepo: OrderItemsRepository,
     private readonly productsService: ProductsService,
-    private readonly usersService: UsersService,
+    private readonly userShopService: UserShopService,
     private readonly userAddressesService: UserAddressesService,
     private readonly cartItemsService: CartItemsService,
   ) {}
 
-  async findUserPendingOrderByUserIdOrThrow(
+  async findAllUserOrdersByUserIdOrThrow(
     userId: string,
-  ): Promise<ShopOrderResponseDto> {
-    const foundPendingOrder =
-      await this.ordersRepo.findPendingOrderByUserId(userId);
-    if (!foundPendingOrder) {
-      throw new NotFoundException('User does not have pending order.');
+  ): Promise<ShopOrderResponseDto[]> {
+    const foundOrders = await this.ordersRepo.findAllUserOrders(userId);
+    if (!foundOrders || foundOrders.length === 0) {
+      throw new NotFoundException('User orders not found.');
     }
-    return toResponseDto(ShopOrderResponseDto, foundPendingOrder);
+    return toListResponseDtos(ShopOrderResponseDto, foundOrders, [
+      'customer-order',
+    ]);
   }
 
-  @Transactional()
-  async createOrderItem(
+  async findUserOrderByUserIdOrThrow(
+    userId: string,
     orderId: string,
-    orderItemCreateDto: OrderItemCreateDto,
-  ): Promise<OrderItem> {
-    const lockedProduct =
-      await this.productsService.validateAndReserveProductStock(
-        orderItemCreateDto.productId,
-        orderItemCreateDto.quantity,
-      );
-
-    return await this.createOrderItemSnapshot(
+  ): Promise<ShopOrderResponseDto> {
+    const foundOrder = await this.ordersRepo.findOrderByUserIdAndOrderId(
+      userId,
       orderId,
-      orderItemCreateDto,
-      lockedProduct,
     );
+    if (!foundOrder) {
+      throw new NotFoundException('User order not found.');
+    }
+    return toResponseDto(ShopOrderResponseDto, foundOrder, ['order-details']);
+  }
+
+  async findUserOrderByShopIdOrThrow(
+    userId: string,
+    orderId: string,
+  ): Promise<ShopOrderResponseDto> {
+    const userShopId =
+      await this.userShopService.findFieldWithOptionByUserIdOrThrow(userId, {
+        id: true,
+      });
+    const foundOrder = await this.ordersRepo.findOrderByUserIdAndOrderId(
+      userShopId.id as string,
+      orderId,
+    );
+    if (!foundOrder) {
+      throw new NotFoundException('Order not found.');
+    }
+    return toResponseDto(ShopOrderResponseDto, foundOrder, ['order-details']);
+  }
+
+  async findUserShopPendingOrderByUserIdOrThrow(
+    userId: string,
+  ): Promise<ShopOrderResponseDto[]> {
+    const userShopId =
+      await this.userShopService.findFieldWithOptionByUserIdOrThrow(userId, {
+        id: true,
+      });
+    const foundShopPendingOrders =
+      await this.ordersRepo.findUserShopPendingOrdersByShopId(
+        userShopId.id as string,
+      );
+    console.log(foundShopPendingOrders);
+    if (!foundShopPendingOrders || foundShopPendingOrders.length === 0) {
+      throw new NotFoundException('Shop pending orders not found.');
+    }
+    return toListResponseDtos(ShopOrderResponseDto, foundShopPendingOrders, [
+      'customer-order',
+    ]);
   }
 
   @Transactional()
@@ -96,14 +135,14 @@ export class OrdersService {
       [{ request: buyNowRequestDto, product: reservedProduct }],
     );
 
-    return toResponseDto(ShopOrderResponseDto, order, ['customer-order']);
+    return toResponseDto(ShopOrderResponseDto, order, ['order-details']);
   }
 
   @Transactional()
   async checkoutCart(
     userId: string,
     checkoutRequestDto: CheckoutRequestDto,
-  ): Promise<CustomerOrderCreateResponseDto> {
+  ): Promise<CheckoutResponseDto> {
     this.validateCheckoutRequestNotEmpty(checkoutRequestDto);
 
     const shippingAddress =
@@ -149,8 +188,45 @@ export class OrdersService {
     );
 
     const response = this.toCustomerOrderResponse(createdOrders);
-    response.grand_total = this.calculateGrandTotal(createdOrders);
+    response.grandTotal = this.calculateGrandTotal(createdOrders);
     return response;
+  }
+
+  async userCancelOrderOrThrow(
+    userId: string,
+    orderId: string,
+  ): Promise<{ message: string }> {
+    const cancelResult = await this.ordersRepo.userCancelOrderByOrderId(
+      userId,
+      orderId,
+    );
+    if (!cancelResult) {
+      throw new NotFoundException('User order not found.');
+    }
+    return {
+      message: 'Cancel order Success.',
+    };
+  }
+
+  async shopConfirmOrderOrThrow(
+    userId: string,
+    orderId: string,
+  ): Promise<ShopOrderResponseDto> {
+    const userShopId =
+      await this.userShopService.findFieldWithOptionByUserIdOrThrow(userId, {
+        id: true,
+      });
+    const confirmResult = await this.ordersRepo.shopConfirmOrderByOrderId(
+      userShopId.id as string,
+      orderId,
+    );
+    if (!confirmResult) {
+      throw new NotFoundException('Order not found.');
+    }
+    const confirmedOrder = await this.ordersRepo.findOrderById(orderId);
+    return toResponseDto(ShopOrderResponseDto, confirmedOrder, [
+      'order-details',
+    ]);
   }
 
   private calculateGrandTotal(orders: Order[]): number {
@@ -166,11 +242,9 @@ export class OrdersService {
     return grandTotal;
   }
 
-  private toCustomerOrderResponse(
-    orders: Order[],
-  ): CustomerOrderCreateResponseDto {
+  private toCustomerOrderResponse(orders: Order[]): CheckoutResponseDto {
     return plainToInstance(
-      CustomerOrderCreateResponseDto,
+      CheckoutResponseDto,
       { orders: orders },
       {
         groups: ['customer-order'],
@@ -191,7 +265,7 @@ export class OrdersService {
   }
 
   private validateOrderItemRequestsMatchesUserCartItems(
-    orderItemCreateDtos: OrderItemCreateDto[],
+    orderItemCreateDtos: OrderItemCreateRequestDto[],
     cartItems: CartItem[],
   ) {
     const orderItemsByProductId = new Map(
@@ -210,15 +284,15 @@ export class OrdersService {
   }
 
   private sortItemsByProductIdForLocking(
-    orderItemCreateDtos: OrderItemCreateDto[],
-  ): OrderItemCreateDto[] {
+    orderItemCreateDtos: OrderItemCreateRequestDto[],
+  ): OrderItemCreateRequestDto[] {
     return [...orderItemCreateDtos].sort((left, right) =>
       left.productId.localeCompare(right.productId),
     );
   }
 
   private async reserveProductsAndGroupItemsByShop(
-    orderItemCreateDtos: OrderItemCreateDto[],
+    orderItemCreateDtos: OrderItemCreateRequestDto[],
   ): Promise<ReservedItemsByShop> {
     const reservedItemsByShop: ReservedItemsByShop = new Map();
 
@@ -292,7 +366,7 @@ export class OrdersService {
 
   private async createOrderItemSnapshot(
     orderId: string,
-    orderItemCreateDto: OrderItemCreateDto,
+    orderItemCreateDto: OrderItemCreateRequestDto,
     product: Product,
   ): Promise<OrderItem> {
     return await this.orderItemsRepo.createOrderItem(orderId, {

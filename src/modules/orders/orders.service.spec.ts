@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CartItemsService } from '../carts/services/cart.items.service';
 import { ProductsService } from '../products/services/products.service';
 import { UserAddressesService } from '../users/services/user.addresses.service';
+import { UserShopService } from '../users/services/user.shop.service';
 import { UsersService } from '../users/services/users.service';
 import { PaymentMethod } from './entities/order.entity';
 import { OrderItemsRepository } from './repositories/order.items.repository';
@@ -48,6 +49,7 @@ describe('OrdersService order creation flows', () => {
         { provide: OrderItemsRepository, useValue: orderItemsRepo },
         { provide: ProductsService, useValue: productsService },
         { provide: UsersService, useValue: {} },
+        { provide: UserShopService, useValue: {} },
         { provide: UserAddressesService, useValue: userAddressesService },
         { provide: CartItemsService, useValue: cartItemsService },
       ],
@@ -140,10 +142,10 @@ describe('OrdersService order creation flows', () => {
       address,
       PaymentMethod.BANKING,
     );
-    expect(result.order_items).toEqual([
-      expect.objectContaining({ product_id: product.id, quantity: 2 }),
+    expect(result.orderItems).toEqual([
+      expect.objectContaining({ productId: product.id, quantity: 2 }),
     ]);
-    expect(result.sub_total).toBe(200);
+    expect(result.subTotal).toBe(200);
   });
 
   it('checkout creates one COD order per shop and returns the combined total', async () => {
@@ -222,8 +224,8 @@ describe('OrdersService order creation flows', () => {
       cartItemsService.markUserCartItemsAsOrderedOrThrow,
     ).toHaveBeenCalledWith('user-id', ['cart-a', 'cart-b']);
     expect(result.orders).toHaveLength(2);
-    expect(result.orders[0].order_items).toHaveLength(1);
-    expect(result.grand_total).toBe(40);
+    expect(result.orders[0].orderItems).toHaveLength(1);
+    expect(result.grandTotal).toBe(40);
   });
 
   it('checkout rejects a quantity that no longer matches the cart', async () => {

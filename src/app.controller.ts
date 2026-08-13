@@ -1,7 +1,13 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  Controller,
+  Get,
+  UseInterceptors,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { Public } from './modules/auth/public.decorator';
 
+@UseInterceptors(ClassSerializerInterceptor)
 @Controller('api')
 export class AppController {
   constructor(private readonly appService: AppService) {}

@@ -1,13 +1,13 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../../users/services/users.service';
-import { LoginDto } from '../dto/login.dto';
+import { LoginRequestDto } from '../dto/request/login.request.dto';
 import * as bcrypt from 'bcrypt';
-import { LoginResponseDto } from '../dto/login.response.dto';
+import { LoginResponseDto } from '../dto/response/login.response.dto';
 import { User } from '../../users/entities/user.entity';
-import { UserCreateDto } from '../../users/dto/users/user.create.dto';
-import { UserCreateResponseDto } from '../../users/dto/users/user.create.response.dto';
-import { RoleResponseDto } from '../../users/dto/role/role.response.dto';
+import { UserCreateRequestDto } from '../../users/dto/users/request/user.create.request.dto';
+import { UserCreateResponseDto } from '../../users/dto/users/response/user.create.response.dto';
+import { RoleResponseDto } from '../../users/dto/role/response/role.response.dto';
 import { toResponseDto } from '../../../utils/to.dto.response';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  private async validateLoginUser(loginDto: LoginDto): Promise<User> {
+  private async validateLoginUser(loginDto: LoginRequestDto): Promise<User> {
     const userWithEmailExist =
       await this.usersService.findActiveUserByEmailOrThrow(loginDto.email);
 
@@ -45,7 +45,7 @@ export class AuthService {
   }
 
   async registerUser(
-    userCreateDto: UserCreateDto,
+    userCreateDto: UserCreateRequestDto,
   ): Promise<UserCreateResponseDto> {
     const createdUserResponse =
       await this.usersService.createDefaultUser(userCreateDto);
@@ -53,18 +53,18 @@ export class AuthService {
       createdUserResponse.id,
       createdUserResponse.roles,
     );
-    createdUserResponse.access_token = accessToken;
+    createdUserResponse.accessToken = accessToken;
     return createdUserResponse;
   }
 
-  async login(loginDto: LoginDto): Promise<LoginResponseDto> {
+  async login(loginDto: LoginRequestDto): Promise<LoginResponseDto> {
     const validatedUser = await this.validateLoginUser(loginDto);
     const validatedUserAccessToken = this.signAccessToken(
       validatedUser.id,
       validatedUser.userRoles.map((userRoles) => userRoles.role),
     );
     const loginResponse = toResponseDto(LoginResponseDto, validatedUser);
-    loginResponse.access_token = validatedUserAccessToken;
+    loginResponse.accessToken = validatedUserAccessToken;
     return loginResponse;
   }
 }

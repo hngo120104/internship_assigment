@@ -1,8 +1,8 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from '../entities/product.entity';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
-import { ProductCreateDto } from '../dto/products/product.create.dto';
-import { ProductUpdateDto } from '../dto/products/product.update.dto';
+import { ProductCreateRequestDto } from '../dto/products/request/product.create.request.dto';
+import { ProductUpdateRequestDto } from '../dto/products/request/product.update.request.dto';
 import { Injectable } from '@nestjs/common';
 import { Shop } from '../../users/entities/shop.entity';
 
@@ -27,7 +27,7 @@ export class ProductsRepository {
 
   async findProductByIdAndLock(productId: string): Promise<Product | null> {
     return await this.productsRepo
-      .createQueryBuilder()
+      .createQueryBuilder('products')
       .setLock('pessimistic_write')
       .leftJoinAndSelect('products.shop', 'shop')
       .where('products.id = :productId', { productId })
@@ -48,7 +48,7 @@ export class ProductsRepository {
 
   async createProduct(
     shopId: string,
-    productCreateDto: ProductCreateDto,
+    productCreateDto: ProductCreateRequestDto,
   ): Promise<Product> {
     const product = this.productsRepo.create({
       shop: { id: shopId },
@@ -119,7 +119,7 @@ export class ProductsRepository {
   async updateShopProductById(
     productId: string,
     shopId: string,
-    productUpdateDto: ProductUpdateDto,
+    productUpdateDto: ProductUpdateRequestDto,
   ): Promise<boolean> {
     const updateResult = await this.productsRepo.update(
       { id: productId, shopId, isDeleted: false },
