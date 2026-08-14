@@ -30,7 +30,7 @@ CREATE TABLE
     IF NOT EXISTS `user_roles` (
         `user_id` varchar(36) NOT NULL,
         `role_id` varchar(36) NOT NULL,
-        `is_deleted` tinyint (1) DEFAULT NULL,
+        `is_deleted` tinyint (1) DEFAULT 0,
         PRIMARY KEY (`user_id`, `role_id`), -- Tránh 1 user bị gán trùng 1 role nhiều lần
         CONSTRAINT `FK_user_roles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `FK_user_roles_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE RESTRICT
@@ -140,20 +140,19 @@ CREATE TABLE
         KEY `IDX_photos_product_id` (`product_id`),
         CONSTRAINT `FK_photos_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
+    
 CREATE TABLE
     `cart_items` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `user_id` varchar(36) NOT NULL,
+		`product_id` varchar(36) NOT NULL,
         `cart_item_status` enum ('ACTIVE', 'ORDERED', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE',
-        `product_id` varchar(36) NOT NULL,
-        `quantity` INT NOT NULL DEFAULT 1,
+        `quantity` INTEGER NOT NULL DEFAULT 1,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
-        KEY `IDX_cart_items_user_status` (`user_id`, `cart_item_status`, `is_deleted`),
-        KEY `IDX_cart_items_product_id` (`product_id`),
+        UNIQUE KEY `UQ_cart_product` (`product_id`),
         CONSTRAINT `FK_cart_items_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `FK_cart_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `CHK_cart_items_quantity_non_negative` CHECK (`quantity` > 0)
@@ -209,3 +208,5 @@ CREATE TABLE
         CONSTRAINT `CHK_order_items_unit_price_non_negative` CHECK (`unit_price` >= 0),
         KEY `IDX_order_items_product_id` (`product_id`)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+    
+    

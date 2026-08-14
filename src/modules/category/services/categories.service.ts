@@ -18,9 +18,17 @@ import {
 export class CategoriesService {
   constructor(private readonly categoriesRepo: CategoriesRepository) {}
 
-  async createCategory(
+  async createCategoryOrThrow(
     categoryCreateDto: CategoryCreateRequestDto,
   ): Promise<CategoryResponseDto> {
+    if (categoryCreateDto.parentId) {
+      const parentCategory = await this.categoriesRepo.findActiveCategoryById(
+        categoryCreateDto.parentId,
+      );
+      if (!parentCategory) {
+        throw new NotFoundException('Parent category not found.');
+      }
+    }
     const createdCategory =
       await this.categoriesRepo.createCategory(categoryCreateDto);
     return toResponseDto(CategoryResponseDto, createdCategory);

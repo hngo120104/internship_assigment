@@ -21,7 +21,7 @@ import { Role } from '../../auth/guards/role/role.enum';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @Get('user')
+  @Get('users')
   @SerializeOptions({ groups: ['order-details'] })
   async findAllUserOrders(
     @CurrentUser() user: CurrentUserPayload,
@@ -30,7 +30,8 @@ export class OrdersController {
   }
 
   @Get(':orderId')
-  async findUserPendingOrderByUserId(
+  @SerializeOptions({ groups: ['order-details'] })
+  async findUserOrderByUserId(
     @CurrentUser() user: CurrentUserPayload,
     @Param('orderId') orderId: string,
   ): Promise<ShopOrderResponseDto> {
@@ -69,7 +70,6 @@ export class OrdersController {
     return await this.ordersService.shopConfirmOrderOrThrow(user.sub, orderId);
   }
 
-  @Patch('shops/:orderId/confirm')
   @Post('checkout')
   @SerializeOptions({ groups: ['customer-order'] })
   async checkoutCart(
@@ -80,6 +80,7 @@ export class OrdersController {
   }
 
   @Post('buy-now')
+  @SerializeOptions({ groups: ['order-details'] })
   async buyNow(
     @CurrentUser() user: CurrentUserPayload,
     @Body() buyNowRequestDto: BuyNowRequestDto,

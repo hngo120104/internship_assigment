@@ -151,7 +151,7 @@ export class CartItemsService {
         userId,
         cartItemsAddDto.productId,
       );
-
+    console.log(userId);
     if (createdCartItemExist) {
       return await this.addExistCartItemQuantity(
         cartItemsAddDto,

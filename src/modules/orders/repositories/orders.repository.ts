@@ -79,9 +79,29 @@ export class OrdersRepository {
     return await this.ordersRepo.save(order);
   }
 
-  async findOrderById(orderId: string): Promise<Order | null> {
+  async findConfirmedOrderById(orderId: string): Promise<Order | null> {
+    return await this.ordersRepo.findOne({
+      where: { id: orderId, orderStatus: OrderStatus.CONFIRMED },
+      relations: {
+        orderItems: true,
+        shipAddress: true,
+      },
+    });
+  }
+
+  async findPendingOrderById(orderId: string): Promise<Order | null> {
     return await this.ordersRepo.findOne({
       where: { id: orderId, orderStatus: OrderStatus.PENDING },
+      relations: {
+        orderItems: true,
+        shipAddress: true,
+      },
+    });
+  }
+
+  async findOrderById(orderId: string): Promise<Order | null> {
+    return await this.ordersRepo.findOne({
+      where: { id: orderId },
       relations: {
         orderItems: true,
         shipAddress: true,

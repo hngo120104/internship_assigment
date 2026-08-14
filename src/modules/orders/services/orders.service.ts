@@ -25,7 +25,6 @@ import { CheckoutResponseDto } from '../dto/response/customer.order.response.dto
 import { plainToInstance } from 'class-transformer';
 import { Address } from '../../users/entities/user.address.entity';
 import { UserShopService } from '../../users/services/user.shop.service';
-import { group } from 'console';
 
 interface ReservedOrderItem {
   request: OrderItemCreateRequestDto;
@@ -45,6 +44,25 @@ export class OrdersService {
     private readonly cartItemsService: CartItemsService,
   ) {}
 
+  async findOrderByIdOrThrow(orderId: string): Promise<ShopOrderResponseDto> {
+    const foundOrder = await this.ordersRepo.findOrderById(orderId);
+    if (!foundOrder) {
+      throw new NotFoundException('Order not found.');
+    }
+    return toResponseDto(ShopOrderResponseDto, foundOrder);
+  }
+
+  async findConfirmedOrderByIdOrThrow(
+    orderId: string,
+  ): Promise<ShopOrderResponseDto> {
+    const foundConfirmedOrder =
+      await this.ordersRepo.findConfirmedOrderById(orderId);
+    if (!foundConfirmedOrder) {
+      throw new NotFoundException('Confirmed order not found.');
+    }
+    return toResponseDto(ShopOrderResponseDto, foundConfirmedOrder);
+  }
+
   async findAllUserOrdersByUserIdOrThrow(
     userId: string,
   ): Promise<ShopOrderResponseDto[]> {
@@ -53,7 +71,7 @@ export class OrdersService {
       throw new NotFoundException('User orders not found.');
     }
     return toListResponseDtos(ShopOrderResponseDto, foundOrders, [
-      'customer-order',
+      'order-details',
     ]);
   }
 
@@ -223,7 +241,7 @@ export class OrdersService {
     if (!confirmResult) {
       throw new NotFoundException('Order not found.');
     }
-    const confirmedOrder = await this.ordersRepo.findOrderById(orderId);
+    const confirmedOrder = await this.findConfirmedOrderByIdOrThrow(orderId);
     return toResponseDto(ShopOrderResponseDto, confirmedOrder, [
       'order-details',
     ]);

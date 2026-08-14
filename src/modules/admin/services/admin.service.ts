@@ -40,7 +40,9 @@ export class AdminService {
   async createNewCategory(
     categoryCreateDto: CategoryCreateRequestDto,
   ): Promise<CategoryResponseDto> {
-    return await this.categoriesService.createCategory(categoryCreateDto);
+    return await this.categoriesService.createCategoryOrThrow(
+      categoryCreateDto,
+    );
   }
 
   async updateCategory(
