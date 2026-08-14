@@ -1,4 +1,10 @@
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import {
+  FindManyOptions,
+  FindOneOptions,
+  FindOptionsWhere,
+  In,
+  Repository,
+} from 'typeorm';
 import {
   Order,
   OrderStatus,
@@ -33,19 +39,74 @@ export class OrdersRepository {
     });
   }
 
+  async findAllUserOrdersWithOptionalStatusesByUserId(
+    userId: string,
+    orderStatus?: OrderStatus,
+    paymentStatus?: PaymentStatus,
+  ): Promise<Order[]> {
+    const whereConditions: FindOptionsWhere<Order> = {
+      userId: userId,
+    };
+    if (orderStatus) whereConditions.orderStatus = orderStatus;
+    if (paymentStatus) whereConditions.paymentStatus = paymentStatus;
+    return await this.ordersRepo.find({
+      where: whereConditions,
+      relations: { shipAddress: true, orderItems: true },
+    });
+  }
+
   async findAllShopOrdersWithOptionStatusesByShopId(
     shopId: string,
     orderStatus?: OrderStatus,
     paymentStatus?: PaymentStatus,
   ): Promise<Order[]> {
+    const whereConditions: FindOptionsWhere<Order> = {
+      shopId: shopId,
+    };
+    if (orderStatus) whereConditions.orderStatus = orderStatus;
+    if (paymentStatus) whereConditions.paymentStatus = paymentStatus;
     return await this.ordersRepo.find({
-      where: {
-        shopId: shopId,
-        orderStatus: orderStatus,
-        paymentStatus: paymentStatus,
-      },
+      where: whereConditions,
       relations: { shipAddress: true, orderItems: true },
     });
+  }
+
+  async findOrderByUserIdAndOrderIdAndLock(
+    userId: string,
+    orderId: string,
+  ): Promise<Order | null> {
+    return await this.ordersRepo
+      .createQueryBuilder('orders')
+      .setLock('pessimistic_write')
+      .leftJoinAndSelect('orders.orderItems', 'orderItems')
+      .where('orders.id = :orderId', { orderId: orderId })
+      .andWhere('userId = :userId', { userId: userId })
+      .andWhere('orders.orderStatus IN (:...OrderStatus)', {
+        OrderStatus: [OrderStatus.PENDING, OrderStatus.CONFIRMED],
+      })
+      .andWhere('orders.paymentStatus IN (:...PaymentStatus)', {
+        PaymentStatus: [PaymentStatus.PENDING, PaymentStatus.PAID],
+      })
+      .getOne();
+  }
+
+  async findOrderByShopIdAndOrderIdAndLock(
+    shopId: string,
+    orderId: string,
+  ): Promise<Order | null> {
+    return await this.ordersRepo
+      .createQueryBuilder('orders')
+      .setLock('pessimistic_write')
+      .leftJoinAndSelect('orders.orderItems', 'orderItems')
+      .where('orders.id = :orderId', { orderId: orderId })
+      .andWhere('shopId = :shopId', { shopId: shopId })
+      .andWhere('orders.orderStatus :OrderStatus', {
+        OrderStatus: OrderStatus.PENDING,
+      })
+      .andWhere('orders.paymentStatus IN (:...PaymentStatus)', {
+        PaymentStatus: [PaymentStatus.PENDING, PaymentStatus.PAID],
+      })
+      .getOne();
   }
 
   async findOrderByUserIdAndOrderId(
@@ -54,6 +115,16 @@ export class OrdersRepository {
   ): Promise<Order | null> {
     return await this.ordersRepo.findOne({
       where: { userId: userId, id: orderId },
+      relations: { shipAddress: true, orderItems: true },
+    });
+  }
+
+  async findOrderByShopIdAndOrderId(
+    shopId: string,
+    orderId: string,
+  ): Promise<Order | null> {
+    return await this.ordersRepo.findOne({
+      where: { shopId: shopId, id: orderId },
       relations: { shipAddress: true, orderItems: true },
     });
   }
@@ -111,35 +182,5 @@ export class OrdersRepository {
         shipAddress: true,
       },
     });
-  }
-
-  async shopConfirmOrderByOrderId(
-    shopId: string,
-    orderId: string,
-  ): Promise<boolean> {
-    const confirmResult = await this.ordersRepo.update(
-      {
-        id: orderId,
-        shopId: shopId,
-        orderStatus: OrderStatus.PENDING,
-        paymentStatus: In([PaymentStatus.PAID, PaymentStatus.PENDING]),
-      },
-      { orderStatus: OrderStatus.CONFIRMED },
-    );
-    return confirmResult.affected === 1;
-  }
-
-  async userCancelOrderByOrderId(
-    userId: string,
-    orderId: string,
-  ): Promise<boolean> {
-    const cancelResult = await this.ordersRepo.update(
-      {
-        userId: userId,
-        id: orderId,
-      },
-      { orderStatus: OrderStatus.CANCELLED },
-    );
-    return cancelResult.affected === 1;
   }
 }

@@ -31,8 +31,19 @@ export class ProductsRepository {
       .setLock('pessimistic_write')
       .leftJoinAndSelect('products.shop', 'shop')
       .where('products.id = :productId', { productId })
+      .getOne();
+  }
+
+  async findProductByIdAndLockForBuying(
+    productId: string,
+  ): Promise<Product | null> {
+    return await this.productsRepo
+      .createQueryBuilder('products')
+      .setLock('pessimistic_write')
+      .leftJoinAndSelect('products.shop', 'shop')
+      .where('products.id = :productId', { productId })
       .andWhere('products.isActive = :isActive', { isActive: true })
-      .andWhere('products.isDeleted = :isDeleted', { isDeleted: false })
+      .andWhere('products.idDeleted = :isDeleted', { isDeleted: true })
       .getOne();
   }
 

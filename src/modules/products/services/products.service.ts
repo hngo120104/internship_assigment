@@ -53,6 +53,13 @@ export class ProductsService {
     this.validateProductHasSufficientStock(product, quantity);
   }
 
+  async validateAndRestockProductQuantity(productId: string, quantity: number) {
+    const product =
+      await this.findProductEntityByIdAndLockForUpdateOrThrow(productId);
+    this.increaseProductStock(product, quantity);
+    return await this.productsRepo.saveProduct(product);
+  }
+
   async validateAndReserveProductStock(
     productId: string,
     quantity: number,
@@ -84,6 +91,10 @@ export class ProductsService {
         `Your amount: ${requestedQuantity}. Product amount is not enough: ${product.amount}`,
       );
     }
+  }
+
+  private increaseProductStock(product: Product, quantity: number): void {
+    product.amount += quantity;
   }
 
   private decreaseProductStock(product: Product, quantity: number): void {

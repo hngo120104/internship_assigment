@@ -49,12 +49,18 @@ export class OrdersService {
     private readonly cartItemsService: CartItemsService,
   ) {}
 
-  async findOrderByIdOrThrow(orderId: string): Promise<ShopOrderResponseDto> {
-    const foundOrder = await this.ordersRepo.findOrderById(orderId);
+  async findOrderEntityByShopIdAndOrderIdOrThrow(
+    shopId: string,
+    orderId: string,
+  ): Promise<Order> {
+    const foundOrder = await this.ordersRepo.findOrderByShopIdAndOrderId(
+      shopId,
+      orderId,
+    );
     if (!foundOrder) {
       throw new NotFoundException('Order not found.');
     }
-    return toResponseDto(ShopOrderResponseDto, foundOrder);
+    return foundOrder;
   }
 
   async findConfirmedOrderByIdOrThrow(
@@ -82,7 +88,7 @@ export class OrdersService {
     ]);
   }
 
-  async findUserOrderByUserIdOrThrow(
+  async findUserOrderByUserIdAndOrderIdOrThrow(
     userId: string,
     orderId: string,
   ): Promise<ShopOrderResponseDto> {
@@ -94,6 +100,25 @@ export class OrdersService {
       throw new NotFoundException('User order not found.');
     }
     return toResponseDto(ShopOrderResponseDto, foundOrder, ['order-details']);
+  }
+
+  async findAllUserOrdersWithOptionalStatusesByUserIdOrThrow(
+    userId: string,
+    orderStatus?: OrderStatus,
+    paymentStatus?: PaymentStatus,
+  ): Promise<ShopOrderResponseDto[]> {
+    const foundUserOrders =
+      await this.ordersRepo.findAllUserOrdersWithOptionalStatusesByUserId(
+        userId,
+        orderStatus,
+        paymentStatus,
+      );
+    if (!foundUserOrders || foundUserOrders.length === 0) {
+      throw new NotFoundException('User orders not found.');
+    }
+    return toListResponseDtos(ShopOrderResponseDto, foundUserOrders, [
+      'order-details',
+    ]);
   }
 
   async findAllShopOrdersWithOptionStatusesByShopIdOrThrow(
@@ -111,12 +136,11 @@ export class OrdersService {
         orderStatus,
         paymentStatus,
       );
-    console.log(foundShopOrders);
     if (!foundShopOrders || foundShopOrders.length === 0) {
       throw new NotFoundException('Shop orders not found.');
     }
     return toListResponseDtos(ShopOrderResponseDto, foundShopOrders, [
-      'customer-order',
+      'order-details',
     ]);
   }
 
@@ -203,39 +227,90 @@ export class OrdersService {
     return response;
   }
 
+  @Transactional()
   async userCancelOrderOrThrow(
     userId: string,
     orderId: string,
-  ): Promise<{ message: string }> {
-    const cancelResult = await this.ordersRepo.userCancelOrderByOrderId(
+  ): Promise<ShopOrderResponseDto> {
+    const foundOrder = await this.ordersRepo.findOrderByUserIdAndOrderIdAndLock(
       userId,
       orderId,
     );
-    if (!cancelResult) {
-      throw new NotFoundException('User order not found.');
+    if (!foundOrder) {
+      throw new NotFoundException('Order not found.');
     }
-    return {
-      message: 'Cancel order Success.',
-    };
+    await this.proccessRestockOrderProducts(foundOrder);
+    const cancelledOrder =
+      await this.setOrderCancelledAndRefundedOrThrow(foundOrder);
+    return toResponseDto(ShopOrderResponseDto, cancelledOrder, [
+      'order-details',
+    ]);
+  }
+
+  private async proccessRestockOrderProducts(order: Order) {
+    for (const item of order.orderItems) {
+      await this.productsService.validateAndRestockProductQuantity(
+        item.productId,
+        item.quantity,
+      );
+    }
+  }
+
+  private async setOrderCancelledAndRefundedOrThrow(
+    order: Order,
+  ): Promise<Order> {
+    this.validateOrderStatusToCancel(order);
+    order.orderStatus = OrderStatus.CANCELLED;
+    if (
+      order.paymentStatus === PaymentStatus.PAID &&
+      order.paymentMethod === PaymentMethod.BANKING
+    )
+      order.paymentStatus = PaymentStatus.REFUNDED;
+    return await this.ordersRepo.saveOrder(order);
+  }
+
+  private validateOrderStatusToCancel(order: Order) {
+    if (
+      ![OrderStatus.PENDING, OrderStatus.CONFIRMED].includes(
+        order.orderStatus,
+      ) ||
+      ![PaymentStatus.PENDING, PaymentStatus.PAID].includes(order.paymentStatus)
+    ) {
+      throw new BadRequestException('Order cannot be cancelled.');
+    }
   }
 
   async shopConfirmOrderOrThrow(
     userId: string,
     orderId: string,
   ): Promise<ShopOrderResponseDto> {
-    const userShopId =
+    const userShop =
       await this.userShopService.findFieldWithOptionByUserIdOrThrow(userId, {
         id: true,
       });
-    const confirmResult = await this.ordersRepo.shopConfirmOrderByOrderId(
-      userShopId.id as string,
-      orderId,
-    );
-    if (!confirmResult) {
+    const foundLockedOrder =
+      await this.ordersRepo.findOrderByShopIdAndOrderIdAndLock(
+        userShop.id as string,
+        orderId,
+      );
+    if (!foundLockedOrder) {
       throw new NotFoundException('Order not found.');
     }
-    const confirmedOrder = await this.findConfirmedOrderByIdOrThrow(orderId);
-    return confirmedOrder;
+    const confirmedOrder =
+      await this.validateAndSetOrderConfirmedOrThrow(foundLockedOrder);
+    return toResponseDto(ShopOrderResponseDto, confirmedOrder, [
+      'order-details',
+    ]);
+  }
+
+  private async validateAndSetOrderConfirmedOrThrow(
+    order: Order,
+  ): Promise<Order> {
+    if (order.orderStatus !== OrderStatus.PENDING) {
+      throw new BadRequestException('Cannot confirm this order.');
+    }
+    order.orderStatus = OrderStatus.CONFIRMED;
+    return await this.ordersRepo.saveOrder(order);
   }
 
   private calculateGrandTotal(orders: Order[]): number {
@@ -246,7 +321,7 @@ export class OrdersService {
           sum + (item.quantity ?? 0) * Number(item.unitPrice ?? 0),
         0,
       );
-      return sum + total;
+      return total + sum - Number(order.discount) + Number(order.shippingFee);
     }, 0);
     return grandTotal;
   }

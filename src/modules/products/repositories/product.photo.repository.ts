@@ -35,13 +35,14 @@ export class ProductPhotosRepository {
     productId: string,
     productPhotosInsertDto: ProductPhotoInsertRequestDto[],
   ): Promise<ProductPhoto[]> {
-    const productPhotos = productPhotosInsertDto.map((productPhoto) => ({
-      url: productPhoto.url,
-      description: productPhoto.description,
-      isPrimary: productPhoto.isPrimary ?? false,
-      productId: productId,
-      product: { id: productId },
-    }));
+    const productPhotos: ProductPhotoInsertRequestDto[] =
+      productPhotosInsertDto.map((productPhoto) => ({
+        url: productPhoto.url,
+        description: productPhoto.description,
+        isPrimary: productPhoto.isPrimary ?? false,
+        productId: productId,
+        product: { id: productId },
+      }));
 
     const createdProductPhotos = this.ProductPhotosRepo.create(productPhotos);
 

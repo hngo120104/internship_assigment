@@ -25,7 +25,7 @@ export class ShopOrderResponseDto {
   orderCode?: string;
 
   @Type(() => UserAddressResponseDto)
-  @Expose({ name: 'ship_address', groups: ['order-details', 'order-details'] })
+  @Expose({ name: 'ship_address', groups: ['order-details', 'customer-order'] })
   @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
   shipAddress?: UserAddressResponseDto;
 
