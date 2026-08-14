@@ -20,13 +20,13 @@ import { ProductResponseDto } from '../dto/products/response/product.response.dt
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
 
-@Controller('api/products')
+@Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
   @Roles(Role.SELLER)
-  async createProducts(
+  async createProduct(
     @CurrentUser() user: CurrentUserPayload,
     @Body() productCreateDto: ProductCreateRequestDto,
   ): Promise<ProductResponseDto> {
@@ -51,7 +51,7 @@ export class ProductsController {
   }
 
   @Public()
-  @Get('shop/:shopId')
+  @Get('shops/:shopId')
   async findLatestActiveProductsByShop(
     @Param('shopId') shopId: string,
   ): Promise<ProductResponseDto[]> {

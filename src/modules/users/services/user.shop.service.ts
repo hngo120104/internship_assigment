@@ -56,10 +56,10 @@ export class UserShopService {
       throw new BadRequestException('User is already shop.');
     }
 
-    const existShopName = await this.userShopRepo.findActiveShopByName(
+    const existingShopName = await this.userShopRepo.findActiveShopByName(
       userShopCreateDto.shopName,
     );
-    if (existShopName) {
+    if (existingShopName) {
       throw new ConflictException('Shop name already exists.');
     }
     return foundUser;

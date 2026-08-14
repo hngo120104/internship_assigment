@@ -1,6 +1,6 @@
 import { ProductPhoto } from '../entities/product.photo.entity';
 import { Injectable } from '@nestjs/common';
-import { ProductPhotosInsertRequestDto } from '../dto/product.photos/request/product.photos.insert.request.dto';
+import { ProductPhotoInsertRequestDto } from '../dto/product.photos/request/product.photos.insert.request.dto';
 import { ProductPhotosResponseDto } from '../dto/product.photos/response/product.photos.response.dto';
 import { ProductPhotosRepository } from '../repositories/product.photo.repository';
 import { toListResponseDtos } from '../../../utils/to.dto.response';
@@ -11,7 +11,7 @@ export class ProductPhotosService {
 
   async insertPhotosIntoProduct(
     productId: string,
-    productPhotosInsertDto: ProductPhotosInsertRequestDto[],
+    productPhotosInsertDto: ProductPhotoInsertRequestDto[],
   ): Promise<ProductPhoto[]> {
     const insertedPhotos = await this.productPhotosRepo.insertPhotosIntoProduct(
       productId,

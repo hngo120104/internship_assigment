@@ -5,7 +5,7 @@ import { User } from '../entities/user.entity';
 import { Role } from '../entities/role.entity';
 
 @Injectable()
-export class UserRolesServce {
+export class UserRolesService {
   constructor(private readonly userRolesRepo: UserRolesRepository) {}
 
   async saveUserRoles(user: User, role: Role): Promise<UserRoles> {

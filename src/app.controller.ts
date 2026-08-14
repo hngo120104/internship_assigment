@@ -8,7 +8,7 @@ import { AppService } from './app.service';
 import { Public } from './modules/auth/public.decorator';
 
 @UseInterceptors(ClassSerializerInterceptor)
-@Controller('api')
+@Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 

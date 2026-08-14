@@ -142,7 +142,7 @@ export class CartItemsService {
   }
 
   @Transactional()
-  async createNewCartItemOrAddQuantity(
+  async addCartItemOrAddQuantity(
     userId: string,
     cartItemsAddDto: CartItemsAddRequestDto,
   ): Promise<CartItemResponseDto> {
@@ -151,9 +151,8 @@ export class CartItemsService {
         userId,
         cartItemsAddDto.productId,
       );
-    console.log(userId);
     if (createdCartItemExist) {
-      return await this.addExistCartItemQuantity(
+      return await this.increaseCartItemQuantity(
         cartItemsAddDto,
         createdCartItemExist,
       );
@@ -176,7 +175,7 @@ export class CartItemsService {
     return toResponseDto(CartItemResponseDto, newCartItem);
   }
 
-  async addExistCartItemQuantity(
+  async increaseCartItemQuantity(
     cartItemsAddDto: CartItemsAddRequestDto,
     cartItem: CartItem,
   ): Promise<CartItemResponseDto> {
@@ -192,7 +191,7 @@ export class CartItemsService {
     return toResponseDto(CartItemResponseDto, cartItem);
   }
 
-  async updateExistCartItemQuantity(
+  async updateCartItemQuantity(
     cartItemId: string,
     userId: string,
     cartItemsUpdateDto: CartItemsUpdateRequestDto,

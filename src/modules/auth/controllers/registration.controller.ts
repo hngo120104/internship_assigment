@@ -5,11 +5,11 @@ import { UserCreateResponseDto } from '../../users/dto/users/response/user.creat
 import { Public } from '../public.decorator';
 import { AuthService } from '../services/auth.service';
 
-@Controller('api/users')
+@Controller('users')
 export class RegistrationController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
+  @Post('registration')
   @Public()
   register(
     @Body() userCreateDto: UserCreateRequestDto,

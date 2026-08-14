@@ -13,7 +13,7 @@ import {
   ArrayUnique,
 } from 'class-validator';
 import { Expose, Type } from 'class-transformer';
-import { ProductPhotosInsertRequestDto } from '../../product.photos/request/product.photos.insert.request.dto';
+import { ProductPhotoInsertRequestDto } from '../../product.photos/request/product.photos.insert.request.dto';
 
 export class ProductCreateRequestDto {
   @IsString()
@@ -30,9 +30,9 @@ export class ProductCreateRequestDto {
 
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ProductPhotosInsertRequestDto)
+  @Type(() => ProductPhotoInsertRequestDto)
   @IsNotEmpty()
-  photos!: ProductPhotosInsertRequestDto[];
+  photos!: ProductPhotoInsertRequestDto[];
 
   @IsOptional()
   @IsString()

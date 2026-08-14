@@ -16,7 +16,7 @@ import { UserShopResponseDto } from '../dto/user.shop/response/user.shop.respons
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { Role } from '../../auth/guards/role/role.enum';
 
-@Controller('api/shops')
+@Controller('shops')
 export class ShopsController {
   constructor(private readonly userShopService: UserShopService) {}
 

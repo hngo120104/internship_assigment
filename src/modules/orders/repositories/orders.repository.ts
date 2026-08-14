@@ -33,12 +33,16 @@ export class OrdersRepository {
     });
   }
 
-  async findUserShopPendingOrdersByShopId(shopId: string): Promise<Order[]> {
+  async findAllShopOrdersWithOptionStatusesByShopId(
+    shopId: string,
+    orderStatus?: OrderStatus,
+    paymentStatus?: PaymentStatus,
+  ): Promise<Order[]> {
     return await this.ordersRepo.find({
       where: {
         shopId: shopId,
-        orderStatus: OrderStatus.PENDING,
-        paymentStatus: PaymentStatus.PENDING,
+        orderStatus: orderStatus,
+        paymentStatus: paymentStatus,
       },
       relations: { shipAddress: true, orderItems: true },
     });

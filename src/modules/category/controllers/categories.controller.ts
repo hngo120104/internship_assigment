@@ -3,7 +3,7 @@ import { Public } from '../../auth/public.decorator';
 import { CategoriesService } from '../services/categories.service';
 
 @Injectable()
-@Controller('api/categories')
+@Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 

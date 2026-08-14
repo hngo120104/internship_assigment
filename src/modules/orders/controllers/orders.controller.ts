@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   SerializeOptions,
 } from '@nestjs/common';
 import { OrdersService } from '../services/orders.service';
@@ -16,8 +17,9 @@ import { BuyNowRequestDto } from '../dto/request/buynow.request.dto';
 import { CheckoutResponseDto } from '../dto/response/customer.order.response.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { Role } from '../../auth/guards/role/role.enum';
+import { OrderStatus } from '../entities/order.entity';
 
-@Controller('api/orders')
+@Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
@@ -50,19 +52,22 @@ export class OrdersController {
     return await this.ordersService.userCancelOrderOrThrow(user.sub, orderId);
   }
 
-  @Get('shops/pending')
+  @Get('shops')
   @Roles(Role.SELLER)
   @SerializeOptions({ groups: ['order-details'] })
-  async findUserShopPendingOrdersByUserId(
+  async findAllShopPendingOrders(
     @CurrentUser() user: CurrentUserPayload,
+    @Query('status') status: OrderStatus,
   ): Promise<ShopOrderResponseDto[]> {
-    return await this.ordersService.findUserShopPendingOrderByUserIdOrThrow(
+    return await this.ordersService.findAllShopOrdersWithOptionStatusesByShopIdOrThrow(
       user.sub,
+      status,
     );
   }
 
   @Patch('shops/:orderId/confirm')
   @SerializeOptions({ groups: ['order-details'] })
+  @Roles(Role.SELLER)
   async shopConfirmOrder(
     @CurrentUser() user: CurrentUserPayload,
     @Param('orderId') orderId: string,

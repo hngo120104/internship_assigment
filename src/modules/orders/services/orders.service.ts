@@ -19,7 +19,12 @@ import {
   toListResponseDtos,
   toResponseDto,
 } from '../../../utils/to.dto.response';
-import { Order, PaymentMethod } from '../entities/order.entity';
+import {
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '../entities/order.entity';
 import { CartItem } from '../../carts/entities/cart.item.entity';
 import { CheckoutResponseDto } from '../dto/response/customer.order.response.dto';
 import { plainToInstance } from 'class-transformer';
@@ -60,7 +65,9 @@ export class OrdersService {
     if (!foundConfirmedOrder) {
       throw new NotFoundException('Confirmed order not found.');
     }
-    return toResponseDto(ShopOrderResponseDto, foundConfirmedOrder);
+    return toResponseDto(ShopOrderResponseDto, foundConfirmedOrder, [
+      'order-details',
+    ]);
   }
 
   async findAllUserOrdersByUserIdOrThrow(
@@ -89,40 +96,26 @@ export class OrdersService {
     return toResponseDto(ShopOrderResponseDto, foundOrder, ['order-details']);
   }
 
-  async findUserOrderByShopIdOrThrow(
+  async findAllShopOrdersWithOptionStatusesByShopIdOrThrow(
     userId: string,
-    orderId: string,
-  ): Promise<ShopOrderResponseDto> {
-    const userShopId =
-      await this.userShopService.findFieldWithOptionByUserIdOrThrow(userId, {
-        id: true,
-      });
-    const foundOrder = await this.ordersRepo.findOrderByUserIdAndOrderId(
-      userShopId.id as string,
-      orderId,
-    );
-    if (!foundOrder) {
-      throw new NotFoundException('Order not found.');
-    }
-    return toResponseDto(ShopOrderResponseDto, foundOrder, ['order-details']);
-  }
-
-  async findUserShopPendingOrderByUserIdOrThrow(
-    userId: string,
+    orderStatus?: OrderStatus,
+    paymentStatus?: PaymentStatus,
   ): Promise<ShopOrderResponseDto[]> {
-    const userShopId =
+    const userShop =
       await this.userShopService.findFieldWithOptionByUserIdOrThrow(userId, {
         id: true,
       });
-    const foundShopPendingOrders =
-      await this.ordersRepo.findUserShopPendingOrdersByShopId(
-        userShopId.id as string,
+    const foundShopOrders =
+      await this.ordersRepo.findAllShopOrdersWithOptionStatusesByShopId(
+        userShop.id as string,
+        orderStatus,
+        paymentStatus,
       );
-    console.log(foundShopPendingOrders);
-    if (!foundShopPendingOrders || foundShopPendingOrders.length === 0) {
-      throw new NotFoundException('Shop pending orders not found.');
+    console.log(foundShopOrders);
+    if (!foundShopOrders || foundShopOrders.length === 0) {
+      throw new NotFoundException('Shop orders not found.');
     }
-    return toListResponseDtos(ShopOrderResponseDto, foundShopPendingOrders, [
+    return toListResponseDtos(ShopOrderResponseDto, foundShopOrders, [
       'customer-order',
     ]);
   }
@@ -242,9 +235,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found.');
     }
     const confirmedOrder = await this.findConfirmedOrderByIdOrThrow(orderId);
-    return toResponseDto(ShopOrderResponseDto, confirmedOrder, [
-      'order-details',
-    ]);
+    return confirmedOrder;
   }
 
   private calculateGrandTotal(orders: Order[]): number {

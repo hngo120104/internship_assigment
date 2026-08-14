@@ -37,9 +37,9 @@ export class CategoriesService {
   async findActiveCategoryEntitiesByIds(
     categoryIds: string[],
   ): Promise<Category[]> {
-    const foundActiveCategoriyEntities =
+    const foundActiveCategoryEntities =
       await this.categoriesRepo.findActiveCategoryEntitiesByIds(categoryIds);
-    return foundActiveCategoriyEntities;
+    return foundActiveCategoryEntities;
   }
 
   async findManyActiveCategories(

@@ -6,7 +6,7 @@ import { Product } from '../entities/product.entity';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ProductResponseDto } from '../dto/products/response/product.response.dto';
 import { ProductPhotosRepository } from '../repositories/product.photo.repository';
-import { ProductPhotosInsertRequestDto } from '../dto/product.photos/request/product.photos.insert.request.dto';
+import { ProductPhotoInsertRequestDto } from '../dto/product.photos/request/product.photos.insert.request.dto';
 import { Transactional } from 'typeorm-transactional';
 import { UserShopService } from '../../users/services/user.shop.service';
 import { ProductCategoriesRepository } from '../repositories/product.categories.repository';
@@ -93,7 +93,7 @@ export class ProductsService {
   private async insertPhotosIntoProduct(
     productId: string,
     createdProduct: Product,
-    productPhotosInsertDto: ProductPhotosInsertRequestDto[],
+    productPhotosInsertDto: ProductPhotoInsertRequestDto[],
   ) {
     const insertedPhotos = await this.productPhotosRepo.insertPhotosIntoProduct(
       productId,

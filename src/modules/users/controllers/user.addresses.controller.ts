@@ -15,7 +15,7 @@ import { UserAddressCreateRequestDto } from '../dto/user.addresses/request/user.
 import { UserAddressResponseDto } from '../dto/user.addresses/response/user.address.reponse.dto';
 import { UserAddressUpdateRequestDto } from '../dto/user.addresses/request/user.address.update.request.dto';
 
-@Controller('api/users/addresses')
+@Controller('users/addresses')
 export class UserAddressesController {
   constructor(private readonly userAddressesService: UserAddressesService) {}
 

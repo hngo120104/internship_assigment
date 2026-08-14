@@ -11,7 +11,7 @@ import { UserShopService } from './user.shop.service';
 import { UserPhotosService } from './user.photos.service';
 import { UserCreateRequestDto } from '../dto/users/request/user.create.request.dto';
 import { UserShopCreateRequestDto } from '../dto/user.shop/request/user.shop.create.request.dto';
-import { UserPhotosInsertRequestDto } from '../dto/user.photos/request/user.photos.insert.request.dto';
+import { UserPhotoInsertRequestDto } from '../dto/user.photos/request/user.photos.insert.request.dto';
 import { RolesRepository } from '../repositories/role.repository';
 import { UserShopResponseDto } from '../dto/user.shop/response/user.shop.response.dto';
 
@@ -42,7 +42,7 @@ export class UsersService {
     return toListResponseDtos(UserResponseDto, foundUsers);
   }
 
-  async findActiveUserEntityByUserIdOrThrow(
+  async findActiveUserByUserIdOrThrow(
     userId: string,
   ): Promise<UserResponseDto> {
     const foundUser = await this.usersRepo.findActiveUserById(userId);
@@ -62,11 +62,11 @@ export class UsersService {
   }
 
   private async validateUserRegistration(userCreateDto: UserCreateRequestDto) {
-    const existUserWithEmail = await this.usersRepo.findActiveUserByEmail(
+    const existingUserWithEmail = await this.usersRepo.findActiveUserByEmail(
       userCreateDto.email,
     );
 
-    if (existUserWithEmail) {
+    if (existingUserWithEmail) {
       throw new ConflictException('Email already exists.');
     }
   }
@@ -85,7 +85,7 @@ export class UsersService {
 
   private async insertPhotosIntoUser(
     createdUser: User,
-    userPhotosDto: UserPhotosInsertRequestDto[],
+    userPhotosDto: UserPhotoInsertRequestDto[],
   ) {
     let userPhotos: UserPhoto[] = [];
 
@@ -147,19 +147,19 @@ export class UsersService {
     const user = await this.usersRepo.findActiveUserById(userId);
 
     if (!user) throw new NotFoundException('User does not exist.');
-    const userOldPassowrd = user.passwordHashed;
+    const userOldPassword = user.passwordHashed;
 
     const matchedOldPassword = await bcrypt.compare(
       oldPassword,
-      userOldPassowrd,
+      userOldPassword,
     );
     if (!matchedOldPassword)
       throw new BadRequestException('Password does not match.');
 
-    const newPassowrdHashed = await bcrypt.hash(newPassword, 12);
+    const newPasswordHashed = await bcrypt.hash(newPassword, 12);
     const updatedUser = await this.usersRepo.updateUserPassword(
       user,
-      newPassowrdHashed,
+      newPasswordHashed,
     );
     return toResponseDto(UserResponseDto, updatedUser);
   }

@@ -17,9 +17,9 @@ import { UserResponseDto } from '../../users/dto/users/response/user.response.dt
 import { UserCartResponseDto } from '../../carts/dto/response/cart.response.dto';
 import { UserShopResponseDto } from '../../users/dto/user.shop/response/user.shop.response.dto';
 
-@Controller('api/admin')
+@Controller('admin')
 export class AdminController {
-  constructor(private readonly AdminService: AdminService) {}
+  constructor(private readonly adminService: AdminService) {}
 
   @Get('users/active')
   @Roles(Role.ADMIN)
@@ -27,28 +27,28 @@ export class AdminController {
     @Query('page') page: number,
     @Query('limit') limit: number,
   ): Promise<UserResponseDto[]> {
-    return await this.AdminService.findActiveUsers(page, limit);
+    return await this.adminService.findActiveUsers(page, limit);
   }
 
   @Get('shops/active')
   @Roles(Role.ADMIN)
-  async finfManyActiveShops(
+  async findManyActiveShops(
     @Query('page') page: number,
     @Query('limit') limit: number,
   ): Promise<UserShopResponseDto[]> {
-    return await this.AdminService.findActiveShops(page, limit);
+    return await this.adminService.findActiveShops(page, limit);
   }
 
   @Get('carts')
   @Roles(Role.ADMIN)
   async findActiveUsersCarts(): Promise<UserCartResponseDto[]> {
-    return await this.AdminService.findActiveUsersCarts();
+    return await this.adminService.findActiveUsersCarts();
   }
 
   @Post('ban/:userId')
   @Roles(Role.ADMIN)
   async banUser(@Param('userId') userId: string): Promise<UserResponseDto> {
-    return await this.AdminService.banUser(userId);
+    return await this.adminService.banUser(userId);
   }
 
   @Post('categories')
@@ -56,7 +56,7 @@ export class AdminController {
   async createNewCategory(
     @Body() categoryCreateDto: CategoryCreateRequestDto,
   ): Promise<CategoryResponseDto> {
-    return await this.AdminService.createNewCategory(categoryCreateDto);
+    return await this.adminService.createNewCategory(categoryCreateDto);
   }
 
   @Patch('categories/:categoryId')
@@ -65,7 +65,7 @@ export class AdminController {
     @Param('categoryId') categoryId: string,
     @Body() categoryUpdateDto: CategoryUpdateRequestDto,
   ): Promise<CategoryResponseDto> {
-    return await this.AdminService.updateCategory(
+    return await this.adminService.updateCategory(
       categoryId,
       categoryUpdateDto,
     );

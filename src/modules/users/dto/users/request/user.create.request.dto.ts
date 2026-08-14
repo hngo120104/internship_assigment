@@ -9,7 +9,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Expose, Type } from 'class-transformer';
-import { UserPhotosInsertRequestDto } from '../../user.photos/request/user.photos.insert.request.dto';
+import { UserPhotoInsertRequestDto } from '../../user.photos/request/user.photos.insert.request.dto';
 
 export class UserCreateRequestDto {
   @IsString()
@@ -32,6 +32,6 @@ export class UserCreateRequestDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => UserPhotosInsertRequestDto)
-  photos?: UserPhotosInsertRequestDto[];
+  @Type(() => UserPhotoInsertRequestDto)
+  photos?: UserPhotoInsertRequestDto[];
 }

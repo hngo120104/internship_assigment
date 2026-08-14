@@ -57,7 +57,7 @@ describe('CartItemsService', () => {
     cartItemsRepo.createCartItem.mockResolvedValue(createdItem);
     productsService.validateProductQuantity.mockResolvedValue(undefined);
 
-    const result = await service.createNewCartItemOrAddQuantity('user-id', {
+    const result = await service.addCartItemOrAddQuantity('user-id', {
       productId: 'product-id',
       quantity: 2,
     });
@@ -91,7 +91,7 @@ describe('CartItemsService', () => {
     );
     productsService.validateProductQuantity.mockResolvedValue(undefined);
 
-    const result = await service.createNewCartItemOrAddQuantity('user-id', {
+    const result = await service.addCartItemOrAddQuantity('user-id', {
       productId: 'product-id',
       quantity: 3,
     });
