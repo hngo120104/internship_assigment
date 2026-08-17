@@ -5,7 +5,7 @@ interface UserCartLike {
   userId: string;
   cartItems: Array<{
     quantity: number;
-    product?: { price: number };
+    variant?: { price: number };
   }>;
 }
 
@@ -25,8 +25,8 @@ export class UserCartResponseDto {
     return items.reduce(
       (
         total: number,
-        item: { quantity: number; product?: { price: number } },
-      ) => (total = total + item.quantity * (item.product?.price ?? 0)),
+        item: { quantity: number; variant?: { price: number } },
+      ) => (total = total + item.quantity * Number(item.variant?.price ?? 0)),
       0,
     );
   })

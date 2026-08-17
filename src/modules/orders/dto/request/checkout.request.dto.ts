@@ -20,8 +20,8 @@ export class CheckoutRequestDto {
   @Expose({ name: 'order_items' })
   @IsNotEmpty()
   @IsArray()
-  @ArrayUnique((item: OrderItemCreateRequestDto) => item.productId, {
-    message: 'Product cannot be duplicated.',
+  @ArrayUnique((item: OrderItemCreateRequestDto) => item.variantId, {
+    message: 'Product variant cannot be duplicated.',
   })
   @ArrayMinSize(1)
   @ValidateNested({ each: true })

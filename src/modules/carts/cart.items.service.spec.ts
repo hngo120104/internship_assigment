@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ProductsService } from '../products/services/products.service';
+import { ProductVariantsService } from '../products/services/product.variants.service';
 import { CartItemsRepository } from './repositories/cart.items.repository';
 import { CartItemsService } from './services/cart.items.service';
 
@@ -14,29 +14,29 @@ jest.mock('typeorm-transactional', () => ({
 describe('CartItemsService', () => {
   let service: CartItemsService;
   let cartItemsRepo: {
-    findActiveCartItemByUserIdAndProductId: jest.Mock;
+    findActiveCartItemByUserIdAndVariantId: jest.Mock;
     createCartItem: jest.Mock;
     saveCartItem: jest.Mock;
     softDeleteCartItem: jest.Mock;
     softDeleteAllCartItemsOfUser: jest.Mock;
   };
-  let productsService: { validateProductQuantity: jest.Mock };
+  let productsService: { validateVariantQuantity: jest.Mock };
 
   beforeEach(async () => {
     cartItemsRepo = {
-      findActiveCartItemByUserIdAndProductId: jest.fn(),
+      findActiveCartItemByUserIdAndVariantId: jest.fn(),
       createCartItem: jest.fn(),
       saveCartItem: jest.fn(),
       softDeleteCartItem: jest.fn(),
       softDeleteAllCartItemsOfUser: jest.fn(),
     };
-    productsService = { validateProductQuantity: jest.fn() };
+    productsService = { validateVariantQuantity: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CartItemsService,
         { provide: CartItemsRepository, useValue: cartItemsRepo },
-        { provide: ProductsService, useValue: productsService },
+        { provide: ProductVariantsService, useValue: productsService },
       ],
     }).compile();
 
@@ -47,28 +47,28 @@ describe('CartItemsService', () => {
     const createdItem = {
       id: 'cart-item-id',
       userId: 'user-id',
-      productId: 'product-id',
+      variantId: 'variant-id',
       quantity: 2,
-      product: { price: 100 },
+      variant: { price: 100, product: { id: 'product-id' } },
     };
-    cartItemsRepo.findActiveCartItemByUserIdAndProductId
+    cartItemsRepo.findActiveCartItemByUserIdAndVariantId
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(createdItem);
     cartItemsRepo.createCartItem.mockResolvedValue(createdItem);
-    productsService.validateProductQuantity.mockResolvedValue(undefined);
+    productsService.validateVariantQuantity.mockResolvedValue(undefined);
 
     const result = await service.addCartItemOrAddQuantity('user-id', {
-      productId: 'product-id',
+      variantId: 'variant-id',
       quantity: 2,
     });
 
-    expect(productsService.validateProductQuantity).toHaveBeenCalledWith(
-      'product-id',
+    expect(productsService.validateVariantQuantity).toHaveBeenCalledWith(
+      'variant-id',
       2,
     );
     expect(cartItemsRepo.createCartItem).toHaveBeenCalledWith(
       'user-id',
-      'product-id',
+      'variant-id',
       2,
     );
     expect(result.quantity).toBe(2);
@@ -79,25 +79,25 @@ describe('CartItemsService', () => {
     const existingItem = {
       id: 'cart-item-id',
       userId: 'user-id',
-      productId: 'product-id',
+      variantId: 'variant-id',
       quantity: 2,
-      product: { price: 100 },
+      variant: { price: 100, product: { id: 'product-id' } },
     };
-    cartItemsRepo.findActiveCartItemByUserIdAndProductId.mockResolvedValue(
+    cartItemsRepo.findActiveCartItemByUserIdAndVariantId.mockResolvedValue(
       existingItem,
     );
     cartItemsRepo.saveCartItem.mockImplementation((cartItem: object) =>
       Promise.resolve(cartItem),
     );
-    productsService.validateProductQuantity.mockResolvedValue(undefined);
+    productsService.validateVariantQuantity.mockResolvedValue(undefined);
 
     const result = await service.addCartItemOrAddQuantity('user-id', {
-      productId: 'product-id',
+      variantId: 'variant-id',
       quantity: 3,
     });
 
-    expect(productsService.validateProductQuantity).toHaveBeenCalledWith(
-      'product-id',
+    expect(productsService.validateVariantQuantity).toHaveBeenCalledWith(
+      'variant-id',
       5,
     );
     expect(cartItemsRepo.createCartItem).not.toHaveBeenCalled();

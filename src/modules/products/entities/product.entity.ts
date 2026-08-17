@@ -7,13 +7,15 @@ import {
   OneToMany,
   JoinColumn,
   PrimaryGeneratedColumn,
+  Index,
 } from 'typeorm';
 import { Shop } from '../../users/entities/shop.entity';
-import { CartItem } from '../../carts/entities/cart.item.entity';
 import { ProductPhoto } from './product.photo.entity';
 import { ProductCategories } from './product.categories.entity';
 import { OrderItem } from '../../orders/entities/order.item.entity';
+import { ProductVariant } from './product.variant.entity';
 
+@Index('IDX_products_shops_id', ['shopId'])
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn('uuid')
@@ -27,12 +29,6 @@ export class Product {
 
   @Column({ type: 'text', nullable: true })
   description?: string;
-
-  @Column({ type: 'int', default: 0 })
-  amount!: number;
-
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
-  price!: number;
 
   @Column({ name: 'is_active', type: 'tinyint', default: 1 })
   isActive!: boolean;
@@ -63,6 +59,6 @@ export class Product {
   @OneToMany(() => ProductPhoto, (photo) => photo.product)
   photos!: ProductPhoto[];
 
-  @OneToMany(() => CartItem, (cartItem) => cartItem.product)
-  cartItems!: CartItem[];
+  @OneToMany(() => ProductVariant, (productVariant) => productVariant.product)
+  variants!: ProductVariant[];
 }

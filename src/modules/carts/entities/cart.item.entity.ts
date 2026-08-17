@@ -1,14 +1,16 @@
 import {
+  Check,
   Column,
   CreateDateColumn,
   Entity,
   JoinColumn,
+  Index,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { Product } from '../../products/entities/product.entity';
+import { ProductVariant } from '../../products/entities/product.variant.entity';
 
 export enum CartItemStatus {
   ACTIVE = 'ACTIVE',
@@ -16,6 +18,9 @@ export enum CartItemStatus {
   EXPIRED = 'EXPIRED',
 }
 
+@Check('CHK_cart_items_quantity_non_negative', '`quantity` > 0')
+@Index('IDX_cart_items_user_id', ['userId'])
+@Index('IDX_cart_items_variant_id', ['variantId'])
 @Entity('cart_items')
 export class CartItem {
   @PrimaryGeneratedColumn('uuid')
@@ -28,14 +33,17 @@ export class CartItem {
   @JoinColumn({ name: 'user_id' })
   user?: User;
 
-  @Column({ name: 'product_id', type: 'varchar', length: 36 })
-  productId!: string;
+  @Column({ name: 'variant_id', type: 'varchar', length: 36 })
+  variantId!: string;
 
-  @ManyToOne(() => Product, (product) => product.cartItems, {
+  @ManyToOne(() => ProductVariant, (variant) => variant.cartItems, {
     onDelete: 'RESTRICT',
   })
-  @JoinColumn({ name: 'product_id' })
-  product!: Product;
+  @JoinColumn({
+    name: 'variant_id',
+    foreignKeyConstraintName: 'FK_cart_items_variant',
+  })
+  variant!: ProductVariant;
 
   @Column({
     name: 'cart_item_status',

@@ -2,7 +2,6 @@ import {
   FindManyOptions,
   FindOneOptions,
   FindOptionsWhere,
-  In,
   Repository,
 } from 'typeorm';
 import {
@@ -100,7 +99,7 @@ export class OrdersRepository {
       .leftJoinAndSelect('orders.orderItems', 'orderItems')
       .where('orders.id = :orderId', { orderId: orderId })
       .andWhere('shopId = :shopId', { shopId: shopId })
-      .andWhere('orders.orderStatus :OrderStatus', {
+      .andWhere('orders.orderStatus = :OrderStatus', {
         OrderStatus: OrderStatus.PENDING,
       })
       .andWhere('orders.paymentStatus IN (:...PaymentStatus)', {

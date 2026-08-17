@@ -7,7 +7,7 @@ import { CartItemsRepository } from '../repositories/cart.items.repository';
 import { CartItemResponseDto } from '../dto/response/cart.item.response.dto';
 import { CartItem } from '../entities/cart.item.entity';
 import { CartItemsAddRequestDto } from '../dto/request/cart.items.add.request.dto';
-import { ProductsService } from '../../products/services/products.service';
+import { ProductVariantsService } from '../../products/services/product.variants.service';
 import { CartItemsUpdateRequestDto } from '../dto/request/cart.items.update.request.dto';
 import { UserCartResponseDto } from '../dto/response/cart.response.dto';
 import { Transactional } from 'typeorm-transactional';
@@ -21,7 +21,7 @@ import { CartItemDeleteResponseDto } from '../dto/response/cart.item.delete.resp
 export class CartItemsService {
   constructor(
     private readonly cartItemsRepo: CartItemsRepository,
-    private readonly productsService: ProductsService,
+    private readonly productVariantsService: ProductVariantsService,
   ) {}
 
   async getUserActiveCart(userId: string): Promise<UserCartResponseDto> {
@@ -32,6 +32,40 @@ export class CartItemsService {
       cartItems: foundUserActiveCartItems,
     };
     return toResponseDto(UserCartResponseDto, userCartObj);
+  }
+
+  async findActiveCartItemEntityByUserIdAndVariantIdAndLockForBuyNowOrThrow(
+    userId: string,
+    variantId: string,
+  ): Promise<CartItem> {
+    const foundLockedCartItem =
+      await this.cartItemsRepo.findActiveCartItemByUserIdAndVariantIdAndLockForBuyNow(
+        userId,
+        variantId,
+      );
+    if (!foundLockedCartItem) {
+      throw new NotFoundException('User cart item not found.');
+    }
+    return foundLockedCartItem;
+  }
+
+  async findAllActiveCartItemsEntitiesByUserIdAndVariantIdsAndLockForCheckoutOrThrow(
+    userId: string,
+    variantIds: string[],
+    expectedCount: number,
+  ): Promise<CartItem[]> {
+    const foundLockedCartItems =
+      await this.cartItemsRepo.findActiveCartItemsByUserIdAndVariantIdsAndLockForCheckOut(
+        userId,
+        variantIds,
+      );
+    if (!foundLockedCartItems.length) {
+      throw new NotFoundException('No user cart item found.');
+    }
+    if (foundLockedCartItems.length !== expectedCount) {
+      throw new BadRequestException('One or more cart items not found.');
+    }
+    return foundLockedCartItems;
   }
 
   async findActiveCartItemsEntitiesOfUserByCartItemIdsOrThrow(
@@ -98,32 +132,17 @@ export class CartItemsService {
     return foundCartItem;
   }
 
-  async findActiveCartItemEntityByUserIdAndProductIdOrThrow(
+  async findActiveCartItemEntityByUserIdAndVariantIdOrThrow(
     userId: string,
-    productId: string,
+    variantId: string,
   ): Promise<CartItem> {
     const foundCartItem =
-      await this.cartItemsRepo.findActiveCartItemByUserIdAndProductId(
+      await this.cartItemsRepo.findActiveCartItemByUserIdAndVariantId(
         userId,
-        productId,
+        variantId,
       );
     if (!foundCartItem) throw new NotFoundException('Cart item not found.');
     return foundCartItem;
-  }
-
-  async findActiveCartItemsEntitiesByUserIdAndProductIdsOrThrow(
-    userId: string,
-    productIds: string[],
-    expectedCount: number,
-  ): Promise<CartItem[]> {
-    const foundCartItems =
-      await this.cartItemsRepo.findActiveCartItemsByUserIdAndProductIds(
-        userId,
-        productIds,
-      );
-    if (foundCartItems.length !== expectedCount)
-      throw new NotFoundException('One or more cart items not found.');
-    return foundCartItems;
   }
 
   async findAllActiveUserCarts(): Promise<UserCartResponseDto[]> {
@@ -147,9 +166,9 @@ export class CartItemsService {
     cartItemsAddDto: CartItemsAddRequestDto,
   ): Promise<CartItemResponseDto> {
     const createdCartItemExist =
-      await this.cartItemsRepo.findActiveCartItemByUserIdAndProductId(
+      await this.cartItemsRepo.findActiveCartItemByUserIdAndVariantId(
         userId,
-        cartItemsAddDto.productId,
+        cartItemsAddDto.variantId,
       );
     if (createdCartItemExist) {
       return await this.increaseCartItemQuantity(
@@ -157,20 +176,20 @@ export class CartItemsService {
         createdCartItemExist,
       );
     }
-    await this.productsService.validateProductQuantity(
-      cartItemsAddDto.productId,
+    await this.productVariantsService.validateVariantQuantity(
+      cartItemsAddDto.variantId,
       cartItemsAddDto.quantity,
     );
     await this.cartItemsRepo.createCartItem(
       userId,
-      cartItemsAddDto.productId,
+      cartItemsAddDto.variantId,
       cartItemsAddDto.quantity,
     );
 
     const newCartItem =
-      await this.findActiveCartItemEntityByUserIdAndProductIdOrThrow(
+      await this.findActiveCartItemEntityByUserIdAndVariantIdOrThrow(
         userId,
-        cartItemsAddDto.productId,
+        cartItemsAddDto.variantId,
       );
     return toResponseDto(CartItemResponseDto, newCartItem);
   }
@@ -181,8 +200,8 @@ export class CartItemsService {
   ): Promise<CartItemResponseDto> {
     const totalQuantity = cartItem.quantity + cartItemsAddDto.quantity;
 
-    await this.productsService.validateProductQuantity(
-      cartItemsAddDto.productId,
+    await this.productVariantsService.validateVariantQuantity(
+      cartItemsAddDto.variantId,
       totalQuantity,
     );
 
@@ -203,8 +222,8 @@ export class CartItemsService {
       );
     const updatedQuantity = cartItemsUpdateDto.quantity;
 
-    await this.productsService.validateProductQuantity(
-      foundCartItemBelongsToUser.productId,
+    await this.productVariantsService.validateVariantQuantity(
+      foundCartItemBelongsToUser.variantId,
       updatedQuantity,
     );
     foundCartItemBelongsToUser.quantity = updatedQuantity;
@@ -217,12 +236,12 @@ export class CartItemsService {
 
   async findUserActiveCartItemOrThrow(
     userId: string,
-    productId: string,
+    variantId: string,
   ): Promise<CartItemResponseDto> {
     const foundCartItem =
-      await this.findActiveCartItemEntityByUserIdAndProductIdOrThrow(
+      await this.findActiveCartItemEntityByUserIdAndVariantIdOrThrow(
         userId,
-        productId,
+        variantId,
       );
 
     return toResponseDto(CartItemResponseDto, foundCartItem);

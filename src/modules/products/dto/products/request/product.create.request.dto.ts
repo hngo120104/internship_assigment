@@ -1,24 +1,23 @@
 import {
   IsBoolean,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsArray,
   IsString,
   IsUUID,
-  Min,
   ValidateNested,
   Length,
-  Max,
   ArrayUnique,
+  ArrayMinSize,
 } from 'class-validator';
 import { Expose, Type } from 'class-transformer';
 import { ProductPhotoInsertRequestDto } from '../../product.photos/request/product.photos.insert.request.dto';
+import { ProductVariantCreateRequestDto } from '../../product.variants/request/product.variant.create.request.dto';
 
 export class ProductCreateRequestDto {
   @IsString()
   @IsNotEmpty()
-  @Length(10, 500, { message: 'Name must be between 10 and 500 characters.' })
+  @Length(10, 255, { message: 'Name must be between 10 and 255 characters.' })
   name!: string;
 
   @IsNotEmpty()
@@ -39,17 +38,16 @@ export class ProductCreateRequestDto {
   @Length(0, 5000, { message: 'Description must not exceed 5000 characters.' })
   description?: string;
 
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(0)
-  @Max(999999999)
-  price!: number;
-
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(0)
-  @Max(1000000, { message: 'Stock max is 1000000' })
-  amount!: number;
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayUnique(
+    (variant: ProductVariantCreateRequestDto) =>
+      `${variant.size ?? ''}:${variant.color?.trim().toLowerCase() ?? ''}`,
+    { message: 'Product variants cannot be duplicated.' },
+  )
+  @ValidateNested({ each: true })
+  @Type(() => ProductVariantCreateRequestDto)
+  variants!: ProductVariantCreateRequestDto[];
 
   @IsNotEmpty()
   @IsBoolean()

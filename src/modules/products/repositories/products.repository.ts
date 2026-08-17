@@ -25,28 +25,6 @@ export class ProductsRepository {
     return await this.productsRepo.find(options);
   }
 
-  async findProductByIdAndLock(productId: string): Promise<Product | null> {
-    return await this.productsRepo
-      .createQueryBuilder('products')
-      .setLock('pessimistic_write')
-      .leftJoinAndSelect('products.shop', 'shop')
-      .where('products.id = :productId', { productId })
-      .getOne();
-  }
-
-  async findProductByIdAndLockForBuying(
-    productId: string,
-  ): Promise<Product | null> {
-    return await this.productsRepo
-      .createQueryBuilder('products')
-      .setLock('pessimistic_write')
-      .leftJoinAndSelect('products.shop', 'shop')
-      .where('products.id = :productId', { productId })
-      .andWhere('products.isActive = :isActive', { isActive: true })
-      .andWhere('products.idDeleted = :isDeleted', { isDeleted: true })
-      .getOne();
-  }
-
   async findActiveShopByProductId(
     productId: string,
   ): Promise<Shop | null | undefined> {
@@ -57,13 +35,22 @@ export class ProductsRepository {
     return foundProduct?.shop;
   }
 
+  async findProductById(productId: string): Promise<Product | null> {
+    return this.productsRepo.findOne({
+      where: { id: productId, isDeleted: false },
+    });
+  }
+
   async createProduct(
     shopId: string,
     productCreateDto: ProductCreateRequestDto,
   ): Promise<Product> {
     const product = this.productsRepo.create({
       shop: { id: shopId },
-      ...productCreateDto,
+      shopId,
+      name: productCreateDto.name,
+      description: productCreateDto.description,
+      isActive: productCreateDto.isActive,
     });
     return this.productsRepo.save(product);
   }
@@ -81,6 +68,7 @@ export class ProductsRepository {
       relations: {
         shop: true,
         photos: true,
+        variants: true,
         productCategories: { category: true },
       },
       skip: (page - 1) * limit,
@@ -101,6 +89,7 @@ export class ProductsRepository {
       relations: {
         shop: true,
         photos: true,
+        variants: true,
         productCategories: { category: true },
       },
       order: {
@@ -119,6 +108,7 @@ export class ProductsRepository {
       relations: {
         shop: true,
         photos: true,
+        variants: true,
         productCategories: {
           category: true,
         },

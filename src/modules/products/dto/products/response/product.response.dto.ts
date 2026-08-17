@@ -2,6 +2,7 @@ import { Expose, Transform, TransformFnParams, Type } from 'class-transformer';
 import { CategoryResponseDto } from '../../../../category/dto/response/category.response.dto';
 import { ProductPhotoResponseDto } from '../../product.photos/response/product.photos.insert.response.dto';
 import { Product } from '../../../entities/product.entity';
+import { ProductVariantResponseDto } from '../../product.variants/response/product.variant.response.dto';
 
 export class ProductResponseDto {
   @Expose()
@@ -35,10 +36,8 @@ export class ProductResponseDto {
   description?: string;
 
   @Expose()
-  price!: number;
-
-  @Expose()
-  amount!: number;
+  @Type(() => ProductVariantResponseDto)
+  variants!: ProductVariantResponseDto[];
 
   @Expose({ name: 'is_active' })
   @Transform(({ obj, key }) => obj[key], { toClassOnly: true })

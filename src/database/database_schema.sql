@@ -102,6 +102,21 @@ CREATE TABLE
         `shop_id` varchar(36) NOT NULL,
         `name` varchar(255) NOT NULL,
         `description` text DEFAULT NULL,
+        `is_active` tinyint (1) NOT NULL DEFAULT 1,
+        `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
+        PRIMARY KEY (`id`),
+        KEY `IDX_products_shops_id` (`shop_id`),
+        CONSTRAINT `FK_products_shop` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`id`) ON DELETE RESTRICT
+    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE
+    `product_variants` (
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `product_id` varchar(36) NOT NULL,
+        `size` enum ('S', 'M', 'L', 'XL') DEFAULT NULL,
+        `color` varchar(50) DEFAULT NULL,
         `amount` int NOT NULL DEFAULT 0,
         `price` decimal(12, 2) NOT NULL,
         `is_active` tinyint (1) NOT NULL DEFAULT 1,
@@ -109,10 +124,10 @@ CREATE TABLE
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
-        KEY `IDX_products_shops_id` (`shop_id`),
-        CONSTRAINT `FK_products_shop` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`id`) ON DELETE RESTRICT,
-        CONSTRAINT `CHK_products_amount_non_negative` CHECK (`amount` >= 0),
-        CONSTRAINT `CHK_products_price_non_negative` CHECK (`price` >= 0)
+        KEY `IDX_product_variants_product_id` (`product_id`),
+        CONSTRAINT `FK_product_variants_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
+        CONSTRAINT `CHK_product_variants_amount_non_negative` CHECK (`amount` >= 0),
+        CONSTRAINT `CHK_product_variants_price_non_negative` CHECK (`price` >= 0)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE Table
@@ -145,16 +160,17 @@ CREATE TABLE
     `cart_items` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `user_id` varchar(36) NOT NULL,
-		`product_id` varchar(36) NOT NULL,
+        `variant_id` varchar(36) NOT NULL,
         `cart_item_status` enum ('ACTIVE', 'ORDERED', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE',
         `quantity` INTEGER NOT NULL DEFAULT 1,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
-        UNIQUE KEY `UQ_cart_product` (`product_id`),
+        KEY `IDX_cart_items_user_id` (`user_id`),
+        KEY `IDX_cart_items_variant_id` (`variant_id`),
         CONSTRAINT `FK_cart_items_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
-        CONSTRAINT `FK_cart_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
+        CONSTRAINT `FK_cart_items_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `CHK_cart_items_quantity_non_negative` CHECK (`quantity` > 0)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
@@ -186,7 +202,8 @@ CREATE TABLE
         CONSTRAINT `FK_orders_ship_address` FOREIGN KEY (`recipient_address_id`) REFERENCES `user_addresses` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `CHK_orders_discount_non_negative` CHECK (`discount` >= 0),
         CONSTRAINT `CHK_orders_shipping_fee_non_negative` CHECK (`shipping_fee` >= 0),
-        KEY `IDX_orders_shop_id` (`shop_id`)
+        KEY `IDX_orders_shop_id` (`shop_id`),
+        KEY `IDX_orders_user_id` (`user_id`)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -194,19 +211,25 @@ CREATE TABLE
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `order_id` varchar(36) NOT NULL,
         `product_id` varchar(36) NOT NULL,
+        `variant_id` varchar(36) NOT NULL,
         `product_name` varchar(255) NOT NULL,
+        `variant_size` enum ('S', 'M', 'L', 'XL') DEFAULT NULL,
+        `variant_color` varchar(50) DEFAULT NULL,
         `unit_price` DECIMAL(12, 2) NOT NULL,
         `quantity` int NOT NULL DEFAULT 1,
         `note` varchar(1000) DEFAULT NULL,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         PRIMARY KEY (`id`),
-        UNIQUE KEY `UQ_order_items_order_product` (`order_id`, `product_id`),
+        UNIQUE KEY `UQ_order_items_order_variant` (`order_id`, `variant_id`),
+        KEY `IDX_order_items_order_id` (`order_id`),
+        KEY `IDX_order_items_product_id` (`product_id`),
+        KEY `IDX_order_items_variant_id` (`variant_id`),
         CONSTRAINT `FK_order_items_order_id` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
         CONSTRAINT `FK_order_items_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
+        CONSTRAINT `FK_order_items_variant_id` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `CHK_order_items_quantity_positive` CHECK (`quantity` > 0),
-        CONSTRAINT `CHK_order_items_unit_price_non_negative` CHECK (`unit_price` >= 0),
-        KEY `IDX_order_items_product_id` (`product_id`)
+        CONSTRAINT `CHK_order_items_unit_price_non_negative` CHECK (`unit_price` >= 0)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
     
     

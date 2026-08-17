@@ -1,7 +1,8 @@
-import { Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { Product } from './product.entity';
 import { Category } from '../../category/entities/category.entity';
 
+@Index('IDX_product_categories_category_id', ['categoryId'])
 @Entity('product_categories')
 export class ProductCategories {
   @PrimaryColumn({

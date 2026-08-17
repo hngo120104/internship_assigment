@@ -13,9 +13,21 @@ export class OrderItemResponseDto {
   @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
   productId!: string;
 
+  @Expose({ name: 'variant_id' })
+  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  variantId!: string;
+
   @Expose({ name: 'product_name' })
   @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
   productName!: string;
+
+  @Expose({ name: 'variant_size' })
+  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  variantSize?: string;
+
+  @Expose({ name: 'variant_color' })
+  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  variantColor?: string;
 
   @Expose()
   quantity!: number;

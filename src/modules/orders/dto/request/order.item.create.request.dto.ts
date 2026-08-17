@@ -12,8 +12,8 @@ import {
 export class OrderItemCreateRequestDto {
   @IsUUID()
   @IsNotEmpty()
-  @Expose({ name: 'product_id' })
-  productId!: string;
+  @Expose({ name: 'variant_id' })
+  variantId!: string;
 
   @Expose()
   @IsInt()

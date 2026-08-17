@@ -13,6 +13,9 @@ import { Category } from '../category/entities/category.entity';
 import { CategoriesModule } from '../category/categories.module';
 import { ProductCategories } from './entities/product.categories.entity';
 import { ProductCategoriesRepository } from './repositories/product.categories.repository';
+import { ProductVariant } from './entities/product.variant.entity';
+import { ProductVariantsRepository } from './repositories/product.variants.repository';
+import { ProductVariantsService } from './services/product.variants.service';
 
 @Module({
   imports: [
@@ -22,6 +25,7 @@ import { ProductCategoriesRepository } from './repositories/product.categories.r
       ProductPhoto,
       Category,
       ProductCategories,
+      ProductVariant,
     ]),
     UsersModule,
     CategoriesModule,
@@ -33,7 +37,9 @@ import { ProductCategoriesRepository } from './repositories/product.categories.r
     ProductPhotosService,
     ProductPhotosRepository,
     ProductCategoriesRepository,
+    ProductVariantsRepository,
+    ProductVariantsService,
   ],
-  exports: [ProductsService, ProductsRepository],
+  exports: [ProductsService, ProductsRepository, ProductVariantsService],
 })
 export class ProductsModule {}

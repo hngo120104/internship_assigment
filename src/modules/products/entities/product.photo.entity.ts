@@ -6,9 +6,11 @@ import {
   ManyToOne,
   JoinColumn,
   PrimaryGeneratedColumn,
+  Index,
 } from 'typeorm';
 import { Product } from './product.entity';
 
+@Index('IDX_photos_product_id', ['productId'])
 @Entity('product_photos')
 export class ProductPhoto {
   @PrimaryGeneratedColumn('uuid')

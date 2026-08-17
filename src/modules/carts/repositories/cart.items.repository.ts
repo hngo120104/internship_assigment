@@ -33,44 +33,62 @@ export class CartItemsRepository {
         cartItemStatus: CartItemStatus.ACTIVE,
         isDeleted: false,
       },
-      relations: { product: true },
+      relations: { variant: { product: true } },
     });
   }
 
-  async findActiveCartItemByUserIdAndProductId(
+  async findActiveCartItemByUserIdAndVariantId(
     userId: string,
-    productId: string,
+    variantId: string,
   ): Promise<CartItem | null> {
     return await this.cartItemsRepo.findOne({
       where: {
         userId: userId,
-        productId: productId,
+        variantId,
         cartItemStatus: CartItemStatus.ACTIVE,
         isDeleted: false,
       },
       relations: {
-        product: true,
+        variant: { product: true },
         user: true,
       },
     });
   }
 
-  async findActiveCartItemsByUserIdAndProductIds(
+  async findActiveCartItemByUserIdAndVariantIdAndLockForBuyNow(
     userId: string,
-    productIds: string[],
+    variantId: string,
+  ): Promise<CartItem | null> {
+    return await this.cartItemsRepo
+      .createQueryBuilder('cart_items')
+      .setLock('pessimistic_write')
+      .where('cart_items.userId = :userId', { userId })
+      .andWhere('cart_items.variantId = :variantId', {
+        variantId: variantId,
+      })
+      .andWhere('cart_items.cartItemStatus = :status', {
+        status: CartItemStatus.ACTIVE,
+      })
+      .getOne();
+  }
+
+  async findActiveCartItemsByUserIdAndVariantIdsAndLockForCheckOut(
+    userId: string,
+    variantIds: string[],
   ): Promise<CartItem[]> {
-    return await this.cartItemsRepo.find({
-      where: {
-        userId: userId,
-        productId: In(productIds),
-        cartItemStatus: CartItemStatus.ACTIVE,
-        isDeleted: false,
-      },
-      relations: {
-        product: true,
-        user: true,
-      },
-    });
+    return await this.cartItemsRepo
+      .createQueryBuilder('cart_items')
+      .setLock('pessimistic_write')
+      .where('cart_items. = :userId', { userId })
+      .andWhere('cart_items.variantId IN (:...variantIds)', {
+        variantIds: variantIds,
+      })
+      .andWhere('cart_items.cartItemStatus = :status', {
+        status: CartItemStatus.ACTIVE,
+      })
+      .andWhere('cart_items.isDeleted = false')
+      .orderBy('cart_items.id')
+      .getMany();
   }
 
   async findAllUserActiveCartItemsByUserId(
@@ -83,7 +101,7 @@ export class CartItemsRepository {
         cartItemStatus: CartItemStatus.ACTIVE,
       },
       relations: {
-        product: true,
+        variant: { product: true },
       },
     });
   }
@@ -95,7 +113,7 @@ export class CartItemsRepository {
         cartItemStatus: CartItemStatus.ACTIVE,
       },
       relations: {
-        product: true,
+        variant: { product: true },
       },
       order: {
         userId: 'ASC',
@@ -115,18 +133,18 @@ export class CartItemsRepository {
         cartItemStatus: CartItemStatus.ACTIVE,
         isDeleted: false,
       },
-      relations: { product: true },
+      relations: { variant: { product: true } },
     });
   }
 
   async createCartItem(
     userId: string,
-    productId: string,
+    variantId: string,
     quantity: number,
   ): Promise<CartItem> {
     const newCartItem = this.cartItemsRepo.create({
       userId: userId,
-      productId: productId,
+      variantId,
       quantity: quantity,
       cartItemStatus: CartItemStatus.ACTIVE,
     });
