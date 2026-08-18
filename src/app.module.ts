@@ -39,8 +39,8 @@ import { AdminModules } from './modules/admin/admin.module';
         if (!options) {
           throw new Error('Invalid options passed');
         }
-
-        return addTransactionalDataSource(new DataSource(options));
+        const newDataSource = new DataSource(options);
+        return Promise.resolve(addTransactionalDataSource(newDataSource));
       },
     }),
     OrdersModule,

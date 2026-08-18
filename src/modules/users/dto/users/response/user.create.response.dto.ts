@@ -9,7 +9,12 @@ export class UserCreateResponseDto {
   id!: string;
 
   @Expose({ name: 'user_name' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   userName!: string;
 
   @Expose()
@@ -27,7 +32,12 @@ export class UserCreateResponseDto {
   roles!: RoleResponseDto[];
 
   @Expose({ name: 'user_status' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   userStatus!: UserStatus;
 
   @Expose()
@@ -35,11 +45,21 @@ export class UserCreateResponseDto {
   photos?: UserPhotoResponseDto[];
 
   @Expose({ name: 'created_at' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   createdAt!: Date;
 
   @Expose({ name: 'updated_at' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   updatedAt!: Date;
 
   @Expose({ name: 'access_token', toPlainOnly: true })

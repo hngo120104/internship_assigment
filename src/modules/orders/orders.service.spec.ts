@@ -24,14 +24,14 @@ describe('OrdersService order creation flows', () => {
   };
   let orderItemsRepo: { createOrderItem: jest.Mock };
   let productsService: {
-    findActiveVariantEntityByIdOrThrow: jest.Mock;
+    findPurchasableVariantEntityByIdOrThrow: jest.Mock;
     validateAndReserveVariantStockOrThrow: jest.Mock;
   };
   let userAddressesService: {
     findActiveUserAddressEntityByIdOrThrow: jest.Mock;
   };
   let cartItemsService: {
-    findAllActiveCartItemsEntitiesByUserIdAndVariantIdsAndLockForCheckoutOrThrow: jest.Mock;
+    findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate: jest.Mock;
     markUserCartItemsAsOrderedOrThrow: jest.Mock;
   };
   let userShopService: { findFieldWithOptionByUserIdOrThrow: jest.Mock };
@@ -43,14 +43,14 @@ describe('OrdersService order creation flows', () => {
     };
     orderItemsRepo = { createOrderItem: jest.fn() };
     productsService = {
-      findActiveVariantEntityByIdOrThrow: jest.fn(),
+      findPurchasableVariantEntityByIdOrThrow: jest.fn(),
       validateAndReserveVariantStockOrThrow: jest.fn(),
     };
     userAddressesService = {
       findActiveUserAddressEntityByIdOrThrow: jest.fn(),
     };
     cartItemsService = {
-      findAllActiveCartItemsEntitiesByUserIdAndVariantIdsAndLockForCheckoutOrThrow:
+      findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate:
         jest.fn(),
       markUserCartItemsAsOrderedOrThrow: jest.fn(),
     };
@@ -73,7 +73,7 @@ describe('OrdersService order creation flows', () => {
 
   it('creates an order item using the current variant snapshot', async () => {
     const address = { id: 'address-id' };
-    productsService.findActiveVariantEntityByIdOrThrow.mockResolvedValue({
+    productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue({
       id: 'variant-id',
     });
     productsService.validateAndReserveVariantStockOrThrow.mockResolvedValue({
@@ -113,7 +113,7 @@ describe('OrdersService order creation flows', () => {
     userAddressesService.findActiveUserAddressEntityByIdOrThrow.mockResolvedValue(
       { id: 'address-id' },
     );
-    productsService.findActiveVariantEntityByIdOrThrow.mockResolvedValue({
+    productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue({
       id: 'variant-id',
     });
     productsService.validateAndReserveVariantStockOrThrow.mockRejectedValue(
@@ -163,7 +163,7 @@ describe('OrdersService order creation flows', () => {
     userAddressesService.findActiveUserAddressEntityByIdOrThrow.mockResolvedValue(
       address,
     );
-    productsService.findActiveVariantEntityByIdOrThrow.mockResolvedValue(
+    productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue(
       variant,
     );
     productsService.validateAndReserveVariantStockOrThrow.mockResolvedValue(
@@ -219,10 +219,10 @@ describe('OrdersService order creation flows', () => {
     userAddressesService.findActiveUserAddressEntityByIdOrThrow.mockResolvedValue(
       address,
     );
-    cartItemsService.findAllActiveCartItemsEntitiesByUserIdAndVariantIdsAndLockForCheckoutOrThrow.mockResolvedValue(
+    cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate.mockResolvedValue(
       cartItems,
     );
-    productsService.findActiveVariantEntityByIdOrThrow.mockImplementation(
+    productsService.findPurchasableVariantEntityByIdOrThrow.mockImplementation(
       (variantId: keyof typeof products) =>
         Promise.resolve(products[variantId]),
     );
@@ -285,8 +285,8 @@ describe('OrdersService order creation flows', () => {
         id: 'address-id',
       },
     );
-    cartItemsService.findAllActiveCartItemsEntitiesByUserIdAndVariantIdsAndLockForCheckoutOrThrow.mockResolvedValue(
-      [{ id: 'cart-a', variantId: 'variant-a', quantity: 3 }],
+    cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate.mockRejectedValue(
+      new BadRequestException('Cart item quantity has changed.'),
     );
 
     await expect(

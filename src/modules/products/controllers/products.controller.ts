@@ -78,7 +78,7 @@ export class ProductsController {
     @Param('productId') updateProductId: string,
     @Body() updateProductDto: ProductUpdateRequestDto,
   ): Promise<ProductResponseDto> {
-    return await this.productsService.updateShopProductById(
+    return await this.productsService.updateShopProductByIdOrThrow(
       updateProductId,
       user.sub,
       updateProductDto,

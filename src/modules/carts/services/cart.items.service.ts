@@ -31,13 +31,13 @@ export class CartItemsService {
     return toResponseDto(UserCartResponseDto, userCartObj);
   }
 
-  async findAllActiveCartItemsEntitiesByUserIdAndVariantIdsAndLockForCheckoutOrThrow(
+  async findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate(
     userId: string,
     variantIds: string[],
     expectedCount: number,
   ): Promise<CartItem[]> {
     const foundLockedCartItems =
-      await this.cartItemsRepo.findActiveCartItemsByUserIdAndVariantIdsAndLockForUpdate(
+      await this.cartItemsRepo.findActiveCartItemsByUserIdAndVariantIdsAndLock(
         userId,
         variantIds,
       );
@@ -50,7 +50,7 @@ export class CartItemsService {
     return foundLockedCartItems;
   }
 
-  async findAllUserActiveCartItemEntitiesByUserIdOrThrow(
+  private async findAllUserActiveCartItemEntitiesByUserIdOrThrow(
     userId: string,
   ): Promise<CartItem[]> {
     const foundCartItems =
@@ -61,7 +61,7 @@ export class CartItemsService {
     return foundCartItems;
   }
 
-  async findActiveCartItemEntityByUserIdAndCartItemIdOrThrow(
+  private async findActiveCartItemEntityByUserIdAndCartItemIdOrThrow(
     userId: string,
     cartItemId: string,
   ): Promise<CartItem> {
@@ -75,7 +75,7 @@ export class CartItemsService {
     return foundCartItem;
   }
 
-  async findActiveCartItemEntityByUserIdAndVariantIdOrThrow(
+  private async findActiveCartItemEntityByUserIdAndVariantIdOrThrow(
     userId: string,
     variantId: string,
   ): Promise<CartItem> {
@@ -137,7 +137,7 @@ export class CartItemsService {
     return toResponseDto(CartItemResponseDto, newCartItem);
   }
 
-  async increaseCartItemQuantity(
+  private async increaseCartItemQuantity(
     cartItemsAddDto: CartItemsAddRequestDto,
     cartItem: CartItem,
   ): Promise<CartItemResponseDto> {
@@ -178,7 +178,7 @@ export class CartItemsService {
     return toResponseDto(CartItemResponseDto, updatedCartItem);
   }
 
-  async deleteUserCartItemOrThrow(
+  async softDeleteUserCartItemOrThrow(
     cartItemId: string,
     userId: string,
   ): Promise<DeleteCountResponseDto> {
@@ -194,7 +194,7 @@ export class CartItemsService {
     return new DeleteCountResponseDto(deletedCount);
   }
 
-  async deleteAllUserCartItemsOrThrow(
+  async softDeleteAllUserCartItemsOrThrow(
     userId: string,
   ): Promise<DeleteCountResponseDto> {
     const deletedCount =

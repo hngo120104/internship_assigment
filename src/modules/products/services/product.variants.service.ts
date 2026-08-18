@@ -25,7 +25,7 @@ export class ProductVariantsService {
     private readonly userShopRepo: UserShopRepository,
   ) {}
 
-  async findVariantEntityByIdOrThrow(
+  private async findVariantEntityByIdOrThrow(
     variantId: string,
     productId: string,
   ): Promise<ProductVariant> {
@@ -39,22 +39,37 @@ export class ProductVariantsService {
     return foundVariant;
   }
 
-  async findActiveVariantEntityByIdOrThrow(
+  async findPurchasableVariantEntityByIdOrThrow(
     variantId: string,
   ): Promise<ProductVariant> {
     const foundVariant =
-      await this.productVariantsRepo.findActiveProductVariantById(variantId);
+      await this.productVariantsRepo.findPurchasableProductVariantById(
+        variantId,
+      );
     if (!foundVariant)
       throw new NotFoundException('Product variant not found.');
     return foundVariant;
   }
 
-  async findActiveVariantEntityByIdAndProductIdOrThrow(
+  async findPurchasableVariantsEntitiesByIdsOrThrow(
+    variantIds: string[],
+  ): Promise<ProductVariant[]> {
+    const foundVariants =
+      await this.productVariantsRepo.findPurchasableProductVariantsByIds(
+        variantIds,
+      );
+    if (!foundVariants.length) {
+      throw new NotFoundException('Product variant not found.');
+    }
+    return foundVariants;
+  }
+
+  private async findActiveVariantEntityByIdAndProductIdOrThrow(
     variantId: string,
     productId: string,
   ): Promise<ProductVariant> {
     const variant =
-      await this.productVariantsRepo.findActiveProductVariantByIdAndProductId(
+      await this.productVariantsRepo.findPurchasableProductVariantByIdAndProductId(
         variantId,
         productId,
       );
@@ -62,7 +77,7 @@ export class ProductVariantsService {
     return variant;
   }
 
-  async findActiveVariantEntityByIdAndProductIdAndLockForUpdateOrThrow(
+  private async findActiveVariantEntityByIdAndProductIdAndLockForUpdateOrThrow(
     variantId: string,
     productId: string,
   ): Promise<ProductVariant> {
@@ -192,7 +207,8 @@ export class ProductVariantsService {
     variantId: string,
     quantity: number,
   ): Promise<void> {
-    const variant = await this.findActiveVariantEntityByIdOrThrow(variantId);
+    const variant =
+      await this.findPurchasableVariantEntityByIdOrThrow(variantId);
     this.validateRequestedQuantityIsPositiveInteger(quantity);
     this.validateVariantHasSufficientStock(variant, quantity);
   }
@@ -204,9 +220,8 @@ export class ProductVariantsService {
     quantity: number,
   ): Promise<ProductVariant> {
     const restockResult =
-      await this.productVariantsRepo.restockVariantAmountByProductIdAndVariantIdAtomically(
+      await this.productVariantsRepo.restockVariantAmountByAtomically(
         variantId,
-        productId,
         quantity,
       );
     if (restockResult !== 1)

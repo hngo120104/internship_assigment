@@ -9,7 +9,12 @@ export class ProductResponseDto {
   id!: string;
 
   @Expose({ name: 'shop_id' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   shopId!: string;
 
   @Expose()
@@ -40,6 +45,11 @@ export class ProductResponseDto {
   variants!: ProductVariantResponseDto[];
 
   @Expose({ name: 'is_active' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   isActive!: boolean;
 }

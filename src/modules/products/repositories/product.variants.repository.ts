@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ProductVariant } from '../entities/product.variant.entity';
 import { ProductVariantCreateRequestDto } from '../dto/product.variants/request/product.variant.create.request.dto';
 import { ShopStatus } from '../../users/entities/shop.entity';
@@ -33,7 +33,7 @@ export class ProductVariantsRepository {
     });
   }
 
-  async findActiveProductVariantById(
+  async findPurchasableProductVariantById(
     id: string,
   ): Promise<ProductVariant | null> {
     return await this.variantsRepo.findOne({
@@ -51,7 +51,30 @@ export class ProductVariantsRepository {
     });
   }
 
-  async findActiveProductVariantByIdAndProductId(
+  async findPurchasableProductVariantsByIds(
+    ids: string[],
+  ): Promise<ProductVariant[]> {
+    return await this.variantsRepo.find({
+      where: {
+        id: In(ids),
+        isActive: true,
+        isDeleted: false,
+        product: {
+          isActive: true,
+          isDeleted: false,
+          shop: {
+            isDeleted: false,
+            shopStatus: ShopStatus.ACTIVE,
+          },
+        },
+      },
+      relations: {
+        product: true,
+      },
+    });
+  }
+
+  async findPurchasableProductVariantByIdAndProductId(
     variantId: string,
     productId: string,
   ): Promise<ProductVariant | null> {
@@ -132,26 +155,22 @@ export class ProductVariantsRepository {
         id: id,
         productId: productId,
       })
-      .andWhere('isActive = :isActive', { isActive: true })
-      .andWhere('isDeleted = :isDeleted', { isDeleted: false })
       .andWhere('amount >= :quantity')
       .setParameter('quantity', quantity)
       .execute();
     return updateResult.affected ?? 0;
   }
 
-  async restockVariantAmountByProductIdAndVariantIdAtomically(
+  async restockVariantAmountByAtomically(
     id: string,
-    productId: string,
     quantity: number,
   ): Promise<number> {
     const updateResult = await this.variantsRepo
       .createQueryBuilder()
       .update(ProductVariant)
       .set({ amount: () => 'amount + :quantity' })
-      .where('id = :id AND productId = :productId', {
+      .where('id = :id', {
         id: id,
-        productId: productId,
       })
       .setParameter('quantity', quantity)
       .execute();

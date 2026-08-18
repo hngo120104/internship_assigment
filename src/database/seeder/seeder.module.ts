@@ -49,7 +49,9 @@ import { SeederService } from './services/seeder.service';
           throw new Error('Invalid options passed');
         }
 
-        return addTransactionalDataSource(new DataSource(options));
+        return Promise.resolve(
+          addTransactionalDataSource(new DataSource(options)),
+        );
       },
     }),
   ],

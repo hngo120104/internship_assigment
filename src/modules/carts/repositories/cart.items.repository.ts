@@ -46,7 +46,7 @@ export class CartItemsRepository {
       .getOne();
   }
 
-  async findActiveCartItemsByUserIdAndVariantIdsAndLockForUpdate(
+  async findActiveCartItemsByUserIdAndVariantIdsAndLock(
     userId: string,
     variantIds: string[],
   ): Promise<CartItem[]> {

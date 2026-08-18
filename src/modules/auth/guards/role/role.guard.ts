@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   CanActivate,
@@ -23,6 +25,7 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
+
     const user = request.user;
     if (!user) {
       throw new UnauthorizedException('You need to login first.');

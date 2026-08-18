@@ -1,4 +1,4 @@
-import { Expose, Transform } from 'class-transformer';
+import { Expose, Transform, TransformFnParams } from 'class-transformer';
 import { ProductSize } from '../../../enum/product.size.enum';
 
 export class ProductVariantResponseDto {
@@ -6,7 +6,12 @@ export class ProductVariantResponseDto {
   id!: string;
 
   @Expose({ name: 'product_id' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   productId!: string;
 
   @Expose()
@@ -23,6 +28,11 @@ export class ProductVariantResponseDto {
   price!: number;
 
   @Expose({ name: 'is_active' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   isActive!: boolean;
 }

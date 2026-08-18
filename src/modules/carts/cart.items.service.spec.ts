@@ -115,10 +115,10 @@ describe('CartItemsService', () => {
     cartItemsRepo.softDeleteAllCartItemsOfUser.mockResolvedValue(3);
 
     await expect(
-      service.deleteUserCartItemOrThrow('cart-item-id', 'user-id'),
+      service.softDeleteUserCartItemOrThrow('cart-item-id', 'user-id'),
     ).resolves.toEqual({ deletedCount: 1, message: 'Success.' });
     await expect(
-      service.deleteAllUserCartItemsOrThrow('user-id'),
+      service.softDeleteAllUserCartItemsOrThrow('user-id'),
     ).resolves.toEqual({ deletedCount: 3, message: 'Success.' });
   });
 
@@ -127,10 +127,10 @@ describe('CartItemsService', () => {
     cartItemsRepo.softDeleteAllCartItemsOfUser.mockResolvedValue(0);
 
     await expect(
-      service.deleteUserCartItemOrThrow('cart-item-id', 'user-id'),
+      service.softDeleteUserCartItemOrThrow('cart-item-id', 'user-id'),
     ).rejects.toBeInstanceOf(NotFoundException);
     await expect(
-      service.deleteAllUserCartItemsOrThrow('user-id'),
+      service.softDeleteAllUserCartItemsOrThrow('user-id'),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

@@ -54,6 +54,7 @@ export class OrdersController {
   }
 
   @Patch('users/:orderId')
+  @SerializeOptions({ groups: ['order-details'] })
   async userCancelOrder(
     @CurrentUser() user: CurrentUserPayload,
     @Param('orderId') orderId: string,

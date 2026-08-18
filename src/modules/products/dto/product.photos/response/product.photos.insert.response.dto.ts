@@ -1,4 +1,4 @@
-import { Expose, Transform } from 'class-transformer';
+import { Expose, Transform, TransformFnParams } from 'class-transformer';
 
 export class ProductPhotoResponseDto {
   @Expose()
@@ -8,6 +8,11 @@ export class ProductPhotoResponseDto {
   description?: string;
 
   @Expose({ name: 'is_primary' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   isPrimary!: boolean;
 }

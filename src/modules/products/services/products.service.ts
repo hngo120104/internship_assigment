@@ -37,7 +37,7 @@ export class ProductsService {
     createdProduct.photos = insertedPhotos;
   }
 
-  async processCreateProduct(
+  private async processCreateProduct(
     userId: string,
     productCreateDto: ProductCreateRequestDto,
   ): Promise<Product> {
@@ -136,7 +136,7 @@ export class ProductsService {
     return this.findActiveProductByIdOrThrow(productId);
   }
 
-  async updateShopProductById(
+  async updateShopProductByIdOrThrow(
     productId: string,
     userId: string,
     updateProductDto: ProductUpdateRequestDto,

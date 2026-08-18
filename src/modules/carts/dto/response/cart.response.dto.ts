@@ -1,4 +1,4 @@
-import { Exclude, Expose, Transform, Type } from 'class-transformer';
+import { Expose, Transform, TransformFnParams, Type } from 'class-transformer';
 import { CartItemResponseDto } from './cart.item.response.dto';
 
 interface UserCartLike {
@@ -11,11 +11,21 @@ interface UserCartLike {
 
 export class UserCartResponseDto {
   @Expose({ name: 'user_id' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   userId?: string;
 
   @Expose({ name: 'cart_items' })
-  @Transform(({ obj, key }) => obj[key], { toClassOnly: true })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
   @Type(() => CartItemResponseDto)
   cartItems!: CartItemResponseDto[];
 

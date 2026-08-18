@@ -25,15 +25,16 @@ import {
   PaymentMethod,
   PaymentStatus,
 } from '../entities/order.entity';
-import { CartItem } from '../../carts/entities/cart.item.entity';
 import { CheckoutResponseDto } from '../dto/response/customer.order.response.dto';
 import { plainToInstance } from 'class-transformer';
 import { Address } from '../../users/entities/user.address.entity';
 import { UserShopService } from '../../users/services/user.shop.service';
+import { CartItem } from '../../carts/entities/cart.item.entity';
 
 interface ReservedOrderItem {
-  request: OrderItemCreateRequestDto;
+  quantity: number;
   variant: ProductVariant;
+  note?: string;
 }
 
 type ReservedItemsByShop = Map<string, ReservedOrderItem[]>;
@@ -49,7 +50,7 @@ export class OrdersService {
     private readonly cartItemsService: CartItemsService,
   ) {}
 
-  async findOrderEntityByShopIdAndOrderIdOrThrow(
+  private async findOrderEntityByShopIdAndOrderIdOrThrow(
     shopId: string,
     orderId: string,
   ): Promise<Order> {
@@ -145,7 +146,7 @@ export class OrdersService {
         buyNowRequestDto.shipAddressId,
       );
     const foundVariant =
-      await this.productVariantsService.findActiveVariantEntityByIdOrThrow(
+      await this.productVariantsService.findPurchasableVariantEntityByIdOrThrow(
         buyNowRequestDto.variantId,
       );
     const reservedVariant =
@@ -153,15 +154,18 @@ export class OrdersService {
         foundVariant,
         buyNowRequestDto.quantity,
       );
-
-    // create order with product snap shot and return order id
+    const reservedItem: ReservedOrderItem = {
+      quantity: buyNowRequestDto.quantity,
+      variant: reservedVariant,
+      note: buyNowRequestDto.note,
+    };
     const order = await this.createOrderWithItemsForShop(
       userId,
       reservedVariant.product.shopId,
       shippingAddress.id,
       shippingAddress,
       buyNowRequestDto.paymentMethod,
-      [{ request: buyNowRequestDto, variant: reservedVariant }],
+      [reservedItem],
     );
 
     return toResponseDto(ShopOrderResponseDto, order, ['order-details']);
@@ -181,34 +185,24 @@ export class OrdersService {
       );
 
     const foundActiveUserCartItems =
-      await this.cartItemsService.findAllActiveCartItemsEntitiesByUserIdAndVariantIdsAndLockForCheckoutOrThrow(
+      await this.cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate(
         userId,
         checkoutRequestDto.orderItems.map((item) => item.variantId),
         checkoutRequestDto.orderItems.length,
       );
 
-    // use dto here because cart items might hold the older datas
-    const itemsToCheckout = this.sortItemsByVariantIdForLocking(
-      checkoutRequestDto.orderItems,
-    );
+    const groupedOrderItemsByShop =
+      await this.reserveAmountAndGroupOrderItemsByShopId(
+        foundActiveUserCartItems,
+        checkoutRequestDto.orderItems
+      );
 
-    this.validateOrderItemRequestsMatchesUserCartItems(
-      checkoutRequestDto.orderItems,
-      foundActiveUserCartItems,
-    );
-    // obj: { shopId, { orderCreateDto, Product }}
-    // reserve product amount for each order item and group order items by shop
-    const reservedOrderItemsByShop =
-      await this.reserveProductsAndGroupItemsByShop(itemsToCheckout);
-    // create order item snapshots and assign them to order
-    // then assign order to shop by shop id
-    // cart status = PENDING, payment status = PENDING
     const createdOrders = await this.createOrdersForEachShop(
       userId,
       shippingAddress.id,
       shippingAddress,
       checkoutRequestDto.paymentMethod,
-      reservedOrderItemsByShop,
+      groupedOrderItemsByShop,
     );
 
     await this.cartItemsService.markUserCartItemsAsOrderedOrThrow(
@@ -219,6 +213,30 @@ export class OrdersService {
     const response = this.toCustomerOrderResponse(createdOrders);
     response.grandTotal = this.calculateGrandTotal(createdOrders);
     return response;
+  }
+
+  private async reserveAmountAndGroupOrderItemsByShopId(
+    cartItems: CartItem[],
+  ): Promise<ReservedItemsByShop> {
+    const reservedOrders: ReservedItemsByShop = new Map();
+    for (const item of cartItems) {
+      const foundVariant =
+        await this.productVariantsService.findPurchasableVariantEntityByIdOrThrow(
+          item.variantId,
+        );
+      await this.productVariantsService.validateAndReserveVariantStockOrThrow(
+        foundVariant,
+        item.quantity,
+      );
+      const shopOrderItems: ReservedOrderItem[] =
+        reservedOrders.get(foundVariant.product.shopId) ?? [];
+      shopOrderItems.push({
+        quantity: item.quantity,
+        variant: foundVariant,
+      });
+      reservedOrders.set(foundVariant.product.shopId, shopOrderItems);
+    }
+    return reservedOrders;
   }
 
   @Transactional()
@@ -356,58 +374,12 @@ export class OrdersService {
     }
   }
 
-  private validateOrderItemRequestsMatchesUserCartItems(
-    orderItemCreateDtos: OrderItemCreateRequestDto[],
-    cartItems: CartItem[],
-  ) {
-    const orderItemsByVariantId = new Map(
-      orderItemCreateDtos.map((item) => [item.variantId, item]),
-    );
-    for (const cartItem of cartItems) {
-      if (
-        cartItem.quantity !==
-        orderItemsByVariantId.get(cartItem.variantId)?.quantity
-      ) {
-        throw new BadRequestException(
-          `Quantity of product variant ${cartItem.variantId} has been changed.`,
-        );
-      }
-    }
-  }
-
-  private sortItemsByVariantIdForLocking(
+  private sortOrderItemsByVariantIdForLocking(
     orderItemCreateDtos: OrderItemCreateRequestDto[],
   ): OrderItemCreateRequestDto[] {
     return [...orderItemCreateDtos].sort((left, right) =>
       left.variantId.localeCompare(right.variantId),
     );
-  }
-
-  private async reserveProductsAndGroupItemsByShop(
-    orderItemCreateDtos: OrderItemCreateRequestDto[],
-  ): Promise<ReservedItemsByShop> {
-    const reservedItemsByShop: ReservedItemsByShop = new Map();
-
-    for (const item of orderItemCreateDtos) {
-      const validatedVariant =
-        await this.productVariantsService.findActiveVariantEntityByIdOrThrow(
-          item.variantId,
-        );
-      const reservedVariant =
-        await this.productVariantsService.validateAndReserveVariantStockOrThrow(
-          validatedVariant,
-          item.quantity,
-        );
-      // group item by shop id
-      const shopItems =
-        reservedItemsByShop.get(reservedVariant.product.shopId) ?? [];
-      shopItems.push({
-        request: item,
-        variant: reservedVariant,
-      });
-      reservedItemsByShop.set(reservedVariant.product.shopId, shopItems);
-    }
-    return reservedItemsByShop;
   }
 
   private async createOrdersForEachShop(
@@ -449,11 +421,12 @@ export class OrdersService {
       paymentMethod,
     );
     const createdOrderItems: OrderItem[] = [];
-    for (const { request, variant } of reservedItems) {
+    for (const { quantity, variant, note } of reservedItems) {
       const createdOrderItem = await this.createOrderItemSnapshot(
         order.id,
-        request,
+        quantity,
         variant,
+        note,
       );
       createdOrderItems.push(createdOrderItem);
     }
@@ -463,8 +436,9 @@ export class OrdersService {
 
   private async createOrderItemSnapshot(
     orderId: string,
-    orderItemCreateDto: OrderItemCreateRequestDto,
+    quantity: number,
     variant: ProductVariant,
+    note?: string,
   ): Promise<OrderItem> {
     return await this.orderItemsRepo.createOrderItem(orderId, {
       productId: variant.product.id,
@@ -472,9 +446,9 @@ export class OrdersService {
       productName: variant.product.name,
       variantSize: variant.size,
       variantColor: variant.color,
-      quantity: orderItemCreateDto.quantity,
+      quantity: quantity,
       unitPrice: Number(variant.price),
-      note: orderItemCreateDto.note,
+      note: note,
     });
   }
 }
