@@ -63,31 +63,6 @@ export class OrdersService {
     return foundOrder;
   }
 
-  async findConfirmedOrderByIdOrThrow(
-    orderId: string,
-  ): Promise<ShopOrderResponseDto> {
-    const foundConfirmedOrder =
-      await this.ordersRepo.findConfirmedOrderById(orderId);
-    if (!foundConfirmedOrder) {
-      throw new NotFoundException('Confirmed order not found.');
-    }
-    return toResponseDto(ShopOrderResponseDto, foundConfirmedOrder, [
-      'order-details',
-    ]);
-  }
-
-  async findAllUserOrdersByUserIdOrThrow(
-    userId: string,
-  ): Promise<ShopOrderResponseDto[]> {
-    const foundOrders = await this.ordersRepo.findAllUserOrders(userId);
-    if (!foundOrders || foundOrders.length === 0) {
-      throw new NotFoundException('User orders not found.');
-    }
-    return toListResponseDtos(ShopOrderResponseDto, foundOrders, [
-      'order-details',
-    ]);
-  }
-
   async findUserOrderByUserIdAndOrderIdOrThrow(
     userId: string,
     orderId: string,
@@ -142,6 +117,21 @@ export class OrdersService {
     return toListResponseDtos(ShopOrderResponseDto, foundShopOrders, [
       'order-details',
     ]);
+  }
+
+  async findShopOrderByUserIdAndOrderIdOrThrow(
+    userId: string,
+    orderId: string,
+  ): Promise<ShopOrderResponseDto> {
+    const userShop =
+      await this.userShopService.findFieldWithOptionByUserIdOrThrow(userId, {
+        id: true,
+      });
+    const foundOrder = await this.findOrderEntityByShopIdAndOrderIdOrThrow(
+      userShop.id as string,
+      orderId,
+    );
+    return toResponseDto(ShopOrderResponseDto, foundOrder, ['order-details']);
   }
 
   @Transactional()
@@ -252,13 +242,20 @@ export class OrdersService {
   }
 
   private async proccessRestockOrderProducts(order: Order) {
-    for (const item of order.orderItems) {
+    const sortedOrderItems = this.sortOrderItems(order.orderItems);
+    for (const item of sortedOrderItems) {
       await this.productVariantsService.validateAndRestockVariantQuantity(
         item.variantId,
         item.productId,
         item.quantity,
       );
     }
+  }
+
+  private sortOrderItems(items: OrderItem[]): OrderItem[] {
+    return [...items].sort((left, right) => {
+      return left.id.localeCompare(right.id);
+    });
   }
 
   private async setOrderCancelledAndRefundedOrThrow(

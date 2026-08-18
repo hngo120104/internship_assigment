@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Patch,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Body, Controller, Post, Patch, Delete } from '@nestjs/common';
 import { UserShopService } from '../services/user.shop.service';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
@@ -15,6 +7,7 @@ import { UserShopCreateRequestDto } from '../dto/user.shop/request/user.shop.cre
 import { UserShopResponseDto } from '../dto/user.shop/response/user.shop.response.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { Role } from '../../auth/guards/role/role.enum';
+import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
 
 @Controller('shops')
 export class ShopsController {
@@ -42,8 +35,10 @@ export class ShopsController {
 
   @Delete()
   @Roles(Role.SELLER)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteShop(@CurrentUser() user: CurrentUserPayload): Promise<void> {
-    await this.userShopService.deleteShopOrThrow(user.sub);
+  async deleteShop(
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<DeleteCountResponseDto> {
+    const deletedCount = await this.userShopService.deleteShopOrThrow(user.sub);
+    return new DeleteCountResponseDto(deletedCount);
   }
 }

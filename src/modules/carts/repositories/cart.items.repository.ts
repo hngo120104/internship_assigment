@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CartItem, CartItemStatus } from '../entities/cart.item.entity';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 @Injectable()
 export class CartItemsRepository {
@@ -9,33 +9,6 @@ export class CartItemsRepository {
     @InjectRepository(CartItem)
     private readonly cartItemsRepo: Repository<CartItem>,
   ) {}
-
-  async findOneWithOptions(
-    options: FindOneOptions<CartItem>,
-  ): Promise<CartItem | null> {
-    return await this.cartItemsRepo.findOne(options);
-  }
-
-  async findManyWithOptions(
-    options: FindManyOptions<CartItem>,
-  ): Promise<CartItem[]> {
-    return await this.cartItemsRepo.find(options);
-  }
-
-  async findActiveCartItemsOfUserByCartItemIds(
-    userId: string,
-    cartItemIds: string[],
-  ): Promise<CartItem[]> {
-    return await this.cartItemsRepo.find({
-      where: {
-        userId: userId,
-        id: In(cartItemIds),
-        cartItemStatus: CartItemStatus.ACTIVE,
-        isDeleted: false,
-      },
-      relations: { variant: { product: true } },
-    });
-  }
 
   async findActiveCartItemByUserIdAndVariantId(
     userId: string,
@@ -55,7 +28,7 @@ export class CartItemsRepository {
     });
   }
 
-  async findActiveCartItemByUserIdAndVariantIdAndLockForBuyNow(
+  async findActiveCartItemByUserIdAndVariantIdAndLockForUpdate(
     userId: string,
     variantId: string,
   ): Promise<CartItem | null> {
@@ -69,17 +42,18 @@ export class CartItemsRepository {
       .andWhere('cart_items.cartItemStatus = :status', {
         status: CartItemStatus.ACTIVE,
       })
+      .andWhere('cart_items.isDeleted = false')
       .getOne();
   }
 
-  async findActiveCartItemsByUserIdAndVariantIdsAndLockForCheckOut(
+  async findActiveCartItemsByUserIdAndVariantIdsAndLockForUpdate(
     userId: string,
     variantIds: string[],
   ): Promise<CartItem[]> {
     return await this.cartItemsRepo
       .createQueryBuilder('cart_items')
       .setLock('pessimistic_write')
-      .where('cart_items. = :userId', { userId })
+      .where('cart_items.userId = :userId', { userId })
       .andWhere('cart_items.variantId IN (:...variantIds)', {
         variantIds: variantIds,
       })
@@ -87,7 +61,7 @@ export class CartItemsRepository {
         status: CartItemStatus.ACTIVE,
       })
       .andWhere('cart_items.isDeleted = false')
-      .orderBy('cart_items.id')
+      .orderBy('cart_items.id', 'ASC')
       .getMany();
   }
 
@@ -186,22 +160,6 @@ export class CartItemsRepository {
     return cartItemToDelete.affected ?? 0;
   }
 
-  async markActiveCartItemOfUserAsOrdered(
-    userId: string,
-    cartItemId: string,
-  ): Promise<boolean> {
-    const updateResult = await this.cartItemsRepo.update(
-      {
-        userId: userId,
-        id: cartItemId,
-        isDeleted: false,
-        cartItemStatus: CartItemStatus.ACTIVE,
-      },
-      { cartItemStatus: CartItemStatus.ORDERED },
-    );
-    return updateResult.affected !== 0;
-  }
-
   async markActiveCartItemsOfUserAsOrdered(
     userId: string,
     cartItemIds: string[],
@@ -210,18 +168,6 @@ export class CartItemsRepository {
       {
         userId: userId,
         id: In(cartItemIds),
-        isDeleted: false,
-        cartItemStatus: CartItemStatus.ACTIVE,
-      },
-      { cartItemStatus: CartItemStatus.ORDERED },
-    );
-    return updateResult.affected ?? 0;
-  }
-
-  async markAllActiveCartItemsOfUserAsOrdered(userId: string): Promise<number> {
-    const updateResult = await this.cartItemsRepo.update(
-      {
-        userId,
         isDeleted: false,
         cartItemStatus: CartItemStatus.ACTIVE,
       },

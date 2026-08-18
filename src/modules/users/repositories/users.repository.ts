@@ -1,22 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserCreateRequestDto } from '../dto/users/request/user.create.request.dto';
 import { User, UserStatus } from '../entities/user.entity';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class UsersRepository {
   constructor(@InjectRepository(User) private userRepo: Repository<User>) {}
-
-  async findOneWithOptions(
-    options: FindOneOptions<User>,
-  ): Promise<User | null> {
-    return await this.userRepo.findOne(options);
-  }
-
-  async findManyWithOptions(options: FindManyOptions<User>): Promise<User[]> {
-    return await this.userRepo.find(options);
-  }
 
   async createUser(
     userCreateDto: UserCreateRequestDto,
@@ -36,19 +26,6 @@ export class UsersRepository {
   ): Promise<User> {
     user.passwordHashed = newPasswordHashed;
     return await this.userRepo.save(user);
-  }
-
-  async updateUser(userId: string, updateData: Partial<User>): Promise<User> {
-    const updateResult = await this.userRepo.update(userId, updateData);
-
-    if (updateResult.affected === 0) {
-      throw new NotFoundException(`User does not exist.`);
-    }
-
-    return await this.userRepo.findOneByOrFail({
-      id: userId,
-      isDeleted: false,
-    });
   }
 
   async banUser(userId: string): Promise<User> {
@@ -87,18 +64,6 @@ export class UsersRepository {
         shop: true,
         addresses: true,
       },
-      skip: (page - 1) * limit,
-      take: limit,
-      order: {
-        userName: 'ASC',
-      },
-    });
-  }
-
-  findManyUsers(page: number, limit: number): Promise<User[]> {
-    return this.userRepo.find({
-      where: { isDeleted: false },
-      relations: { userRoles: { role: true }, photos: true, shop: true },
       skip: (page - 1) * limit,
       take: limit,
       order: {

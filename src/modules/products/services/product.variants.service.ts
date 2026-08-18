@@ -11,6 +11,10 @@ import { ProductVariantsRepository } from '../repositories/product.variants.repo
 import { ProductsRepository } from '../repositories/products.repository';
 import { Transactional } from 'typeorm-transactional';
 import { UserShopService } from '../../users/services/user.shop.service';
+import { toResponseDto } from '../../../utils/to.dto.response';
+import { ProductVariantResponseDto } from '../dto/product.variants/response/product.variant.response.dto';
+import { UserShopRepository } from '../../users/repositories/user.shop.repository';
+import { Product } from '../entities/product.entity';
 
 @Injectable()
 export class ProductVariantsService {
@@ -18,6 +22,7 @@ export class ProductVariantsService {
     private readonly userShopsService: UserShopService,
     private readonly productVariantsRepo: ProductVariantsRepository,
     private readonly productsRepo: ProductsRepository,
+    private readonly userShopRepo: UserShopRepository,
   ) {}
 
   async findVariantEntityByIdOrThrow(
@@ -57,32 +62,70 @@ export class ProductVariantsService {
     return variant;
   }
 
+  async findActiveVariantEntityByIdAndProductIdAndLockForUpdateOrThrow(
+    variantId: string,
+    productId: string,
+  ): Promise<ProductVariant> {
+    const foundLockedVariant =
+      await this.productVariantsRepo.findActiveVariantByIdAndAndProductIdAndLockForUpdate(
+        variantId,
+        productId,
+      );
+    if (!foundLockedVariant)
+      throw new NotFoundException('Product variant not found.');
+    return foundLockedVariant;
+  }
+
   @Transactional()
   async createProductVariants(
+    userId: string,
     productId: string,
     variantCreateDtos: ProductVariantCreateRequestDto[],
   ): Promise<ProductVariant[]> {
-    const product = await this.productsRepo.findProductById(productId);
-    if (!product) throw new NotFoundException('Product not found.');
     this.validateVariantListNotEmpty(variantCreateDtos);
     this.validateVariantSizeAndColorAreUnique(variantCreateDtos);
+    const product = await this.validateShopExistsAndHasProduct(
+      userId,
+      productId,
+    );
     await this.validateVariantsDoNotAlreadyExist(productId, variantCreateDtos);
     return this.productVariantsRepo.createVariants(
-      productId,
+      product.id,
       variantCreateDtos,
     );
   }
 
+  private async validateShopExistsAndHasProduct(
+    userId: string,
+    productId: string,
+  ): Promise<Product> {
+    const userShop = await this.userShopRepo.findActiveShopByUserId(userId);
+    if (!userShop) {
+      throw new NotFoundException('User shop not found.');
+    }
+    const product = await this.productsRepo.findProductByIdAndShopId(
+      productId,
+      userShop.id,
+    );
+    if (!product) {
+      throw new NotFoundException('Product not found.');
+    }
+    return product;
+  }
+
   @Transactional()
   async updateProductVariant(
+    userId: string,
     variantId: string,
     productId: string,
     variantUpdateDto: ProductVariantUpdateRequestDto,
-  ): Promise<ProductVariant> {
-    const variant = await this.findActiveVariantEntityByIdAndProductIdOrThrow(
-      variantId,
-      productId,
-    );
+  ): Promise<ProductVariantResponseDto> {
+    const variant =
+      await this.findActiveVariantEntityByIdAndProductIdAndLockForUpdateOrThrow(
+        variantId,
+        productId,
+      );
+    await this.validateVariantOfProductOfShop(userId, variant);
     const setKeysOfSizeAndColor = {
       size: variantUpdateDto.size ?? variant.size,
       color: variantUpdateDto.color ?? variant.color,
@@ -97,7 +140,27 @@ export class ProductVariantsService {
     if (variantUpdateDto.color !== undefined) {
       variant.color = variantUpdateDto.color.trim();
     }
-    return this.productVariantsRepo.save(variant);
+    await this.productVariantsRepo.save(variant);
+    return toResponseDto(ProductVariantResponseDto, variant);
+  }
+
+  private async validateVariantOfProductOfShop(
+    userId: string,
+    variant: ProductVariant,
+  ) {
+    const userShop = await this.userShopRepo.findActiveShopByUserId(userId);
+    const product = await this.productsRepo.findActiveProductByVariantId(
+      variant.id,
+    );
+    if (!userShop) {
+      throw new NotFoundException('User shop not found.');
+    }
+    if (!product) {
+      throw new NotFoundException('Product of variant not found.');
+    }
+    if (product.shopId !== userShop.id) {
+      throw new NotFoundException('Product does not belong to shop.');
+    }
   }
 
   async softDeleteProductVariantOrThrow(
@@ -141,7 +204,7 @@ export class ProductVariantsService {
     quantity: number,
   ): Promise<ProductVariant> {
     const restockResult =
-      await this.productVariantsRepo.restockVariantAmountByProductIdAndVariantIdAomiccaly(
+      await this.productVariantsRepo.restockVariantAmountByProductIdAndVariantIdAtomically(
         variantId,
         productId,
         quantity,

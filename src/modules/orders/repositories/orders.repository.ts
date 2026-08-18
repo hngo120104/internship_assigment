@@ -1,9 +1,4 @@
-import {
-  FindManyOptions,
-  FindOneOptions,
-  FindOptionsWhere,
-  Repository,
-} from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import {
   Order,
   OrderStatus,
@@ -20,23 +15,6 @@ export class OrdersRepository {
     @InjectRepository(Order)
     private readonly ordersRepo: Repository<Order>,
   ) {}
-
-  async findOneWithOptions(
-    options: FindOneOptions<Order>,
-  ): Promise<Order | null> {
-    return await this.ordersRepo.findOne(options);
-  }
-
-  async findManyWithOptions(options: FindManyOptions<Order>): Promise<Order[]> {
-    return await this.ordersRepo.find(options);
-  }
-
-  async findAllUserOrders(userId: string): Promise<Order[]> {
-    return await this.ordersRepo.find({
-      where: { userId: userId },
-      relations: { orderItems: true, shipAddress: true },
-    });
-  }
 
   async findAllUserOrdersWithOptionalStatusesByUserId(
     userId: string,
@@ -151,35 +129,5 @@ export class OrdersRepository {
 
   async saveOrder(order: Order): Promise<Order> {
     return await this.ordersRepo.save(order);
-  }
-
-  async findConfirmedOrderById(orderId: string): Promise<Order | null> {
-    return await this.ordersRepo.findOne({
-      where: { id: orderId, orderStatus: OrderStatus.CONFIRMED },
-      relations: {
-        orderItems: true,
-        shipAddress: true,
-      },
-    });
-  }
-
-  async findPendingOrderById(orderId: string): Promise<Order | null> {
-    return await this.ordersRepo.findOne({
-      where: { id: orderId, orderStatus: OrderStatus.PENDING },
-      relations: {
-        orderItems: true,
-        shipAddress: true,
-      },
-    });
-  }
-
-  async findOrderById(orderId: string): Promise<Order | null> {
-    return await this.ordersRepo.findOne({
-      where: { id: orderId },
-      relations: {
-        orderItems: true,
-        shipAddress: true,
-      },
-    });
   }
 }

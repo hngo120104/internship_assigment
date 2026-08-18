@@ -1,14 +1,8 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CategoriesRepository } from '../repositories/categories.repository';
 import { CategoryCreateRequestDto } from '../dto/request/category.create.request.dto';
 import { CategoryResponseDto } from '../dto/response/category.response.dto';
-import { Category } from '../entities/category.entity';
 import { CategoryUpdateRequestDto } from '../dto/request/category.update.request.dto';
-import { In } from 'typeorm';
 import {
   toListResponseDtos,
   toResponseDto,
@@ -34,14 +28,6 @@ export class CategoriesService {
     return toResponseDto(CategoryResponseDto, createdCategory);
   }
 
-  async findActiveCategoryEntitiesByIds(
-    categoryIds: string[],
-  ): Promise<Category[]> {
-    const foundActiveCategoryEntities =
-      await this.categoriesRepo.findActiveCategoryEntitiesByIds(categoryIds);
-    return foundActiveCategoryEntities;
-  }
-
   async findManyActiveCategories(
     page: number,
     limit: number,
@@ -60,24 +46,5 @@ export class CategoriesService {
       categoryUpdateDto,
     );
     return toResponseDto(CategoryResponseDto, updatedCategory);
-  }
-
-  async deleteCategories(
-    categoryIds: string[],
-  ): Promise<CategoryResponseDto[]> {
-    if (categoryIds.length === 0) {
-      throw new BadRequestException(
-        'Categories to be deleted must not be empty.',
-      );
-    }
-    const deletedCategoriesNumber =
-      await this.categoriesRepo.softDeleteCategoriesByIds(categoryIds);
-    if (deletedCategoriesNumber != categoryIds.length) {
-      throw new NotFoundException('Some categories might already be deleted.');
-    }
-    const deletedCategories = await this.categoriesRepo.findManyWithOptions({
-      where: { id: In(categoryIds), isActive: false },
-    });
-    return toListResponseDtos(CategoryResponseDto, deletedCategories);
   }
 }

@@ -7,7 +7,6 @@ import { Shop } from '../users/entities/shop.entity';
 import { ProductsRepository } from './repositories/products.repository';
 import { UsersModule } from '../users/users.module';
 import { ProductPhoto } from './entities/product.photo.entity';
-import { ProductPhotosService } from './services/product.photos.service';
 import { ProductPhotosRepository } from './repositories/product.photo.repository';
 import { Category } from '../category/entities/category.entity';
 import { CategoriesModule } from '../category/categories.module';
@@ -34,7 +33,6 @@ import { ProductVariantsService } from './services/product.variants.service';
   providers: [
     ProductsService,
     ProductsRepository,
-    ProductPhotosService,
     ProductPhotosRepository,
     ProductCategoriesRepository,
     ProductVariantsRepository,

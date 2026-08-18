@@ -71,6 +71,22 @@ export class ProductVariantsRepository {
     });
   }
 
+  async findActiveVariantByIdAndAndProductIdAndLockForUpdate(
+    id: string,
+    productId: string,
+  ): Promise<ProductVariant | null> {
+    return await this.variantsRepo
+      .createQueryBuilder('product_variants')
+      .setLock('pessimistic_write')
+      .where(
+        'product_variants.id = :id AND product_variants.productId = :productId',
+        { id, productId },
+      )
+      .andWhere('product_variants.isActive = true')
+      .andWhere('product_variants.isDeleted = false')
+      .getOne();
+  }
+
   async findAllProductVariantByProductId(
     productId: string,
   ): Promise<ProductVariant[]> {
@@ -124,7 +140,7 @@ export class ProductVariantsRepository {
     return updateResult.affected ?? 0;
   }
 
-  async restockVariantAmountByProductIdAndVariantIdAomiccaly(
+  async restockVariantAmountByProductIdAndVariantIdAtomically(
     id: string,
     productId: string,
     quantity: number,

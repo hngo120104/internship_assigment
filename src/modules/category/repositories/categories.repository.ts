@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from '../entities/category.entity';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CategoryCreateRequestDto } from '../dto/request/category.create.request.dto';
 import { CategoryUpdateRequestDto } from '../dto/request/category.update.request.dto';
 
@@ -12,18 +12,6 @@ export class CategoriesRepository {
     private readonly categoriesRepo: Repository<Category>,
   ) {}
 
-  async findOneWithOptions(
-    options: FindOneOptions<Category>,
-  ): Promise<Category | null> {
-    return await this.categoriesRepo.findOne(options);
-  }
-
-  async findManyWithOptions(
-    options: FindManyOptions<Category>,
-  ): Promise<Category[]> {
-    return await this.categoriesRepo.find(options);
-  }
-
   async createCategory(
     categoryCreateDto: CategoryCreateRequestDto,
   ): Promise<Category> {
@@ -31,15 +19,6 @@ export class CategoriesRepository {
       ...categoryCreateDto,
     });
     return await this.categoriesRepo.save(newCategory);
-  }
-
-  async findActiveCategoryEntitiesByIds(
-    categoryIds: string[],
-  ): Promise<Category[]> {
-    const foundCategories = await this.categoriesRepo.find({
-      where: { id: In(categoryIds), isActive: true },
-    });
-    return foundCategories;
   }
 
   async findManyActiveCategories(
@@ -78,13 +57,5 @@ export class CategoriesRepository {
     }
 
     return this.categoriesRepo.findOneByOrFail({ id: categoryId });
-  }
-
-  async softDeleteCategoriesByIds(categoryIds: string[]): Promise<number> {
-    const deleteResult = await this.categoriesRepo.update(
-      { id: In(categoryIds), isActive: true },
-      { isActive: false },
-    );
-    return deleteResult.affected ?? 0;
   }
 }

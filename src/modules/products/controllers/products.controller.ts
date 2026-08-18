@@ -7,8 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  HttpCode,
-  HttpStatus,
 } from '@nestjs/common';
 import { ProductsService } from '../services/products.service';
 import { ProductCreateRequestDto } from '../dto/products/request/product.create.request.dto';
@@ -19,10 +17,21 @@ import { Public } from '../../auth/public.decorator';
 import { ProductResponseDto } from '../dto/products/response/product.response.dto';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
+import { ProductVariantUpdateRequestDto } from '../dto/product.variants/request/product.variant.update.request.dto';
+import { ProductVariantsService } from '../services/product.variants.service';
+import { ProductVariantResponseDto } from '../dto/product.variants/response/product.variant.response.dto';
+import { toListResponseDtos } from '../../../utils/to.dto.response';
+import { ProductCategoriesUpdateRequestDto } from '../dto/products/request/product.categories.update.request.dto';
+import { ProductVariantsCreateRequestDto } from '../dto/product.variants/request/product.variants.create.request.dto';
+import { ListResponseDto } from '../../../common/dto/list.response.dto';
+import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
 
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly productVariantsService: ProductVariantsService,
+  ) {}
 
   @Post()
   @Roles(Role.SELLER)
@@ -38,12 +47,14 @@ export class ProductsController {
   async findManyActiveLatestProducts(
     @Query('page') page: number,
     @Query('limit') limit: number,
-  ): Promise<ProductResponseDto[]> {
-    return await this.productsService.findLatestActiveProducts(page, limit);
+  ): Promise<ListResponseDto<ProductResponseDto>> {
+    return new ListResponseDto(
+      await this.productsService.findLatestActiveProducts(page, limit),
+    );
   }
 
   @Public()
-  @Get('/:productId')
+  @Get(':productId')
   async getProductDetails(
     @Param('productId') productId: string,
   ): Promise<ProductResponseDto> {
@@ -54,13 +65,15 @@ export class ProductsController {
   @Get('shops/:shopId')
   async findLatestActiveProductsByShop(
     @Param('shopId') shopId: string,
-  ): Promise<ProductResponseDto[]> {
-    return await this.productsService.findLatestActiveShopProducts(shopId);
+  ): Promise<ListResponseDto<ProductResponseDto>> {
+    return new ListResponseDto(
+      await this.productsService.findLatestActiveShopProducts(shopId),
+    );
   }
 
   @Patch(':productId')
   @Roles(Role.SELLER)
-  async updateShopProduct(
+  async updateShopProductMetadata(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') updateProductId: string,
     @Body() updateProductDto: ProductUpdateRequestDto,
@@ -77,25 +90,76 @@ export class ProductsController {
   async updateShopProductCategories(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') updateProductId: string,
-    @Body() categoryIds: string[],
+    @Body() requestDto: ProductCategoriesUpdateRequestDto,
   ): Promise<ProductResponseDto> {
     return await this.productsService.updateShopProductCategories(
       updateProductId,
       user.sub,
-      categoryIds,
+      requestDto.categoryIds,
     );
+  }
+
+  @Post(':productId/variants')
+  @Roles(Role.SELLER)
+  async addProductVariants(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('productId') productId: string,
+    @Body() requestDto: ProductVariantsCreateRequestDto,
+  ): Promise<ListResponseDto<ProductVariantResponseDto>> {
+    const createdVariants =
+      await this.productVariantsService.createProductVariants(
+        user.sub,
+        productId,
+        requestDto.variants,
+      );
+    return new ListResponseDto(
+      toListResponseDtos(ProductVariantResponseDto, createdVariants),
+    );
+  }
+
+  @Patch(':productId/:variantId')
+  @Roles(Role.SELLER)
+  async updateProductVariant(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('productId') productId: string,
+    @Param('variantId') variantId: string,
+    @Body() productVariantUpdateRequestDto: ProductVariantUpdateRequestDto,
+  ): Promise<ProductVariantResponseDto> {
+    return await this.productVariantsService.updateProductVariant(
+      user.sub,
+      variantId,
+      productId,
+      productVariantUpdateRequestDto,
+    );
+  }
+
+  @Delete(':productId/:variantId')
+  @Roles(Role.SELLER)
+  async deleteProductVariant(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('productId') productId: string,
+    @Param('variantId') variantId: string,
+  ): Promise<DeleteCountResponseDto> {
+    const deletedCount =
+      await this.productVariantsService.softDeleteProductVariantOrThrow(
+        user.sub,
+        variantId,
+        productId,
+      );
+    return new DeleteCountResponseDto(deletedCount);
   }
 
   @Delete(':productId')
   @Roles(Role.SELLER)
-  @HttpCode(HttpStatus.NO_CONTENT)
   async deleteShopProduct(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') deleteProductId: string,
-  ): Promise<void> {
-    await this.productsService.deleteShopProductByIdOrThrow(
-      deleteProductId,
-      user.sub,
-    );
+  ): Promise<DeleteCountResponseDto> {
+    const deletedCount =
+      await this.productsService.softDeleteShopProductByIdOrThrow(
+        deleteProductId,
+        user.sub,
+      );
+    return new DeleteCountResponseDto(deletedCount);
   }
 }

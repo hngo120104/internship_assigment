@@ -62,6 +62,7 @@ describe('ProductsService', () => {
     });
 
     expect(variantsService.createProductVariants).toHaveBeenCalledWith(
+      'user-id',
       'product-id',
       variants,
     );

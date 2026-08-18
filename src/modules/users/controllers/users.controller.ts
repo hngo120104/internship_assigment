@@ -5,7 +5,7 @@ import { UserResponseDto } from '../dto/users/response/user.response.dto';
 import { UserPasswordUpdateRequestDto } from '../dto/users/request/user.password.update.request.dto';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
-import { UserDeleteResponseDto } from '../dto/users/response/user.delete.response.dto';
+import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
 
 @Controller('users')
 export class UsersController {
@@ -34,7 +34,7 @@ export class UsersController {
   @Delete()
   async deleteAccount(
     @CurrentUser() user: CurrentUserPayload,
-  ): Promise<UserDeleteResponseDto> {
+  ): Promise<DeleteCountResponseDto> {
     return await this.usersService.deleteUserByUserIdOrThrow(user.sub);
   }
 }

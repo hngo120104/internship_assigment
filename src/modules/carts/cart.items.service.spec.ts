@@ -15,6 +15,7 @@ describe('CartItemsService', () => {
   let service: CartItemsService;
   let cartItemsRepo: {
     findActiveCartItemByUserIdAndVariantId: jest.Mock;
+    findActiveCartItemByUserIdAndVariantIdAndLockForUpdate: jest.Mock;
     createCartItem: jest.Mock;
     saveCartItem: jest.Mock;
     softDeleteCartItem: jest.Mock;
@@ -25,6 +26,7 @@ describe('CartItemsService', () => {
   beforeEach(async () => {
     cartItemsRepo = {
       findActiveCartItemByUserIdAndVariantId: jest.fn(),
+      findActiveCartItemByUserIdAndVariantIdAndLockForUpdate: jest.fn(),
       createCartItem: jest.fn(),
       saveCartItem: jest.fn(),
       softDeleteCartItem: jest.fn(),
@@ -51,13 +53,16 @@ describe('CartItemsService', () => {
       quantity: 2,
       variant: { price: 100, product: { id: 'product-id' } },
     };
-    cartItemsRepo.findActiveCartItemByUserIdAndVariantId
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(createdItem);
+    cartItemsRepo.findActiveCartItemByUserIdAndVariantIdAndLockForUpdate.mockResolvedValue(
+      null,
+    );
+    cartItemsRepo.findActiveCartItemByUserIdAndVariantId.mockResolvedValue(
+      createdItem,
+    );
     cartItemsRepo.createCartItem.mockResolvedValue(createdItem);
     productsService.validateVariantQuantity.mockResolvedValue(undefined);
 
-    const result = await service.addCartItemOrAddQuantity('user-id', {
+    const result = await service.addCartItem('user-id', {
       variantId: 'variant-id',
       quantity: 2,
     });
@@ -83,7 +88,7 @@ describe('CartItemsService', () => {
       quantity: 2,
       variant: { price: 100, product: { id: 'product-id' } },
     };
-    cartItemsRepo.findActiveCartItemByUserIdAndVariantId.mockResolvedValue(
+    cartItemsRepo.findActiveCartItemByUserIdAndVariantIdAndLockForUpdate.mockResolvedValue(
       existingItem,
     );
     cartItemsRepo.saveCartItem.mockImplementation((cartItem: object) =>
@@ -91,7 +96,7 @@ describe('CartItemsService', () => {
     );
     productsService.validateVariantQuantity.mockResolvedValue(undefined);
 
-    const result = await service.addCartItemOrAddQuantity('user-id', {
+    const result = await service.addCartItem('user-id', {
       variantId: 'variant-id',
       quantity: 3,
     });
@@ -111,10 +116,10 @@ describe('CartItemsService', () => {
 
     await expect(
       service.deleteUserCartItemOrThrow('cart-item-id', 'user-id'),
-    ).resolves.toEqual({ deletedAmount: 1, message: 'Success' });
+    ).resolves.toEqual({ deletedCount: 1, message: 'Success.' });
     await expect(
       service.deleteAllUserCartItemsOrThrow('user-id'),
-    ).resolves.toEqual({ deletedAmount: 3, message: 'Success' });
+    ).resolves.toEqual({ deletedCount: 3, message: 'Success.' });
   });
 
   it('throws when no active cart item is deleted', async () => {

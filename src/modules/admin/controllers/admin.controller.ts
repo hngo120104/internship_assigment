@@ -16,6 +16,7 @@ import { CategoryUpdateRequestDto } from '../../category/dto/request/category.up
 import { UserResponseDto } from '../../users/dto/users/response/user.response.dto';
 import { UserCartResponseDto } from '../../carts/dto/response/cart.response.dto';
 import { UserShopResponseDto } from '../../users/dto/user.shop/response/user.shop.response.dto';
+import { ListResponseDto } from '../../../common/dto/list.response.dto';
 
 @Controller('admin')
 export class AdminController {
@@ -26,8 +27,10 @@ export class AdminController {
   async findManyActiveUsers(
     @Query('page') page: number,
     @Query('limit') limit: number,
-  ): Promise<UserResponseDto[]> {
-    return await this.adminService.findActiveUsers(page, limit);
+  ): Promise<ListResponseDto<UserResponseDto>> {
+    return new ListResponseDto(
+      await this.adminService.findActiveUsers(page, limit),
+    );
   }
 
   @Get('shops/active')
@@ -35,14 +38,16 @@ export class AdminController {
   async findManyActiveShops(
     @Query('page') page: number,
     @Query('limit') limit: number,
-  ): Promise<UserShopResponseDto[]> {
-    return await this.adminService.findActiveShops(page, limit);
+  ): Promise<ListResponseDto<UserShopResponseDto>> {
+    return new ListResponseDto(
+      await this.adminService.findActiveShops(page, limit),
+    );
   }
 
   @Get('carts')
   @Roles(Role.ADMIN)
-  async findActiveUsersCarts(): Promise<UserCartResponseDto[]> {
-    return await this.adminService.findActiveUsersCarts();
+  async findActiveUsersCarts(): Promise<ListResponseDto<UserCartResponseDto>> {
+    return new ListResponseDto(await this.adminService.findActiveUsersCarts());
   }
 
   @Post('ban/:userId')

@@ -11,11 +11,8 @@ import { ProductVariantsService } from '../../products/services/product.variants
 import { CartItemsUpdateRequestDto } from '../dto/request/cart.items.update.request.dto';
 import { UserCartResponseDto } from '../dto/response/cart.response.dto';
 import { Transactional } from 'typeorm-transactional';
-import {
-  toListResponseDtos,
-  toResponseDto,
-} from '../../../utils/to.dto.response';
-import { CartItemDeleteResponseDto } from '../dto/response/cart.item.delete.response.dto';
+import { toResponseDto } from '../../../utils/to.dto.response';
+import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
 
 @Injectable()
 export class CartItemsService {
@@ -34,28 +31,13 @@ export class CartItemsService {
     return toResponseDto(UserCartResponseDto, userCartObj);
   }
 
-  async findActiveCartItemEntityByUserIdAndVariantIdAndLockForBuyNowOrThrow(
-    userId: string,
-    variantId: string,
-  ): Promise<CartItem> {
-    const foundLockedCartItem =
-      await this.cartItemsRepo.findActiveCartItemByUserIdAndVariantIdAndLockForBuyNow(
-        userId,
-        variantId,
-      );
-    if (!foundLockedCartItem) {
-      throw new NotFoundException('User cart item not found.');
-    }
-    return foundLockedCartItem;
-  }
-
   async findAllActiveCartItemsEntitiesByUserIdAndVariantIdsAndLockForCheckoutOrThrow(
     userId: string,
     variantIds: string[],
     expectedCount: number,
   ): Promise<CartItem[]> {
     const foundLockedCartItems =
-      await this.cartItemsRepo.findActiveCartItemsByUserIdAndVariantIdsAndLockForCheckOut(
+      await this.cartItemsRepo.findActiveCartItemsByUserIdAndVariantIdsAndLockForUpdate(
         userId,
         variantIds,
       );
@@ -68,32 +50,6 @@ export class CartItemsService {
     return foundLockedCartItems;
   }
 
-  async findActiveCartItemsEntitiesOfUserByCartItemIdsOrThrow(
-    userId: string,
-    cartItemIds: string[],
-  ): Promise<CartItem[]> {
-    const foundCartItems =
-      await this.cartItemsRepo.findActiveCartItemsOfUserByCartItemIds(
-        userId,
-        cartItemIds,
-      );
-    if (foundCartItems.length !== cartItemIds.length) {
-      throw new BadRequestException('One or more of cart items not found.');
-    }
-    return foundCartItems;
-  }
-
-  async findAllUserActiveCartItemsByUserIdOrThrow(
-    userId: string,
-  ): Promise<CartItemResponseDto[]> {
-    const foundCartItems =
-      await this.cartItemsRepo.findAllUserActiveCartItemsByUserId(userId);
-    if (foundCartItems.length === 0) {
-      throw new NotFoundException('Cart items not found.');
-    }
-    return toListResponseDtos(CartItemResponseDto, foundCartItems);
-  }
-
   async findAllUserActiveCartItemEntitiesByUserIdOrThrow(
     userId: string,
   ): Promise<CartItem[]> {
@@ -103,19 +59,6 @@ export class CartItemsService {
       throw new NotFoundException('Cart items not found.');
     }
     return foundCartItems;
-  }
-
-  async findActiveCartItemByUserIdAndCartItemIdOrThrow(
-    userId: string,
-    cartItemId: string,
-  ): Promise<CartItemResponseDto> {
-    const foundCartItem =
-      await this.cartItemsRepo.findActiveCartItemByUserIdAndCartItemId(
-        userId,
-        cartItemId,
-      );
-    if (!foundCartItem) throw new NotFoundException('Cart item not found.');
-    return toResponseDto(CartItemResponseDto, foundCartItem);
   }
 
   async findActiveCartItemEntityByUserIdAndCartItemIdOrThrow(
@@ -161,19 +104,19 @@ export class CartItemsService {
   }
 
   @Transactional()
-  async addCartItemOrAddQuantity(
+  async addCartItem(
     userId: string,
     cartItemsAddDto: CartItemsAddRequestDto,
   ): Promise<CartItemResponseDto> {
-    const createdCartItemExist =
-      await this.cartItemsRepo.findActiveCartItemByUserIdAndVariantId(
+    const foundLockedCartItem =
+      await this.cartItemsRepo.findActiveCartItemByUserIdAndVariantIdAndLockForUpdate(
         userId,
         cartItemsAddDto.variantId,
       );
-    if (createdCartItemExist) {
+    if (foundLockedCartItem) {
       return await this.increaseCartItemQuantity(
         cartItemsAddDto,
-        createdCartItemExist,
+        foundLockedCartItem,
       );
     }
     await this.productVariantsService.validateVariantQuantity(
@@ -210,6 +153,7 @@ export class CartItemsService {
     return toResponseDto(CartItemResponseDto, cartItem);
   }
 
+  @Transactional()
   async updateCartItemQuantity(
     cartItemId: string,
     userId: string,
@@ -234,23 +178,10 @@ export class CartItemsService {
     return toResponseDto(CartItemResponseDto, updatedCartItem);
   }
 
-  async findUserActiveCartItemOrThrow(
-    userId: string,
-    variantId: string,
-  ): Promise<CartItemResponseDto> {
-    const foundCartItem =
-      await this.findActiveCartItemEntityByUserIdAndVariantIdOrThrow(
-        userId,
-        variantId,
-      );
-
-    return toResponseDto(CartItemResponseDto, foundCartItem);
-  }
-
   async deleteUserCartItemOrThrow(
     cartItemId: string,
     userId: string,
-  ): Promise<CartItemDeleteResponseDto> {
+  ): Promise<DeleteCountResponseDto> {
     const deletedCount = await this.cartItemsRepo.softDeleteCartItem(
       userId,
       cartItemId,
@@ -260,24 +191,18 @@ export class CartItemsService {
         'Cart item does not exist or is already deleted.',
       );
     }
-    return toResponseDto(CartItemDeleteResponseDto, {
-      deletedAmount: deletedCount,
-      message: 'Success',
-    });
+    return new DeleteCountResponseDto(deletedCount);
   }
 
   async deleteAllUserCartItemsOrThrow(
     userId: string,
-  ): Promise<CartItemDeleteResponseDto> {
+  ): Promise<DeleteCountResponseDto> {
     const deletedCount =
       await this.cartItemsRepo.softDeleteAllCartItemsOfUser(userId);
     if (deletedCount === 0) {
       throw new NotFoundException('Cart items do not exist or are deleted.');
     }
-    return toResponseDto(CartItemDeleteResponseDto, {
-      deletedAmount: deletedCount,
-      message: 'Success',
-    });
+    return new DeleteCountResponseDto(deletedCount);
   }
 
   async markUserCartItemsAsOrderedOrThrow(
@@ -290,18 +215,6 @@ export class CartItemsService {
         cartItemIds,
       );
     if (cartItemIds.length !== updatedCount) {
-      throw new NotFoundException('Some cart items are no longer active.');
-    }
-    return updatedCount;
-  }
-
-  async markAllUserCartItemsAsOrderedOrThrow(
-    userId: string,
-    expectedCount: number,
-  ): Promise<number> {
-    const updatedCount =
-      await this.cartItemsRepo.markAllActiveCartItemsOfUserAsOrdered(userId);
-    if (updatedCount !== expectedCount) {
       throw new NotFoundException('Some cart items are no longer active.');
     }
     return updatedCount;

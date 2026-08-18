@@ -2,12 +2,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Shop, ShopStatus } from '../entities/shop.entity';
 import { User } from '../entities/user.entity';
 import { UserShopCreateRequestDto } from '../dto/user.shop/request/user.shop.create.request.dto';
-import {
-  FindManyOptions,
-  FindOneOptions,
-  FindOptionsSelect,
-  Repository,
-} from 'typeorm';
+import { FindOptionsSelect, Repository } from 'typeorm';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserShopUpdateRequestDto } from '../dto/user.shop/request/user.shop.update.request.dto';
 
@@ -25,16 +20,6 @@ export class UserShopRepository {
       where: { userId: userId },
       select: selectedField,
     });
-  }
-
-  async findOneWithOptions(
-    options: FindOneOptions<Shop>,
-  ): Promise<Shop | null> {
-    return await this.userShopRepo.findOne(options);
-  }
-
-  async findManyWithOptions(options: FindManyOptions<Shop>): Promise<Shop[]> {
-    return await this.userShopRepo.find(options);
   }
 
   async findManyActiveShops(page: number, limit: number): Promise<Shop[]> {

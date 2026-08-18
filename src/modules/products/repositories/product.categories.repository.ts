@@ -1,11 +1,6 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductCategories } from '../entities/product.categories.entity';
-import {
-  FindManyOptions,
-  FindOneOptions,
-  QueryFailedError,
-  Repository,
-} from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { BadRequestException } from '@nestjs/common';
 
 export class ProductCategoriesRepository {
@@ -13,18 +8,6 @@ export class ProductCategoriesRepository {
     @InjectRepository(ProductCategories)
     private readonly productCategoriesRepo: Repository<ProductCategories>,
   ) {}
-
-  async findOneWithOptions(
-    options: FindOneOptions<ProductCategories>,
-  ): Promise<ProductCategories | null> {
-    return await this.productCategoriesRepo.findOne(options);
-  }
-
-  async findManyWithOptions(
-    options: FindManyOptions<ProductCategories>,
-  ): Promise<ProductCategories[]> {
-    return await this.productCategoriesRepo.find(options);
-  }
 
   async saveProductCategories(
     productId: string,

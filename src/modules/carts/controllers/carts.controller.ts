@@ -15,7 +15,7 @@ import { UserCartResponseDto } from '../dto/response/cart.response.dto';
 import { CartItemsService } from '../services/cart.items.service';
 import { CartItemResponseDto } from '../dto/response/cart.item.response.dto';
 import { CartItemsUpdateRequestDto } from '../dto/request/cart.items.update.request.dto';
-import { CartItemDeleteResponseDto } from '../dto/response/cart.item.delete.response.dto';
+import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
 
 @Controller('carts')
 export class CartsController {
@@ -33,10 +33,7 @@ export class CartsController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() cartItemsAddDto: CartItemsAddRequestDto,
   ): Promise<CartItemResponseDto> {
-    return this.cartItemsService.addCartItemOrAddQuantity(
-      user.sub,
-      cartItemsAddDto,
-    );
+    return this.cartItemsService.addCartItem(user.sub, cartItemsAddDto);
   }
 
   @Patch(':cartItemId')
@@ -56,7 +53,7 @@ export class CartsController {
   async deleteCartItem(
     @Param('cartItemId') cartItemId: string,
     @CurrentUser() user: CurrentUserPayload,
-  ): Promise<CartItemDeleteResponseDto> {
+  ): Promise<DeleteCountResponseDto> {
     return await this.cartItemsService.deleteUserCartItemOrThrow(
       cartItemId,
       user.sub,
@@ -66,7 +63,7 @@ export class CartsController {
   @Delete()
   async deleteCart(
     @CurrentUser() user: CurrentUserPayload,
-  ): Promise<CartItemDeleteResponseDto> {
+  ): Promise<DeleteCountResponseDto> {
     return await this.cartItemsService.deleteAllUserCartItemsOrThrow(user.sub);
   }
 }

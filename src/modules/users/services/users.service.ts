@@ -7,13 +7,10 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { User } from '../entities/user.entity';
 import { UserPhoto } from '../entities/user.photo.entity';
 import { UsersRepository } from '../repositories/users.repository';
-import { UserShopService } from './user.shop.service';
 import { UserPhotosService } from './user.photos.service';
 import { UserCreateRequestDto } from '../dto/users/request/user.create.request.dto';
-import { UserShopCreateRequestDto } from '../dto/user.shop/request/user.shop.create.request.dto';
 import { UserPhotoInsertRequestDto } from '../dto/user.photos/request/user.photos.insert.request.dto';
 import { RolesRepository } from '../repositories/role.repository';
-import { UserShopResponseDto } from '../dto/user.shop/response/user.shop.response.dto';
 
 import { UserResponseDto } from '../dto/users/response/user.response.dto';
 import { UserCreateResponseDto } from '../dto/users/response/user.create.response.dto';
@@ -22,7 +19,7 @@ import {
   toListResponseDtos,
   toResponseDto,
 } from '../../../utils/to.dto.response';
-import { UserDeleteResponseDto } from '../dto/users/response/user.delete.response.dto';
+import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
 
 @Injectable()
 export class UsersService {
@@ -31,7 +28,6 @@ export class UsersService {
     private readonly roleRepo: RolesRepository,
     private readonly userRolesRepo: UserRolesRepository,
     private readonly userPhotosService: UserPhotosService,
-    private readonly userShopService: UserShopService,
   ) {}
 
   async findManyActiveUsers(
@@ -131,14 +127,6 @@ export class UsersService {
     return toResponseDto(UserCreateResponseDto, newUserWithPasswordHashed);
   }
 
-  async updateUser(
-    userId: string,
-    updateData: Partial<User>,
-  ): Promise<UserResponseDto> {
-    const updatedUser = await this.usersRepo.updateUser(userId, updateData);
-    return toResponseDto(UserResponseDto, updatedUser);
-  }
-
   async updateUserPassword(
     userId: string,
     newPassword: string,
@@ -164,19 +152,6 @@ export class UsersService {
     return toResponseDto(UserResponseDto, updatedUser);
   }
 
-  @Transactional()
-  async shopRegister(
-    userId: string,
-    userShopCreateDto: UserShopCreateRequestDto,
-  ): Promise<UserShopResponseDto> {
-    const userShopRegisterResponse = await this.userShopService.createShop(
-      userId,
-      userShopCreateDto,
-    );
-
-    return userShopRegisterResponse;
-  }
-
   async banUser(userId: string): Promise<UserResponseDto> {
     const bannedUser = await this.usersRepo.banUser(userId);
     return toResponseDto(UserResponseDto, bannedUser);
@@ -184,14 +159,11 @@ export class UsersService {
 
   async deleteUserByUserIdOrThrow(
     userId: string,
-  ): Promise<UserDeleteResponseDto> {
+  ): Promise<DeleteCountResponseDto> {
     const deleteResult = await this.usersRepo.softDeleteUser(userId);
     if (!deleteResult) {
       throw new NotFoundException('User not found.');
     }
-    return {
-      amount: deleteResult ? 1 : 0,
-      message: 'Success.',
-    };
+    return new DeleteCountResponseDto(1);
   }
 }

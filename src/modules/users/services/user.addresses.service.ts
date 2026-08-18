@@ -8,36 +8,11 @@ import { UserAddressCreateRequestDto } from '../dto/user.addresses/request/user.
 import { UserAddressResponseDto } from '../dto/user.addresses/response/user.address.reponse.dto';
 import { Address } from '../entities/user.address.entity';
 import { UserAddressUpdateRequestDto } from '../dto/user.addresses/request/user.address.update.request.dto';
-import {
-  toListResponseDtos,
-  toResponseDto,
-} from '../../../utils/to.dto.response';
+import { toResponseDto } from '../../../utils/to.dto.response';
 
 @Injectable()
 export class UserAddressesService {
   constructor(private readonly userAddressesRepo: UserAddressesRepository) {}
-
-  async findPrimaryUserAddressEntityByUserIdOrThrow(
-    userId: string,
-  ): Promise<Address> {
-    const foundAddress =
-      await this.userAddressesRepo.findPrimaryUserAddressByUserId(userId);
-    if (!foundAddress) {
-      throw new NotFoundException('User address not found.');
-    }
-    return foundAddress;
-  }
-
-  async findActiveUserAddressesByUserIdOrThrow(
-    userId: string,
-  ): Promise<UserAddressResponseDto[]> {
-    const addresses =
-      await this.userAddressesRepo.findActiveUserAddressesByUserId(userId);
-    if (!addresses || addresses.length === 0) {
-      throw new NotFoundException('User addresses not found.');
-    }
-    return toListResponseDtos(UserAddressResponseDto, addresses);
-  }
 
   async findActiveUserAddressEntityByIdOrThrow(
     userId: string,

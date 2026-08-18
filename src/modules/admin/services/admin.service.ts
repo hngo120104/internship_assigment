@@ -55,12 +55,6 @@ export class AdminService {
     );
   }
 
-  async deleteCategories(
-    categoryIds: string[],
-  ): Promise<CategoryResponseDto[]> {
-    return await this.categoriesService.deleteCategories(categoryIds);
-  }
-
   async banUser(userId: string): Promise<UserResponseDto> {
     return await this.usersService.banUser(userId);
   }

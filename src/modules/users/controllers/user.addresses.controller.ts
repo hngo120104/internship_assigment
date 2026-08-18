@@ -1,19 +1,12 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Patch,
-  Post,
-  Delete,
-} from '@nestjs/common';
+import { Body, Controller, Param, Patch, Post, Delete } from '@nestjs/common';
 import { UserAddressesService } from '../services/user.addresses.service';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
 import { UserAddressCreateRequestDto } from '../dto/user.addresses/request/user.address.create.request.dto';
 import { UserAddressResponseDto } from '../dto/user.addresses/response/user.address.reponse.dto';
 import { UserAddressUpdateRequestDto } from '../dto/user.addresses/request/user.address.update.request.dto';
+import { UserAddressesDeleteRequestDto } from '../dto/user.addresses/request/user.addresses.delete.request.dto';
+import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
 
 @Controller('users/addresses')
 export class UserAddressesController {
@@ -44,14 +37,15 @@ export class UserAddressesController {
   }
 
   @Delete()
-  @HttpCode(HttpStatus.NO_CONTENT)
   async deleteUserAddresses(
     @CurrentUser() user: CurrentUserPayload,
-    @Body() addressIds: string[],
-  ): Promise<void> {
-    await this.userAddressesService.deleteUserAddressesOrThrow(
-      user.sub,
-      addressIds,
-    );
+    @Body() requestDto: UserAddressesDeleteRequestDto,
+  ): Promise<DeleteCountResponseDto> {
+    const deletedCount =
+      await this.userAddressesService.deleteUserAddressesOrThrow(
+        user.sub,
+        requestDto.addressIds,
+      );
+    return new DeleteCountResponseDto(deletedCount);
   }
 }

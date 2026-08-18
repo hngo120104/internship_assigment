@@ -9,7 +9,6 @@ import { ProductPhotoInsertRequestDto } from '../dto/product.photos/request/prod
 import { Transactional } from 'typeorm-transactional';
 import { UserShopService } from '../../users/services/user.shop.service';
 import { ProductCategoriesRepository } from '../repositories/product.categories.repository';
-import { Shop } from '../../users/entities/shop.entity';
 import { ProductVariantsService } from './product.variants.service';
 import {
   toListResponseDtos,
@@ -25,17 +24,6 @@ export class ProductsService {
     private readonly productCategoriesRepo: ProductCategoriesRepository,
     private readonly productVariantsService: ProductVariantsService,
   ) {}
-
-  async findShopEntityByProductIdOrThrow(productId: string): Promise<Shop> {
-    const foundShop =
-      await this.productsRepo.findActiveShopByProductId(productId);
-
-    if (!foundShop) {
-      throw new NotFoundException('User does not have shop');
-    }
-
-    return foundShop;
-  }
 
   private async insertPhotosIntoProduct(
     productId: string,
@@ -61,6 +49,7 @@ export class ProductsService {
     );
     createdProduct.variants =
       await this.productVariantsService.createProductVariants(
+        userId,
         createdProduct.id,
         productCreateDto.variants,
       );
@@ -170,7 +159,7 @@ export class ProductsService {
     return toResponseDto(ProductResponseDto, updatedProduct);
   }
 
-  async deleteShopProductByIdOrThrow(
+  async softDeleteShopProductByIdOrThrow(
     productId: string,
     userId: string,
   ): Promise<number> {

@@ -18,6 +18,7 @@ import { CheckoutResponseDto } from '../dto/response/customer.order.response.dto
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { Role } from '../../auth/guards/role/role.enum';
 import { FindOrderRequestDto } from '../dto/request/find.order.request.dto';
+import { ListResponseDto } from '../../../common/dto/list.response.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -28,11 +29,13 @@ export class OrdersController {
   async findAllUserOrders(
     @CurrentUser() user: CurrentUserPayload,
     @Query() findOrderRequestDto: FindOrderRequestDto,
-  ): Promise<ShopOrderResponseDto[]> {
-    return await this.ordersService.findAllUserOrdersWithOptionalStatusesByUserIdOrThrow(
-      user.sub,
-      findOrderRequestDto.orderStatus,
-      findOrderRequestDto.paymentStatus,
+  ): Promise<ListResponseDto<ShopOrderResponseDto>> {
+    return new ListResponseDto(
+      await this.ordersService.findAllUserOrdersWithOptionalStatusesByUserIdOrThrow(
+        user.sub,
+        findOrderRequestDto.orderStatus,
+        findOrderRequestDto.paymentStatus,
+      ),
     );
   }
 
@@ -64,11 +67,26 @@ export class OrdersController {
   async findAllShopOrdersWithQueryOptions(
     @CurrentUser() user: CurrentUserPayload,
     @Query() findOrderRequestDto: FindOrderRequestDto,
-  ): Promise<ShopOrderResponseDto[]> {
-    return await this.ordersService.findAllShopOrdersWithOptionStatusesByShopIdOrThrow(
+  ): Promise<ListResponseDto<ShopOrderResponseDto>> {
+    return new ListResponseDto(
+      await this.ordersService.findAllShopOrdersWithOptionStatusesByShopIdOrThrow(
+        user.sub,
+        findOrderRequestDto.orderStatus,
+        findOrderRequestDto.paymentStatus,
+      ),
+    );
+  }
+
+  @Get('shops/:orderId')
+  @Roles(Role.SELLER)
+  @SerializeOptions({ groups: ['order-details'] })
+  async findShopOrderDetails(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('orderId') orderId: string,
+  ): Promise<ShopOrderResponseDto> {
+    return await this.ordersService.findShopOrderByUserIdAndOrderIdOrThrow(
       user.sub,
-      findOrderRequestDto.orderStatus,
-      findOrderRequestDto.paymentStatus,
+      orderId,
     );
   }
 

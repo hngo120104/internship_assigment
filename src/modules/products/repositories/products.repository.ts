@@ -1,10 +1,9 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from '../entities/product.entity';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { ProductCreateRequestDto } from '../dto/products/request/product.create.request.dto';
 import { ProductUpdateRequestDto } from '../dto/products/request/product.update.request.dto';
 import { Injectable } from '@nestjs/common';
-import { Shop } from '../../users/entities/shop.entity';
 
 @Injectable()
 export class ProductsRepository {
@@ -13,31 +12,20 @@ export class ProductsRepository {
     private readonly productsRepo: Repository<Product>,
   ) {}
 
-  async findOneWithOptions(
-    options: FindOneOptions<Product>,
-  ): Promise<Product | null> {
-    return await this.productsRepo.findOne(options);
-  }
-
-  async findManyWithOptions(
-    options: FindManyOptions<Product>,
-  ): Promise<Product[]> {
-    return await this.productsRepo.find(options);
-  }
-
-  async findActiveShopByProductId(
+  async findProductByIdAndShopId(
     productId: string,
-  ): Promise<Shop | null | undefined> {
-    const foundProduct = await this.productsRepo.findOne({
-      where: { id: productId, isActive: true, isDeleted: false },
-      relations: { shop: true },
+    shopId: string,
+  ): Promise<Product | null> {
+    return this.productsRepo.findOne({
+      where: { id: productId, shopId: shopId, isDeleted: false },
     });
-    return foundProduct?.shop;
   }
 
-  async findProductById(productId: string): Promise<Product | null> {
+  async findActiveProductByVariantId(
+    variantId: string,
+  ): Promise<Product | null> {
     return this.productsRepo.findOne({
-      where: { id: productId, isDeleted: false },
+      where: { variants: { id: variantId }, isActive: true, isDeleted: false },
     });
   }
 
@@ -55,16 +43,19 @@ export class ProductsRepository {
     return this.productsRepo.save(product);
   }
 
-  async saveProduct(product: Product): Promise<Product> {
-    return await this.productsRepo.save(product);
-  }
-
   findManyLatestActiveProducts(
     page: number,
     limit: number,
   ): Promise<Product[]> {
     return this.productsRepo.find({
-      where: { isActive: true, isDeleted: false },
+      where: {
+        isActive: true,
+        isDeleted: false,
+        variants: {
+          isActive: true,
+          isDeleted: true,
+        },
+      },
       relations: {
         shop: true,
         photos: true,
@@ -85,6 +76,10 @@ export class ProductsRepository {
         isActive: true,
         isDeleted: false,
         shopId: shopId,
+        variants: {
+          isActive: true,
+          isDeleted: true,
+        },
       },
       relations: {
         shop: true,
@@ -104,6 +99,10 @@ export class ProductsRepository {
         id: productId,
         isActive: true,
         isDeleted: false,
+        variants: {
+          isActive: true,
+          isDeleted: true,
+        },
       },
       relations: {
         shop: true,

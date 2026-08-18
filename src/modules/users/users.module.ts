@@ -15,8 +15,6 @@ import { RolesRepository } from './repositories/role.repository';
 import { Address } from './entities/user.address.entity';
 import { UserRoles } from './entities/user.roles.entity';
 import { UserRolesRepository } from './repositories/user.roles.repository';
-import { UserRolesService } from './services/user.roles.service';
-import { RolesService } from './services/role.service';
 import { ShopsController } from './controllers/user.shops.controller';
 import { UserAddressesController } from './controllers/user.addresses.controller';
 import { UserAddressesService } from './services/user.addresses.service';
@@ -34,10 +32,7 @@ import { UserAddressesRepository } from './repositories/user.addresses.repositor
     UserPhotosRepository,
     UserShopRepository,
     RolesRepository,
-    UserRolesService,
     UserRolesRepository,
-    RolesService,
-    RolesRepository,
     UserAddressesService,
     UserAddressesRepository,
   ],
@@ -47,7 +42,6 @@ import { UserAddressesRepository } from './repositories/user.addresses.repositor
     UserShopService,
     UserShopRepository,
     UsersRepository,
-    RolesService,
     UserAddressesService,
   ],
 })
