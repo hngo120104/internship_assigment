@@ -18,7 +18,7 @@ describe('CartItemsService', () => {
     findActiveCartItemByUserIdAndVariantIdAndLockForUpdate: jest.Mock;
     createCartItem: jest.Mock;
     saveCartItem: jest.Mock;
-    softDeleteCartItem: jest.Mock;
+    userSoftDeleteCartItem: jest.Mock;
     softDeleteAllCartItemsOfUser: jest.Mock;
   };
   let productsService: { validateVariantQuantity: jest.Mock };
@@ -29,7 +29,7 @@ describe('CartItemsService', () => {
       findActiveCartItemByUserIdAndVariantIdAndLockForUpdate: jest.fn(),
       createCartItem: jest.fn(),
       saveCartItem: jest.fn(),
-      softDeleteCartItem: jest.fn(),
+      userSoftDeleteCartItem: jest.fn(),
       softDeleteAllCartItemsOfUser: jest.fn(),
     };
     productsService = { validateVariantQuantity: jest.fn() };
@@ -111,11 +111,11 @@ describe('CartItemsService', () => {
   });
 
   it('returns the deleted cart items response', async () => {
-    cartItemsRepo.softDeleteCartItem.mockResolvedValue(1);
+    cartItemsRepo.userSoftDeleteCartItem.mockResolvedValue(1);
     cartItemsRepo.softDeleteAllCartItemsOfUser.mockResolvedValue(3);
 
     await expect(
-      service.softDeleteUserCartItemOrThrow('cart-item-id', 'user-id'),
+      service.userSoftDeleteUserCartItemOrThrow('cart-item-id', 'user-id'),
     ).resolves.toEqual({ deletedCount: 1, message: 'Success.' });
     await expect(
       service.softDeleteAllUserCartItemsOrThrow('user-id'),
@@ -123,11 +123,11 @@ describe('CartItemsService', () => {
   });
 
   it('throws when no active cart item is deleted', async () => {
-    cartItemsRepo.softDeleteCartItem.mockResolvedValue(0);
+    cartItemsRepo.userSoftDeleteCartItem.mockResolvedValue(0);
     cartItemsRepo.softDeleteAllCartItemsOfUser.mockResolvedValue(0);
 
     await expect(
-      service.softDeleteUserCartItemOrThrow('cart-item-id', 'user-id'),
+      service.userSoftDeleteUserCartItemOrThrow('cart-item-id', 'user-id'),
     ).rejects.toBeInstanceOf(NotFoundException);
     await expect(
       service.softDeleteAllUserCartItemsOrThrow('user-id'),

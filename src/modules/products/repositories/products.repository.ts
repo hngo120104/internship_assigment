@@ -21,6 +21,27 @@ export class ProductsRepository {
     });
   }
 
+  async findAllUserShopProductByShopId(
+    shopId: string,
+    page: number,
+    limit: number,
+  ): Promise<Product[]> {
+    return await this.productsRepo.find({
+      where: {
+        shopId: shopId,
+        isDeleted: false,
+      },
+      relations: {
+        variants: true,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+  }
+
   async findActiveProductByVariantId(
     variantId: string,
   ): Promise<Product | null> {

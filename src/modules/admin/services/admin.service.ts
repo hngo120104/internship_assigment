@@ -26,8 +26,11 @@ export class AdminService {
     return await this.usersService.findManyActiveUsers(page, limit);
   }
 
-  async findActiveUsersCarts(): Promise<UserCartResponseDto[]> {
-    return await this.cartItemsService.findAllActiveUserCarts();
+  async findActiveUsersCarts(
+    page: number,
+    limit: number,
+  ): Promise<UserCartResponseDto[]> {
+    return await this.cartItemsService.findAllActiveUserCarts(page, limit);
   }
 
   async findActiveShops(

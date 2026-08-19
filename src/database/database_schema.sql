@@ -155,7 +155,7 @@ CREATE TABLE
         KEY `IDX_photos_product_id` (`product_id`),
         CONSTRAINT `FK_photos_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-    
+
 CREATE TABLE
     `cart_items` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
@@ -210,7 +210,6 @@ CREATE TABLE
     `order_items` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `order_id` varchar(36) NOT NULL,
-        `product_id` varchar(36) NOT NULL,
         `variant_id` varchar(36) NOT NULL,
         `product_name` varchar(255) NOT NULL,
         `variant_size` enum ('S', 'M', 'L', 'XL') DEFAULT NULL,
@@ -223,13 +222,9 @@ CREATE TABLE
         PRIMARY KEY (`id`),
         UNIQUE KEY `UQ_order_items_order_variant` (`order_id`, `variant_id`),
         KEY `IDX_order_items_order_id` (`order_id`),
-        KEY `IDX_order_items_product_id` (`product_id`),
         KEY `IDX_order_items_variant_id` (`variant_id`),
         CONSTRAINT `FK_order_items_order_id` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
-        CONSTRAINT `FK_order_items_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `FK_order_items_variant_id` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE RESTRICT,
         CONSTRAINT `CHK_order_items_quantity_positive` CHECK (`quantity` > 0),
         CONSTRAINT `CHK_order_items_unit_price_non_negative` CHECK (`unit_price` >= 0)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-    
-    

@@ -54,7 +54,7 @@ export class CartsController {
     @Param('cartItemId') cartItemId: string,
     @CurrentUser() user: CurrentUserPayload,
   ): Promise<DeleteCountResponseDto> {
-    return await this.cartItemsService.softDeleteUserCartItemOrThrow(
+    return await this.cartItemsService.userSoftDeleteUserCartItemOrThrow(
       cartItemId,
       user.sub,
     );

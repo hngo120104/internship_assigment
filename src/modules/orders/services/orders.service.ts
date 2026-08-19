@@ -32,8 +32,8 @@ import { UserShopService } from '../../users/services/user.shop.service';
 import { CartItem } from '../../carts/entities/cart.item.entity';
 
 interface ReservedOrderItem {
-  quantity: number;
   variant: ProductVariant;
+  quantity: number;
   note?: string;
 }
 
@@ -150,13 +150,13 @@ export class OrdersService {
         buyNowRequestDto.variantId,
       );
     const reservedVariant =
-      await this.productVariantsService.validateAndReserveVariantStockOrThrow(
+      await this.productVariantsService.validateAndReserveVariantAmountOrThrow(
         foundVariant,
         buyNowRequestDto.quantity,
       );
     const reservedItem: ReservedOrderItem = {
-      quantity: buyNowRequestDto.quantity,
       variant: reservedVariant,
+      quantity: buyNowRequestDto.quantity,
       note: buyNowRequestDto.note,
     };
     const order = await this.createOrderWithItemsForShop(
@@ -183,18 +183,24 @@ export class OrdersService {
         userId,
         checkoutRequestDto.shipAddressId,
       );
-
-    const foundActiveUserCartItems =
+    const cartItems =
       await this.cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate(
         userId,
         checkoutRequestDto.orderItems.map((item) => item.variantId),
         checkoutRequestDto.orderItems.length,
       );
 
+    const variants =
+      await this.productVariantsService.findPurchasableVariantsEntitiesByIdsOrThrow(
+        cartItems.map((item) => item.variantId),
+        cartItems.length,
+      );
+
     const groupedOrderItemsByShop =
-      await this.reserveAmountAndGroupOrderItemsByShopId(
-        foundActiveUserCartItems,
-        checkoutRequestDto.orderItems
+      await this.reserveAndGroupOrderItemsByShopId(
+        checkoutRequestDto.orderItems,
+        cartItems,
+        variants,
       );
 
     const createdOrders = await this.createOrdersForEachShop(
@@ -207,7 +213,7 @@ export class OrdersService {
 
     await this.cartItemsService.markUserCartItemsAsOrderedOrThrow(
       userId,
-      foundActiveUserCartItems.map((item) => item.id),
+      cartItems.map((item) => item.id),
     );
 
     const response = this.toCustomerOrderResponse(createdOrders);
@@ -215,28 +221,44 @@ export class OrdersService {
     return response;
   }
 
-  private async reserveAmountAndGroupOrderItemsByShopId(
+  private async reserveAndGroupOrderItemsByShopId(
+    orderItemRequests: OrderItemCreateRequestDto[],
     cartItems: CartItem[],
-  ): Promise<ReservedItemsByShop> {
-    const reservedOrders: ReservedItemsByShop = new Map();
-    for (const item of cartItems) {
-      const foundVariant =
-        await this.productVariantsService.findPurchasableVariantEntityByIdOrThrow(
-          item.variantId,
-        );
-      await this.productVariantsService.validateAndReserveVariantStockOrThrow(
-        foundVariant,
-        item.quantity,
+    variants: ProductVariant[],
+  ) {
+    const requestsByVariantId = new Map(
+      orderItemRequests.map((request) => [request.variantId, request]),
+    );
+    const cartItemsByVariantId = new Map(
+      cartItems.map((item) => [item.variantId, item]),
+    );
+    const sortedVariants = [...variants].sort((l, r) => {
+      return l.id.localeCompare(r.id);
+    });
+    const ordersByShop: ReservedItemsByShop = new Map();
+    for (const variant of sortedVariants) {
+      const cartItem = cartItemsByVariantId.get(variant.id);
+      const request = requestsByVariantId.get(variant.id);
+      if (!cartItem || !request) {
+        throw new BadRequestException('Check out item doesnot match cart.');
+      }
+      const orderItem: ReservedOrderItem = {
+        variant: variant,
+        quantity: cartItem.quantity,
+        note: request.note,
+      };
+
+      await this.productVariantsService.validateAndReserveVariantAmountOrThrow(
+        variant,
+        orderItem.quantity,
       );
-      const shopOrderItems: ReservedOrderItem[] =
-        reservedOrders.get(foundVariant.product.shopId) ?? [];
-      shopOrderItems.push({
-        quantity: item.quantity,
-        variant: foundVariant,
-      });
-      reservedOrders.set(foundVariant.product.shopId, shopOrderItems);
+
+      const orderItemsOfShop = ordersByShop.get(variant.product.shopId) ?? [];
+      orderItemsOfShop.push(orderItem);
+      ordersByShop.set(variant.product.shopId, orderItemsOfShop);
     }
-    return reservedOrders;
+
+    return ordersByShop;
   }
 
   @Transactional()
@@ -260,19 +282,18 @@ export class OrdersService {
   }
 
   private async proccessRestockOrderProducts(order: Order) {
-    const sortedOrderItems = this.sortOrderItems(order.orderItems);
+    const sortedOrderItems = this.sortOrderItemsByVariantId(order.orderItems);
     for (const item of sortedOrderItems) {
       await this.productVariantsService.validateAndRestockVariantQuantity(
         item.variantId,
-        item.productId,
         item.quantity,
       );
     }
   }
 
-  private sortOrderItems(items: OrderItem[]): OrderItem[] {
+  private sortOrderItemsByVariantId(items: OrderItem[]): OrderItem[] {
     return [...items].sort((left, right) => {
-      return left.id.localeCompare(right.id);
+      return left.variantId.localeCompare(right.variantId);
     });
   }
 
@@ -374,14 +395,6 @@ export class OrdersService {
     }
   }
 
-  private sortOrderItemsByVariantIdForLocking(
-    orderItemCreateDtos: OrderItemCreateRequestDto[],
-  ): OrderItemCreateRequestDto[] {
-    return [...orderItemCreateDtos].sort((left, right) =>
-      left.variantId.localeCompare(right.variantId),
-    );
-  }
-
   private async createOrdersForEachShop(
     userId: string,
     shippingAddressId: string,
@@ -421,12 +434,12 @@ export class OrdersService {
       paymentMethod,
     );
     const createdOrderItems: OrderItem[] = [];
-    for (const { quantity, variant, note } of reservedItems) {
+    for (const orderItem of reservedItems) {
       const createdOrderItem = await this.createOrderItemSnapshot(
         order.id,
-        quantity,
-        variant,
-        note,
+        orderItem.quantity,
+        orderItem.variant,
+        orderItem.note,
       );
       createdOrderItems.push(createdOrderItem);
     }
@@ -441,7 +454,6 @@ export class OrdersService {
     note?: string,
   ): Promise<OrderItem> {
     return await this.orderItemsRepo.createOrderItem(orderId, {
-      productId: variant.product.id,
       variantId: variant.id,
       productName: variant.product.name,
       variantSize: variant.size,

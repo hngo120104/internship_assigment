@@ -5,7 +5,6 @@ import { Injectable } from '@nestjs/common';
 
 export type CreateOrderItemData = Pick<
   OrderItem,
-  | 'productId'
   | 'variantId'
   | 'productName'
   | 'variantSize'

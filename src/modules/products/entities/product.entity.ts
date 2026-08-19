@@ -12,7 +12,6 @@ import {
 import { Shop } from '../../users/entities/shop.entity';
 import { ProductPhoto } from './product.photo.entity';
 import { ProductCategories } from './product.categories.entity';
-import { OrderItem } from '../../orders/entities/order.item.entity';
 import { ProductVariant } from './product.variant.entity';
 
 @Index('IDX_products_shops_id', ['shopId'])
@@ -52,9 +51,6 @@ export class Product {
     (productCategories) => productCategories.product,
   )
   productCategories!: ProductCategories[];
-
-  @OneToMany(() => OrderItem, (orderItem) => orderItem.product)
-  orderItems!: OrderItem[];
 
   @OneToMany(() => ProductPhoto, (photo) => photo.product)
   photos!: ProductPhoto[];

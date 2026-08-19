@@ -96,6 +96,27 @@ export class CartItemsRepository {
     });
   }
 
+  async findAllActiveCartItemsPaginated(
+    page: number,
+    limit: number,
+  ): Promise<CartItem[]> {
+    return await this.cartItemsRepo.find({
+      where: {
+        isDeleted: false,
+        cartItemStatus: CartItemStatus.ACTIVE,
+      },
+      relations: {
+        variant: { product: true },
+      },
+      order: {
+        userId: 'ASC',
+        createdAt: 'ASC',
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+  }
+
   async findActiveCartItemByUserIdAndCartItemId(
     userId: string,
     cartItemId: string,
@@ -129,7 +150,7 @@ export class CartItemsRepository {
     return this.cartItemsRepo.save(cartItem);
   }
 
-  async softDeleteCartItem(
+  async userSoftDeleteCartItem(
     userId: string,
     cartItemId: string,
   ): Promise<number> {
@@ -146,6 +167,37 @@ export class CartItemsRepository {
       },
     );
     return deleteResult.affected ?? 0;
+  }
+
+  async softDeleteCartItem(cartItemId: string): Promise<number> {
+    const deleteResult = await this.cartItemsRepo.update(
+      {
+        id: cartItemId,
+        isDeleted: false,
+        cartItemStatus: CartItemStatus.ACTIVE,
+      },
+      {
+        isDeleted: true,
+        cartItemStatus: CartItemStatus.EXPIRED,
+      },
+    );
+    return deleteResult.affected ?? 0;
+  }
+
+  async softDeleteSomeCartItemsOfUser(
+    userId: string,
+    cartItemIds: string[],
+  ): Promise<number> {
+    const cartItemToDelete = await this.cartItemsRepo.update(
+      {
+        userId: userId,
+        id: In(cartItemIds),
+        isDeleted: false,
+        cartItemStatus: CartItemStatus.ACTIVE,
+      },
+      { isDeleted: true, cartItemStatus: CartItemStatus.EXPIRED },
+    );
+    return cartItemToDelete.affected ?? 0;
   }
 
   async softDeleteAllCartItemsOfUser(userId: string): Promise<number> {
@@ -174,5 +226,17 @@ export class CartItemsRepository {
       { cartItemStatus: CartItemStatus.ORDERED },
     );
     return updateResult.affected ?? 0;
+  }
+
+  async softDeleteAbandonedCartItems(cutoffDate: Date): Promise<number> {
+    const deleteResult = await this.cartItemsRepo
+      .createQueryBuilder()
+      .update(CartItem)
+      .set({ isDeleted: true, cartItemStatus: CartItemStatus.EXPIRED })
+      .where('updatedAt < :cutoffDate', { cutoffDate })
+      .andWhere('isDeleted = false')
+      .andWhere('cartItemStatus = :status', { status: CartItemStatus.ACTIVE })
+      .execute();
+    return deleteResult.affected ?? 0;
   }
 }

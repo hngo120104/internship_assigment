@@ -53,6 +53,22 @@ export class ProductsController {
     );
   }
 
+  @Roles(Role.SELLER)
+  @Get('shops')
+  async sellerViewShopProducts(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ): Promise<ListResponseDto<ProductResponseDto>> {
+    return new ListResponseDto(
+      await this.productsService.findALlUserShopProductsOrThrow(
+        user.sub,
+        page,
+        limit,
+      ),
+    );
+  }
+
   @Public()
   @Get(':productId')
   async getProductDetails(

@@ -25,6 +25,24 @@ export class ProductsService {
     private readonly productVariantsService: ProductVariantsService,
   ) {}
 
+  async findALlUserShopProductsOrThrow(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<ProductResponseDto[]> {
+    const userShop = await this.userShopService.findShopByUserIdOrThrow(userId);
+    const userShopProducts =
+      await this.productsRepo.findAllUserShopProductByShopId(
+        userShop.id,
+        page,
+        limit,
+      );
+    if (!userShopProducts.length) {
+      throw new NotFoundException('User shop doesnot have product.');
+    }
+    return toListResponseDtos(ProductResponseDto, userShopProducts);
+  }
+
   private async insertPhotosIntoProduct(
     productId: string,
     createdProduct: Product,

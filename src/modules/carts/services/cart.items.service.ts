@@ -88,8 +88,12 @@ export class CartItemsService {
     return foundCartItem;
   }
 
-  async findAllActiveUserCarts(): Promise<UserCartResponseDto[]> {
-    const activeCartItems = await this.cartItemsRepo.findAllActiveCartItems();
+  async findAllActiveUserCarts(
+    page: number,
+    limit: number,
+  ): Promise<UserCartResponseDto[]> {
+    const activeCartItems =
+      await this.cartItemsRepo.findAllActiveCartItemsPaginated(page, limit);
     const itemsByUserId = new Map<string, CartItem[]>();
 
     for (const cartItem of activeCartItems) {
@@ -178,11 +182,11 @@ export class CartItemsService {
     return toResponseDto(CartItemResponseDto, updatedCartItem);
   }
 
-  async softDeleteUserCartItemOrThrow(
+  async userSoftDeleteUserCartItemOrThrow(
     cartItemId: string,
     userId: string,
   ): Promise<DeleteCountResponseDto> {
-    const deletedCount = await this.cartItemsRepo.softDeleteCartItem(
+    const deletedCount = await this.cartItemsRepo.userSoftDeleteCartItem(
       userId,
       cartItemId,
     );
@@ -218,5 +222,14 @@ export class CartItemsService {
       throw new NotFoundException('Some cart items are no longer active.');
     }
     return updatedCount;
+  }
+
+  async cleanupAbandonedCartItems(): Promise<number> {
+    const MONTH_THRESHOLD = 1000 * 10;
+    const cutoffDate = new Date(Date.now() - MONTH_THRESHOLD);
+    console.log('Cleaning up...');
+    const deleteCount =
+      await this.cartItemsRepo.softDeleteAbandonedCartItems(cutoffDate);
+    return deleteCount;
   }
 }

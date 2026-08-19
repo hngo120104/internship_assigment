@@ -53,28 +53,16 @@ export class ProductVariantsService {
 
   async findPurchasableVariantsEntitiesByIdsOrThrow(
     variantIds: string[],
+    expectedCount: number,
   ): Promise<ProductVariant[]> {
     const foundVariants =
       await this.productVariantsRepo.findPurchasableProductVariantsByIds(
         variantIds,
       );
-    if (!foundVariants.length) {
-      throw new NotFoundException('Product variant not found.');
+    if (foundVariants.length !== expectedCount) {
+      throw new NotFoundException('One or more of product variants not found.');
     }
     return foundVariants;
-  }
-
-  private async findActiveVariantEntityByIdAndProductIdOrThrow(
-    variantId: string,
-    productId: string,
-  ): Promise<ProductVariant> {
-    const variant =
-      await this.productVariantsRepo.findPurchasableProductVariantByIdAndProductId(
-        variantId,
-        productId,
-      );
-    if (!variant) throw new NotFoundException('Product variant not found.');
-    return variant;
   }
 
   private async findActiveVariantEntityByIdAndProductIdAndLockForUpdateOrThrow(
@@ -216,7 +204,6 @@ export class ProductVariantsService {
   @Transactional()
   async validateAndRestockVariantQuantity(
     variantId: string,
-    productId: string,
     quantity: number,
   ): Promise<ProductVariant> {
     const restockResult =
@@ -228,13 +215,10 @@ export class ProductVariantsService {
       throw new NotFoundException(
         'Product variant not found or might already be restocked.',
       );
-    return this.findActiveVariantEntityByIdAndProductIdOrThrow(
-      variantId,
-      productId,
-    );
+    return this.findPurchasableVariantEntityByIdOrThrow(variantId);
   }
 
-  async validateAndReserveVariantStockOrThrow(
+  async validateAndReserveVariantAmountOrThrow(
     variant: ProductVariant,
     quantity: number,
   ): Promise<ProductVariant> {

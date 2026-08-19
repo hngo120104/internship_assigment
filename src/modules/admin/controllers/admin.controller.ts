@@ -46,8 +46,13 @@ export class AdminController {
 
   @Get('carts')
   @Roles(Role.ADMIN)
-  async findActiveUsersCarts(): Promise<ListResponseDto<UserCartResponseDto>> {
-    return new ListResponseDto(await this.adminService.findActiveUsersCarts());
+  async findActiveUsersCarts(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ): Promise<ListResponseDto<UserCartResponseDto>> {
+    return new ListResponseDto(
+      await this.adminService.findActiveUsersCarts(page, limit),
+    );
   }
 
   @Post('ban/:userId')

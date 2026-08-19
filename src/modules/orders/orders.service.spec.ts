@@ -25,7 +25,7 @@ describe('OrdersService order creation flows', () => {
   let orderItemsRepo: { createOrderItem: jest.Mock };
   let productsService: {
     findPurchasableVariantEntityByIdOrThrow: jest.Mock;
-    validateAndReserveVariantStockOrThrow: jest.Mock;
+    validateAndReserveVariantAmountOrThrow: jest.Mock;
   };
   let userAddressesService: {
     findActiveUserAddressEntityByIdOrThrow: jest.Mock;
@@ -44,7 +44,7 @@ describe('OrdersService order creation flows', () => {
     orderItemsRepo = { createOrderItem: jest.fn() };
     productsService = {
       findPurchasableVariantEntityByIdOrThrow: jest.fn(),
-      validateAndReserveVariantStockOrThrow: jest.fn(),
+      validateAndReserveVariantAmountOrThrow: jest.fn(),
     };
     userAddressesService = {
       findActiveUserAddressEntityByIdOrThrow: jest.fn(),
@@ -76,7 +76,7 @@ describe('OrdersService order creation flows', () => {
     productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue({
       id: 'variant-id',
     });
-    productsService.validateAndReserveVariantStockOrThrow.mockResolvedValue({
+    productsService.validateAndReserveVariantAmountOrThrow.mockResolvedValue({
       id: 'variant-id',
       size: 'M',
       color: 'Black',
@@ -116,7 +116,7 @@ describe('OrdersService order creation flows', () => {
     productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue({
       id: 'variant-id',
     });
-    productsService.validateAndReserveVariantStockOrThrow.mockRejectedValue(
+    productsService.validateAndReserveVariantAmountOrThrow.mockRejectedValue(
       new Error('Insufficient stock'),
     );
 
@@ -166,7 +166,7 @@ describe('OrdersService order creation flows', () => {
     productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue(
       variant,
     );
-    productsService.validateAndReserveVariantStockOrThrow.mockResolvedValue(
+    productsService.validateAndReserveVariantAmountOrThrow.mockResolvedValue(
       variant,
     );
     ordersRepo.createOrder.mockResolvedValue(order);
@@ -226,7 +226,7 @@ describe('OrdersService order creation flows', () => {
       (variantId: keyof typeof products) =>
         Promise.resolve(products[variantId]),
     );
-    productsService.validateAndReserveVariantStockOrThrow.mockImplementation(
+    productsService.validateAndReserveVariantAmountOrThrow.mockImplementation(
       (variant: (typeof products)[keyof typeof products]) =>
         Promise.resolve(variant),
     );
@@ -297,7 +297,7 @@ describe('OrdersService order creation flows', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(
-      productsService.validateAndReserveVariantStockOrThrow,
+      productsService.validateAndReserveVariantAmountOrThrow,
     ).not.toHaveBeenCalled();
     expect(ordersRepo.createOrder).not.toHaveBeenCalled();
   });
