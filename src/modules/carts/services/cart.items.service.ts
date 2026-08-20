@@ -225,7 +225,7 @@ export class CartItemsService {
   }
 
   async cleanupAbandonedCartItems(): Promise<number> {
-    const MONTH_THRESHOLD = 1000 * 10;
+    const MONTH_THRESHOLD = 1000 * 60 * 60 * 24 * 30;
     const cutoffDate = new Date(Date.now() - MONTH_THRESHOLD);
     console.log('Cleaning up...');
     const deleteCount =

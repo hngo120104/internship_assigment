@@ -33,7 +33,7 @@ import { ScheduleModule } from '@nestjs/schedule';
           autoLoadEntities: true,
           synchronize: false,
           migrations: ['dist/migrations/*.js'],
-          migrationsRun: true,
+          migrationsRun: false,
           logging: false,
         };
       },

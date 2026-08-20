@@ -8,6 +8,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  Unique,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { ProductVariant } from '../../products/entities/product.variant.entity';
