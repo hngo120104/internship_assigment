@@ -225,8 +225,9 @@ export class CartItemsService {
   }
 
   async cleanupAbandonedCartItems(): Promise<number> {
-    const MONTH_THRESHOLD = 1000 * 60 * 60 * 24 * 30;
-    const cutoffDate = new Date(Date.now() - MONTH_THRESHOLD);
+    const cutoffDate = new Date(
+      Date.now() - Number(process.env.MONTH_THRESHOLD),
+    );
     console.log('Cleaning up...');
     const deleteCount =
       await this.cartItemsRepo.softDeleteAbandonedCartItems(cutoffDate);
