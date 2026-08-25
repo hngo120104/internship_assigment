@@ -13,6 +13,8 @@ import { UserCartResponseDto } from '../dto/response/cart.response.dto';
 import { Transactional } from 'typeorm-transactional';
 import { toResponseDto } from '../../../utils/to.dto.response';
 import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
+import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
+import { ListResponseDto } from '../../../common/dto/list.response.dto';
 
 @Injectable()
 export class CartItemsService {
@@ -88,12 +90,15 @@ export class CartItemsService {
     return foundCartItem;
   }
 
+  //TODO: revise this
   async findAllActiveUserCarts(
-    page: number,
-    limit: number,
-  ): Promise<UserCartResponseDto[]> {
-    const activeCartItems =
-      await this.cartItemsRepo.findAllActiveCartItemsPaginated(page, limit);
+    paginationRequest: PaginationQueryDto,
+  ): Promise<ListResponseDto<UserCartResponseDto>> {
+    const [activeCartItems, count] =
+      await this.cartItemsRepo.findAllActiveCartItemsPaginated(
+        paginationRequest.page,
+        paginationRequest.size,
+      );
     const itemsByUserId = new Map<string, CartItem[]>();
 
     for (const cartItem of activeCartItems) {
@@ -102,8 +107,14 @@ export class CartItemsService {
       itemsByUserId.set(cartItem.userId, userCartItems);
     }
 
-    return [...itemsByUserId].map(([userId, cartItems]) =>
+    const response = [...itemsByUserId].map(([userId, cartItems]) =>
       toResponseDto(UserCartResponseDto, { userId, cartItems }),
+    );
+    return new ListResponseDto(
+      response,
+      count,
+      paginationRequest.page,
+      paginationRequest.size,
     );
   }
 
@@ -174,11 +185,20 @@ export class CartItemsService {
       foundCartItemBelongsToUser.variantId,
       updatedQuantity,
     );
-    foundCartItemBelongsToUser.quantity = updatedQuantity;
-
-    const updatedCartItem = await this.cartItemsRepo.saveCartItem(
-      foundCartItemBelongsToUser,
-    );
+    const updateResult =
+      await this.cartItemsRepo.lockAndUpdateUserCartItemQuantityById(
+        userId,
+        cartItemId,
+        updatedQuantity,
+      );
+    if (!updateResult) {
+      throw new NotFoundException('Cart item not found or already updated.');
+    }
+    const updatedCartItem =
+      await this.findActiveCartItemEntityByUserIdAndCartItemIdOrThrow(
+        userId,
+        cartItemId,
+      );
     return toResponseDto(CartItemResponseDto, updatedCartItem);
   }
 
@@ -214,7 +234,7 @@ export class CartItemsService {
     cartItemIds: string[],
   ): Promise<number> {
     const updatedCount =
-      await this.cartItemsRepo.markActiveCartItemsOfUserAsOrdered(
+      await this.cartItemsRepo.markUserActiveCartItemsAsOrdered(
         userId,
         cartItemIds,
       );

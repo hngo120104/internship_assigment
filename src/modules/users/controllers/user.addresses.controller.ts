@@ -18,7 +18,7 @@ export class UserAddressesController {
     @Body() userAddressesCreateDto: UserAddressCreateRequestDto,
   ): Promise<UserAddressResponseDto> {
     return await this.userAddressesService.createNewUserAddress(
-      user.sub,
+      user.userId,
       userAddressesCreateDto,
     );
   }
@@ -30,7 +30,7 @@ export class UserAddressesController {
     @Body() userAddressesUpdateDto: UserAddressUpdateRequestDto,
   ): Promise<UserAddressResponseDto> {
     return await this.userAddressesService.updateUserAddress(
-      user.sub,
+      user.userId,
       addressId,
       userAddressesUpdateDto,
     );
@@ -43,7 +43,7 @@ export class UserAddressesController {
   ): Promise<DeleteCountResponseDto> {
     const deletedCount =
       await this.userAddressesService.deleteUserAddressesOrThrow(
-        user.sub,
+        user.userId,
         requestDto.addressIds,
       );
     return new DeleteCountResponseDto(deletedCount);

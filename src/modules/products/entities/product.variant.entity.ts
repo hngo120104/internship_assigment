@@ -17,7 +17,7 @@ import { OrderItem } from '../../orders/entities/order.item.entity';
 import { ProductSize } from '../enum/product.size.enum';
 
 @Index('IDX_product_variants_product_id', ['productId'])
-@Unique(['productId', 'size', 'color'])
+@Unique('UQ_product_id_size_color', ['productId', 'size', 'color'])
 @Check('CHK_product_variants_amount_non_negative', '`amount` >= 0')
 @Check('CHK_product_variants_price_non_negative', '`price` >= 0')
 @Entity('product_variants')

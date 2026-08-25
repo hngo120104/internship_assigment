@@ -37,10 +37,15 @@ export class AuthService {
     return userWithEmailExist;
   }
 
-  signAccessToken(userId: string, roles: RoleResponseDto[]): string {
+  private signAccessToken(
+    userId: string,
+    roles: RoleResponseDto[],
+    shopId?: string,
+  ): string {
     return this.jwtService.sign({
-      sub: userId,
+      userId: userId,
       roles: roles.map((role) => role.name),
+      shopId: shopId,
     });
   }
 
@@ -62,6 +67,7 @@ export class AuthService {
     const validatedUserAccessToken = this.signAccessToken(
       validatedUser.id,
       validatedUser.userRoles.map((userRoles) => userRoles.role),
+      validatedUser.shop?.id,
     );
     const loginResponse = toResponseDto(LoginResponseDto, validatedUser);
     loginResponse.accessToken = validatedUserAccessToken;

@@ -23,13 +23,13 @@ export class CategoriesRepository {
 
   async findManyActiveCategories(
     page: number,
-    limit: number,
-  ): Promise<Category[]> {
-    const foundActiveCategories = this.categoriesRepo.find({
+    size: number,
+  ): Promise<[Category[], number]> {
+    const foundActiveCategories = this.categoriesRepo.findAndCount({
       where: { isActive: true },
       relations: { parent: true, children: true },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: (page - 1) * size,
+      take: size,
     });
 
     return foundActiveCategories;

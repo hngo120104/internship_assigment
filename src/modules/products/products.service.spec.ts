@@ -16,7 +16,7 @@ jest.mock('typeorm-transactional', () => ({
 describe('ProductsService', () => {
   it('creates product variants explicitly during product creation', async () => {
     const productsRepo = {
-      createProduct: jest.fn().mockResolvedValue({
+      createProductOrThrow: jest.fn().mockResolvedValue({
         id: 'product-id',
         shopId: 'shop-id',
         name: 'Product name',
@@ -53,7 +53,7 @@ describe('ProductsService', () => {
       { amount: 5, price: 100, isActive: true, color: 'Black' },
     ];
 
-    const result = await service.createProduct('user-id', {
+    const result = await service.createProductOrThrow('user-id', {
       name: 'Product name',
       categoryIds: [],
       photos: [],

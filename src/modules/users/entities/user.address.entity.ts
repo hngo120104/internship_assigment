@@ -47,7 +47,10 @@ export class Address {
   isDeleted!: boolean;
 
   @ManyToOne(() => User, (user) => user.addresses, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({
+    name: 'user_id',
+    foreignKeyConstraintName: 'FK_user_addresses_user_id',
+  })
   user!: User;
 
   @OneToMany(() => Order, (order) => order.shipAddress)

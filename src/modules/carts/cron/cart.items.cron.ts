@@ -8,7 +8,7 @@ export class CartItemCronJob {
 
   constructor(private readonly cartItemsService: CartItemsService) {}
 
-  @Cron('* */5 * * * *')
+  @Cron('0 0 */1 * * *')
   async clearUserAbandonedCartItems() {
     this.logger.debug('Cleaning up user abandoned cart items');
 

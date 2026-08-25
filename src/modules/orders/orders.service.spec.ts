@@ -25,7 +25,8 @@ describe('OrdersService order creation flows', () => {
   let orderItemsRepo: { createOrderItem: jest.Mock };
   let productsService: {
     findPurchasableVariantEntityByIdOrThrow: jest.Mock;
-    validateAndReserveVariantAmountOrThrow: jest.Mock;
+    findPurchasableVariantsEntitiesByIdsOrThrow: jest.Mock;
+    validateAndReserveVariantsAmountOrThrow: jest.Mock;
   };
   let userAddressesService: {
     findActiveUserAddressEntityByIdOrThrow: jest.Mock;
@@ -34,7 +35,7 @@ describe('OrdersService order creation flows', () => {
     findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate: jest.Mock;
     markUserCartItemsAsOrderedOrThrow: jest.Mock;
   };
-  let userShopService: { findFieldWithOptionByUserIdOrThrow: jest.Mock };
+  let userShopService: { findShopIdByUserIdOrThrowByUserIdOrThrow: jest.Mock };
 
   beforeEach(async () => {
     ordersRepo = {
@@ -44,7 +45,8 @@ describe('OrdersService order creation flows', () => {
     orderItemsRepo = { createOrderItem: jest.fn() };
     productsService = {
       findPurchasableVariantEntityByIdOrThrow: jest.fn(),
-      validateAndReserveVariantAmountOrThrow: jest.fn(),
+      findPurchasableVariantsEntitiesByIdsOrThrow: jest.fn(),
+      validateAndReserveVariantsAmountOrThrow: jest.fn(),
     };
     userAddressesService = {
       findActiveUserAddressEntityByIdOrThrow: jest.fn(),
@@ -54,7 +56,7 @@ describe('OrdersService order creation flows', () => {
         jest.fn(),
       markUserCartItemsAsOrderedOrThrow: jest.fn(),
     };
-    userShopService = { findFieldWithOptionByUserIdOrThrow: jest.fn() };
+    userShopService = { findShopIdByUserIdOrThrowByUserIdOrThrow: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -76,7 +78,7 @@ describe('OrdersService order creation flows', () => {
     productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue({
       id: 'variant-id',
     });
-    productsService.validateAndReserveVariantAmountOrThrow.mockResolvedValue({
+    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue({
       id: 'variant-id',
       size: 'M',
       color: 'Black',
@@ -98,7 +100,6 @@ describe('OrdersService order creation flows', () => {
     });
 
     expect(orderItemsRepo.createOrderItem).toHaveBeenCalledWith('order-id', {
-      productId: 'product-id',
       variantId: 'variant-id',
       productName: 'Product name',
       variantSize: 'M',
@@ -116,7 +117,7 @@ describe('OrdersService order creation flows', () => {
     productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue({
       id: 'variant-id',
     });
-    productsService.validateAndReserveVariantAmountOrThrow.mockRejectedValue(
+    productsService.validateAndReserveVariantsAmountOrThrow.mockRejectedValue(
       new Error('Insufficient stock'),
     );
 
@@ -131,7 +132,7 @@ describe('OrdersService order creation flows', () => {
     expect(orderItemsRepo.createOrderItem).not.toHaveBeenCalled();
   });
 
-  it('buy-now creates a BANKING order and returns its item and subtotal', async () => {
+  it('buy-now creates a BANKING order and returns its item and userIdtotal', async () => {
     const address = { id: 'address-id' };
     const variant = {
       id: 'variant-id',
@@ -166,7 +167,7 @@ describe('OrdersService order creation flows', () => {
     productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue(
       variant,
     );
-    productsService.validateAndReserveVariantAmountOrThrow.mockResolvedValue(
+    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue(
       variant,
     );
     ordersRepo.createOrder.mockResolvedValue(order);
@@ -194,7 +195,7 @@ describe('OrdersService order creation flows', () => {
         quantity: 2,
       }),
     ]);
-    expect(result.subTotal).toBe(200);
+    expect(result.userIdTotal).toBe(200);
   });
 
   it('checkout creates one COD order per shop and returns the combined total', async () => {
@@ -222,11 +223,10 @@ describe('OrdersService order creation flows', () => {
     cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate.mockResolvedValue(
       cartItems,
     );
-    productsService.findPurchasableVariantEntityByIdOrThrow.mockImplementation(
-      (variantId: keyof typeof products) =>
-        Promise.resolve(products[variantId]),
+    productsService.findPurchasableVariantsEntitiesByIdsOrThrow.mockResolvedValue(
+      [products['variant-a'], products['variant-b']],
     );
-    productsService.validateAndReserveVariantAmountOrThrow.mockImplementation(
+    productsService.validateAndReserveVariantsAmountOrThrow.mockImplementation(
       (variant: (typeof products)[keyof typeof products]) =>
         Promise.resolve(variant),
     );
@@ -257,8 +257,8 @@ describe('OrdersService order creation flows', () => {
       shipAddressId: address.id,
       paymentMethod: PaymentMethod.COD,
       orderItems: [
-        { variantId: 'variant-b', quantity: 1 },
-        { variantId: 'variant-a', quantity: 2, note: 'Fragile' },
+        { variantId: 'variant-b' },
+        { variantId: 'variant-a', note: 'Fragile' },
       ],
     });
 
@@ -293,17 +293,17 @@ describe('OrdersService order creation flows', () => {
       service.checkoutCart('user-id', {
         shipAddressId: 'address-id',
         paymentMethod: PaymentMethod.COD,
-        orderItems: [{ variantId: 'variant-a', quantity: 2 }],
+        orderItems: [{ variantId: 'variant-a' }],
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(
-      productsService.validateAndReserveVariantAmountOrThrow,
+      productsService.validateAndReserveVariantsAmountOrThrow,
     ).not.toHaveBeenCalled();
     expect(ordersRepo.createOrder).not.toHaveBeenCalled();
   });
 
   it('returns seller order details only through the seller shop', async () => {
-    userShopService.findFieldWithOptionByUserIdOrThrow.mockResolvedValue({
+    userShopService.findShopIdByUserIdOrThrowByUserIdOrThrow.mockResolvedValue({
       id: 'shop-id',
     });
     ordersRepo.findOrderByShopIdAndOrderId.mockResolvedValue({
@@ -318,7 +318,7 @@ describe('OrdersService order creation flows', () => {
     );
 
     expect(
-      userShopService.findFieldWithOptionByUserIdOrThrow,
+      userShopService.findShopIdByUserIdOrThrowByUserIdOrThrow,
     ).toHaveBeenCalledWith('seller-id', { id: true });
     expect(ordersRepo.findOrderByShopIdAndOrderId).toHaveBeenCalledWith(
       'shop-id',

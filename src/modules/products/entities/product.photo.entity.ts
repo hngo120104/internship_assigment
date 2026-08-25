@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { Product } from './product.entity';
 
-@Index('IDX_photos_product_id', ['productId'])
+@Index('IDX_product_photos_product_id', ['productId'])
 @Entity('product_photos')
 export class ProductPhoto {
   @PrimaryGeneratedColumn('uuid')
@@ -40,6 +40,9 @@ export class ProductPhoto {
   @ManyToOne(() => Product, (product) => product.photos, {
     onDelete: 'RESTRICT',
   })
-  @JoinColumn({ name: 'product_id' })
+  @JoinColumn({
+    name: 'product_id',
+    foreignKeyConstraintName: 'FK_product_photos_product_id',
+  })
   product!: Product;
 }

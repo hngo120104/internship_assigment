@@ -28,11 +28,13 @@ export class Category {
   @Column({ name: 'is_active', type: 'tinyint', default: 1 })
   isActive!: boolean;
 
-  // Self Reference Relations
   @ManyToOne(() => Category, (category) => category.children, {
     onDelete: 'SET NULL',
   })
-  @JoinColumn({ name: 'parent_id' })
+  @JoinColumn({
+    name: 'parent_id',
+    foreignKeyConstraintName: 'FK_categories_parent_id',
+  })
   parent?: Category;
 
   @OneToMany(() => Category, (category) => category.parent)

@@ -18,37 +18,45 @@ export class OrdersRepository {
 
   async findAllUserOrdersWithOptionalStatusesByUserId(
     userId: string,
+    page: number,
+    size: number,
     orderStatus?: OrderStatus,
     paymentStatus?: PaymentStatus,
-  ): Promise<Order[]> {
+  ): Promise<[Order[], number]> {
     const whereConditions: FindOptionsWhere<Order> = {
       userId: userId,
     };
     if (orderStatus) whereConditions.orderStatus = orderStatus;
     if (paymentStatus) whereConditions.paymentStatus = paymentStatus;
-    return await this.ordersRepo.find({
+    return await this.ordersRepo.findAndCount({
       where: whereConditions,
       relations: { shipAddress: true, orderItems: true },
+      skip: (page - 1) * size,
+      take: size,
     });
   }
 
   async findAllShopOrdersWithOptionStatusesByShopId(
     shopId: string,
+    page: number,
+    size: number,
     orderStatus?: OrderStatus,
     paymentStatus?: PaymentStatus,
-  ): Promise<Order[]> {
+  ): Promise<[Order[], number]> {
     const whereConditions: FindOptionsWhere<Order> = {
       shopId: shopId,
     };
     if (orderStatus) whereConditions.orderStatus = orderStatus;
     if (paymentStatus) whereConditions.paymentStatus = paymentStatus;
-    return await this.ordersRepo.find({
+    return await this.ordersRepo.findAndCount({
       where: whereConditions,
       relations: { shipAddress: true, orderItems: true },
+      skip: (page - 1) * size,
+      take: size,
     });
   }
 
-  async findOrderByUserIdAndOrderIdAndLock(
+  async findOrderByUserIdAndOrderIdAndLockForCancel(
     userId: string,
     orderId: string,
   ): Promise<Order | null> {
@@ -125,6 +133,39 @@ export class OrdersRepository {
       paymentMethod: paymentMethod,
     });
     return await this.ordersRepo.save(createdOrder);
+  }
+
+  async shopConfirmOrderByOrderId(
+    shopId: string,
+    orderId: string,
+  ): Promise<boolean> {
+    const confirmResult = await this.ordersRepo.update(
+      { id: orderId, shopId: shopId, orderStatus: OrderStatus.PENDING },
+      { orderStatus: OrderStatus.CONFIRMED },
+    );
+    return confirmResult.affected === 1;
+  }
+
+  async shopProcessOrderByOrderId(
+    shopId: string,
+    orderId: string,
+  ): Promise<boolean> {
+    const result = await this.ordersRepo.update(
+      { id: orderId, shopId: shopId, orderStatus: OrderStatus.CONFIRMED },
+      { orderStatus: OrderStatus.PROCESSING },
+    );
+    return result.affected === 1;
+  }
+
+  async shopSendOrderToShipByOrderId(
+    shopId: string,
+    orderId: string,
+  ): Promise<boolean> {
+    const result = await this.ordersRepo.update(
+      { id: orderId, shopId: shopId, orderStatus: OrderStatus.CONFIRMED },
+      { orderStatus: OrderStatus.PROCESSING },
+    );
+    return result.affected === 1;
   }
 
   async saveOrder(order: Order): Promise<Order> {

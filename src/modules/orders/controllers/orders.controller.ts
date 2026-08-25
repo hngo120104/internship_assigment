@@ -19,6 +19,7 @@ import { Roles } from '../../auth/guards/role/role.decorator';
 import { Role } from '../../auth/guards/role/role.enum';
 import { FindOrderRequestDto } from '../dto/request/find.order.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
+import { OrderUpdateRequestDto } from '../dto/request/order.update.request.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -30,36 +31,38 @@ export class OrdersController {
     @CurrentUser() user: CurrentUserPayload,
     @Query() findOrderRequestDto: FindOrderRequestDto,
   ): Promise<ListResponseDto<ShopOrderResponseDto>> {
-    return new ListResponseDto(
-      await this.ordersService.findAllUserOrdersWithOptionalStatusesByUserIdOrThrow(
-        user.sub,
-        findOrderRequestDto.orderStatus,
-        findOrderRequestDto.paymentStatus,
-      ),
+    return await this.ordersService.findAllUserOrdersWithOptionalStatusesByUserIdOrThrow(
+      user.userId,
+      findOrderRequestDto,
     );
   }
 
   @Get('users/:orderId')
   @SerializeOptions({ groups: ['order-details'] })
-  async findUserOrderByUserId(
+  async findUserOrderByOrderId(
     @CurrentUser() user: CurrentUserPayload,
     @Param('orderId') orderId: string,
   ): Promise<ShopOrderResponseDto> {
     const response =
       await this.ordersService.findUserOrderByUserIdAndOrderIdOrThrow(
-        user.sub,
+        user.userId,
         orderId,
       );
     return response;
   }
 
-  @Patch('users/:orderId')
+  @Patch('users/:orderId/cancellation')
   @SerializeOptions({ groups: ['order-details'] })
   async userCancelOrder(
     @CurrentUser() user: CurrentUserPayload,
     @Param('orderId') orderId: string,
+    @Body() request: OrderUpdateRequestDto,
   ) {
-    return await this.ordersService.userCancelOrderOrThrow(user.sub, orderId);
+    return await this.ordersService.updateOrderByOrderId(
+      user.userId,
+      orderId,
+      request,
+    );
   }
 
   @Get('shops')
@@ -69,12 +72,9 @@ export class OrdersController {
     @CurrentUser() user: CurrentUserPayload,
     @Query() findOrderRequestDto: FindOrderRequestDto,
   ): Promise<ListResponseDto<ShopOrderResponseDto>> {
-    return new ListResponseDto(
-      await this.ordersService.findAllShopOrdersWithOptionStatusesByShopIdOrThrow(
-        user.sub,
-        findOrderRequestDto.orderStatus,
-        findOrderRequestDto.paymentStatus,
-      ),
+    return await this.ordersService.findAllShopOrdersWithOptionStatusesByShopIdOrThrow(
+      findOrderRequestDto,
+      user.shopId,
     );
   }
 
@@ -86,19 +86,22 @@ export class OrdersController {
     @Param('orderId') orderId: string,
   ): Promise<ShopOrderResponseDto> {
     return await this.ordersService.findShopOrderByUserIdAndOrderIdOrThrow(
-      user.sub,
       orderId,
+      user.shopId,
     );
   }
 
-  @Patch('shops/:orderId/confirm')
+  @Patch('shops/:orderId/confirmation')
   @SerializeOptions({ groups: ['order-details'] })
   @Roles(Role.SELLER)
   async shopConfirmOrder(
     @CurrentUser() user: CurrentUserPayload,
     @Param('orderId') orderId: string,
   ): Promise<ShopOrderResponseDto> {
-    return await this.ordersService.shopConfirmOrderOrThrow(user.sub, orderId);
+    return await this.ordersService.shopConfirmOrderOrThrow(
+      orderId,
+      user.shopId,
+    );
   }
 
   @Post('checkout')
@@ -107,7 +110,10 @@ export class OrdersController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() checkoutRequestDto: CheckoutRequestDto,
   ): Promise<CheckoutResponseDto> {
-    return await this.ordersService.checkoutCart(user.sub, checkoutRequestDto);
+    return await this.ordersService.checkoutCart(
+      user.userId,
+      checkoutRequestDto,
+    );
   }
 
   @Post('buy-now')
@@ -116,6 +122,6 @@ export class OrdersController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() buyNowRequestDto: BuyNowRequestDto,
   ): Promise<ShopOrderResponseDto> {
-    return await this.ordersService.buyNow(user.sub, buyNowRequestDto);
+    return await this.ordersService.buyNow(user.userId, buyNowRequestDto);
   }
 }

@@ -2,7 +2,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Shop, ShopStatus } from '../entities/shop.entity';
 import { User } from '../entities/user.entity';
 import { UserShopCreateRequestDto } from '../dto/user.shop/request/user.shop.create.request.dto';
-import { FindOptionsSelect, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserShopUpdateRequestDto } from '../dto/user.shop/request/user.shop.update.request.dto';
 
@@ -12,21 +12,24 @@ export class UserShopRepository {
     @InjectRepository(Shop) private readonly userShopRepo: Repository<Shop>,
   ) {}
 
-  async findFieldWithOptionByUserId(
+  async findShopIdByUserIdByUserId(
     userId: string,
-    selectedField: FindOptionsSelect<Shop>,
-  ): Promise<Partial<Shop> | null> {
-    return await this.userShopRepo.findOne({
-      where: { userId: userId },
-      select: selectedField,
-    });
+  ): Promise<string | null | undefined> {
+    return await this.userShopRepo
+      .createQueryBuilder('shops')
+      .select('shops.id')
+      .where('shops.user_id = :userId', { userId: userId })
+      .getRawOne();
   }
 
-  async findManyActiveShops(page: number, limit: number): Promise<Shop[]> {
-    return await this.userShopRepo.find({
+  async findManyActiveShops(
+    page: number,
+    size: number,
+  ): Promise<[Shop[], number]> {
+    return await this.userShopRepo.findAndCount({
       where: { shopStatus: ShopStatus.ACTIVE, isDeleted: false },
-      skip: limit * (page - 1),
-      take: limit,
+      skip: size * (page - 1),
+      take: size,
     });
   }
 

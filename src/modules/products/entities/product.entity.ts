@@ -14,7 +14,7 @@ import { ProductPhoto } from './product.photo.entity';
 import { ProductCategories } from './product.categories.entity';
 import { ProductVariant } from './product.variant.entity';
 
-@Index('IDX_products_shops_id', ['shopId'])
+@Index('IDX_products_shop_id', ['shopId'])
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn('uuid')
@@ -43,7 +43,10 @@ export class Product {
 
   // Relations
   @ManyToOne(() => Shop, (shop) => shop.products, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'shop_id' })
+  @JoinColumn({
+    name: 'shop_id',
+    foreignKeyConstraintName: 'FK_products_shop_id',
+  })
   shop!: Shop;
 
   @OneToMany(

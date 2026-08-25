@@ -7,9 +7,10 @@ USE `internship_assignment`;
 CREATE TABLE
     `roles` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
-        `name` varchar(255) NOT NULL DEFAULT 'CUSTOMER' UNIQUE,
+        `name` varchar(255) NOT NULL DEFAULT 'CUSTOMER',
         `description` VARCHAR(255) DEFAULT NULL,
-        PRIMARY KEY (`id`)
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `UQ_roles_name` (`name`)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -32,8 +33,8 @@ CREATE TABLE
         `role_id` varchar(36) NOT NULL,
         `is_deleted` tinyint (1) DEFAULT 0,
         PRIMARY KEY (`user_id`, `role_id`), -- Tránh 1 user bị gán trùng 1 role nhiều lần
-        CONSTRAINT `FK_user_roles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
-        CONSTRAINT `FK_user_roles_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE RESTRICT
+        CONSTRAINT `FK_user_roles_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+        CONSTRAINT `FK_user_roles_role_id` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -50,7 +51,7 @@ CREATE TABLE
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
-        CONSTRAINT `FK_address_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+        CONSTRAINT `FK_user_addresses_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -63,8 +64,7 @@ CREATE TABLE
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
-        KEY `IDX_photos_user_id` (`user_id`),
-        CONSTRAINT `FK_user_photos_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+        CONSTRAINT `FK_user_photos_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -80,8 +80,8 @@ CREATE TABLE
         `shop_status` enum ('PENDING', 'ACTIVE', 'SUSPENDED', 'REJECTED') NOT NULL DEFAULT 'ACTIVE',
         PRIMARY KEY (`id`),
         UNIQUE KEY `UQ_shops_shop_name` (`shop_name`),
-        UNIQUE KEY `UQ_shop_user` (`user_id`),
-        CONSTRAINT `FK_shops_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+        UNIQUE KEY `UQ_shops_user_id` (`user_id`),
+        CONSTRAINT `FK_shops_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -93,7 +93,7 @@ CREATE TABLE
         `parent_id` varchar(36) DEFAULT NULL,
         `is_active` tinyint (1) NOT NULL DEFAULT 1,
         PRIMARY KEY (`id`),
-        CONSTRAINT `FK_parent_category` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL
+        CONSTRAINT `FK_categories_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -107,8 +107,8 @@ CREATE TABLE
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
-        KEY `IDX_products_shops_id` (`shop_id`),
-        CONSTRAINT `FK_products_shop` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`id`) ON DELETE RESTRICT
+        KEY `IDX_products_shop_id` (`shop_id`),
+        CONSTRAINT `FK_products_shop_id` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -125,7 +125,8 @@ CREATE TABLE
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         KEY `IDX_product_variants_product_id` (`product_id`),
-        CONSTRAINT `FK_product_variants_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
+        UNIQUE KEY `UQ_product_variants_size_color` (`product_id`, `size`, `color`),
+        CONSTRAINT `FK_product_id_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
         CONSTRAINT `CHK_product_variants_amount_non_negative` CHECK (`amount` >= 0),
         CONSTRAINT `CHK_product_variants_price_non_negative` CHECK (`price` >= 0)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
@@ -134,11 +135,11 @@ CREATE Table
     `product_categories` (
         `product_id` varchar(36) NOT NULL,
         `category_id` varchar(36) NOT NULL,
-        `is_deleted` tinyint (1) DEFAULT NULL,
+        `is_deleted` tinyint NOT NULL DEFAULT '0',
         PRIMARY KEY (`product_id`, `category_id`),
         KEY `IDX_product_categories_category_id` (`category_id`),
-        CONSTRAINT `FK_product_categories_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
-        CONSTRAINT `FK_product_categories_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT
+        CONSTRAINT `FK_product_categories_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+        CONSTRAINT `FK_product_categories_category_id` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -152,8 +153,8 @@ CREATE TABLE
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
-        KEY `IDX_photos_product_id` (`product_id`),
-        CONSTRAINT `FK_photos_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT
+        KEY `IDX_product_photos_product_id` (`product_id`),
+        CONSTRAINT `FK_product_photos_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -162,15 +163,15 @@ CREATE TABLE
         `user_id` varchar(36) NOT NULL,
         `variant_id` varchar(36) NOT NULL,
         `cart_item_status` enum ('ACTIVE', 'ORDERED', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE',
-        `quantity` INTEGER NOT NULL DEFAULT 1,
+        `quantity` int NOT NULL,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         KEY `IDX_cart_items_user_id` (`user_id`),
         KEY `IDX_cart_items_variant_id` (`variant_id`),
-        CONSTRAINT `FK_cart_items_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
-        CONSTRAINT `FK_cart_items_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE RESTRICT,
+        CONSTRAINT `FK_cart_items_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
+        CONSTRAINT `FK_cart_items_variant_id` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
         CONSTRAINT `CHK_cart_items_quantity_non_negative` CHECK (`quantity` > 0)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
@@ -196,10 +197,10 @@ CREATE TABLE
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         PRIMARY KEY (`id`),
-        UNIQUE KEY `UQ_orders_order_code` (`order_code`),
-        CONSTRAINT `FK_orders_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
-        CONSTRAINT `FK_orders_shop` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`id`) ON DELETE RESTRICT,
-        CONSTRAINT `FK_orders_ship_address` FOREIGN KEY (`recipient_address_id`) REFERENCES `user_addresses` (`id`) ON DELETE RESTRICT,
+        UNIQUE KEY `UQ_order_code` (`order_code`),
+        CONSTRAINT `FK_orders_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
+        CONSTRAINT `FK_orders_shop_id` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
+        CONSTRAINT `FK_orders_recipient_address_id` FOREIGN KEY (`recipient_address_id`) REFERENCES `user_addresses` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
         CONSTRAINT `CHK_orders_discount_non_negative` CHECK (`discount` >= 0),
         CONSTRAINT `CHK_orders_shipping_fee_non_negative` CHECK (`shipping_fee` >= 0),
         KEY `IDX_orders_shop_id` (`shop_id`),
@@ -220,11 +221,11 @@ CREATE TABLE
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         PRIMARY KEY (`id`),
-        UNIQUE KEY `UQ_order_items_order_variant` (`order_id`, `variant_id`),
+        UNIQUE KEY `UQ_order_items_order_id_variant_id` (`order_id`, `variant_id`),
         KEY `IDX_order_items_order_id` (`order_id`),
         KEY `IDX_order_items_variant_id` (`variant_id`),
-        CONSTRAINT `FK_order_items_order_id` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
-        CONSTRAINT `FK_order_items_variant_id` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE RESTRICT,
+        CONSTRAINT `FK_order_items_order_id` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+        CONSTRAINT `FK_order_items_variant_id` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
         CONSTRAINT `CHK_order_items_quantity_positive` CHECK (`quantity` > 0),
         CONSTRAINT `CHK_order_items_unit_price_non_negative` CHECK (`unit_price` >= 0)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;

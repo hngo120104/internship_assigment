@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
@@ -16,6 +17,10 @@ import { CartItemsService } from '../services/cart.items.service';
 import { CartItemResponseDto } from '../dto/response/cart.item.response.dto';
 import { CartItemsUpdateRequestDto } from '../dto/request/cart.items.update.request.dto';
 import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
+import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
+import { ListResponseDto } from '../../../common/dto/list.response.dto';
+import { Roles } from '../../auth/guards/role/role.decorator';
+import { Role } from '../../auth/guards/role/role.enum';
 
 @Controller('carts')
 export class CartsController {
@@ -25,7 +30,15 @@ export class CartsController {
   async getUserActiveCart(
     @CurrentUser() user: CurrentUserPayload,
   ): Promise<UserCartResponseDto> {
-    return this.cartItemsService.getUserActiveCart(user.sub);
+    return this.cartItemsService.getUserActiveCart(user.userId);
+  }
+
+  @Get('users')
+  @Roles(Role.ADMIN)
+  async findActiveUsersCarts(
+    @Query() paginationRequest: PaginationQueryDto,
+  ): Promise<ListResponseDto<UserCartResponseDto>> {
+    return this.cartItemsService.findAllActiveUserCarts(paginationRequest);
   }
 
   @Post()
@@ -33,7 +46,7 @@ export class CartsController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() cartItemsAddDto: CartItemsAddRequestDto,
   ): Promise<CartItemResponseDto> {
-    return this.cartItemsService.addCartItem(user.sub, cartItemsAddDto);
+    return this.cartItemsService.addCartItem(user.userId, cartItemsAddDto);
   }
 
   @Patch(':cartItemId')
@@ -44,7 +57,7 @@ export class CartsController {
   ): Promise<CartItemResponseDto> {
     return this.cartItemsService.updateCartItemQuantity(
       cartItemId,
-      user.sub,
+      user.userId,
       cartItemsUpdateDto,
     );
   }
@@ -56,7 +69,7 @@ export class CartsController {
   ): Promise<DeleteCountResponseDto> {
     return await this.cartItemsService.userSoftDeleteUserCartItemOrThrow(
       cartItemId,
-      user.sub,
+      user.userId,
     );
   }
 
@@ -65,7 +78,7 @@ export class CartsController {
     @CurrentUser() user: CurrentUserPayload,
   ): Promise<DeleteCountResponseDto> {
     return await this.cartItemsService.softDeleteAllUserCartItemsOrThrow(
-      user.sub,
+      user.userId,
     );
   }
 }

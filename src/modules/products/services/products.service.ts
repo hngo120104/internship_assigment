@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ProductCreateRequestDto } from '../dto/products/request/product.create.request.dto';
 import { ProductUpdateRequestDto } from '../dto/products/request/product.update.request.dto';
 import { Product } from '../entities/product.entity';
@@ -14,6 +18,8 @@ import {
   toListResponseDtos,
   toResponseDto,
 } from '../../../utils/to.dto.response';
+import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
+import { ListResponseDto } from '../../../common/dto/list.response.dto';
 
 @Injectable()
 export class ProductsService {
@@ -25,22 +31,26 @@ export class ProductsService {
     private readonly productVariantsService: ProductVariantsService,
   ) {}
 
-  async findALlUserShopProductsOrThrow(
-    userId: string,
-    page: number,
-    limit: number,
-  ): Promise<ProductResponseDto[]> {
-    const userShop = await this.userShopService.findShopByUserIdOrThrow(userId);
-    const userShopProducts =
-      await this.productsRepo.findAllUserShopProductByShopId(
-        userShop.id,
-        page,
-        limit,
-      );
-    if (!userShopProducts.length) {
-      throw new NotFoundException('User shop doesnot have product.');
+  async findAllUserShopProductsOrThrow(
+    paginationRequest: PaginationQueryDto,
+    shopId?: string,
+  ): Promise<ListResponseDto<ProductResponseDto>> {
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
     }
-    return toListResponseDtos(ProductResponseDto, userShopProducts);
+    const [userShopProducts, count] =
+      await this.productsRepo.findAllUserShopProductByShopId(
+        shopId,
+        paginationRequest.page,
+        paginationRequest.size,
+      );
+    const response = toListResponseDtos(ProductResponseDto, userShopProducts);
+    return new ListResponseDto(
+      response,
+      count,
+      paginationRequest.page,
+      paginationRequest.size,
+    );
   }
 
   private async insertPhotosIntoProduct(
@@ -56,20 +66,18 @@ export class ProductsService {
   }
 
   private async processCreateProduct(
-    userId: string,
+    shopId: string,
     productCreateDto: ProductCreateRequestDto,
   ): Promise<Product> {
-    const shopId = (await this.userShopService.findShopByUserIdOrThrow(userId))
-      .id;
-    const createdProduct = await this.productsRepo.createProduct(
+    const createdProduct = await this.productsRepo.createProductOrThrow(
       shopId,
       productCreateDto,
     );
     createdProduct.variants =
       await this.productVariantsService.createProductVariants(
-        userId,
         createdProduct.id,
         productCreateDto.variants,
+        shopId,
       );
     const createdProductCategories =
       await this.productCategoriesRepo.saveProductCategories(
@@ -89,32 +97,60 @@ export class ProductsService {
   }
 
   @Transactional()
-  async createProduct(
-    userId: string,
+  async createProductOrThrow(
+    shopId: string | undefined,
     productCreateDto: ProductCreateRequestDto,
   ): Promise<ProductResponseDto> {
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
+    }
     const createdProduct = await this.processCreateProduct(
-      userId,
+      shopId,
       productCreateDto,
     );
     return toResponseDto(ProductResponseDto, createdProduct);
   }
 
   async findLatestActiveProducts(
-    page: number,
-    limit: number,
-  ): Promise<ProductResponseDto[]> {
-    const foundLatestProducts =
-      await this.productsRepo.findManyLatestActiveProducts(page, limit);
-    return toListResponseDtos(ProductResponseDto, foundLatestProducts);
+    paginationRequest: PaginationQueryDto,
+  ): Promise<ListResponseDto<ProductResponseDto>> {
+    const [foundLatestProducts, count] =
+      await this.productsRepo.findManyLatestActiveProducts(
+        paginationRequest.page,
+        paginationRequest.size,
+      );
+    const response = toListResponseDtos(
+      ProductResponseDto,
+      foundLatestProducts,
+    );
+    return new ListResponseDto(
+      response,
+      count,
+      paginationRequest.page,
+      paginationRequest.size,
+    );
   }
 
   async findLatestActiveShopProducts(
     shopId: string,
-  ): Promise<ProductResponseDto[]> {
-    const foundShopLatestProducts =
-      await this.productsRepo.findLatestActiveShopProducts(shopId);
-    return toListResponseDtos(ProductResponseDto, foundShopLatestProducts);
+    paginationRequest: PaginationQueryDto,
+  ): Promise<ListResponseDto<ProductResponseDto>> {
+    const [foundShopLatestProducts, count] =
+      await this.productsRepo.findLatestActiveShopProducts(
+        shopId,
+        paginationRequest.page,
+        paginationRequest.size,
+      );
+    const response = toListResponseDtos(
+      ProductResponseDto,
+      foundShopLatestProducts,
+    );
+    return new ListResponseDto(
+      response,
+      count,
+      paginationRequest.page,
+      paginationRequest.size,
+    );
   }
 
   async findActiveProductByIdOrThrow(
@@ -136,13 +172,14 @@ export class ProductsService {
     return foundProduct;
   }
 
-  async updateShopProductCategories(
+  async updateShopProductCategoriesOrThrow(
     productId: string,
-    userId: string,
     categoryIds: string[],
+    shopId?: string,
   ): Promise<ProductResponseDto> {
-    const shopId = (await this.userShopService.findShopByUserIdOrThrow(userId))
-      .id;
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
+    }
     const product = await this.findActiveProductEntityByIdOrThrow(productId);
     if (product.shopId !== shopId) {
       throw new NotFoundException('Product does not exist in your shop.');
@@ -156,11 +193,12 @@ export class ProductsService {
 
   async updateShopProductByIdOrThrow(
     productId: string,
-    userId: string,
     updateProductDto: ProductUpdateRequestDto,
+    shopId?: string,
   ): Promise<ProductResponseDto> {
-    const shopId = (await this.userShopService.findShopByUserIdOrThrow(userId))
-      .id;
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
+    }
     const updateResult = await this.productsRepo.updateShopProductById(
       productId,
       shopId,
@@ -179,13 +217,14 @@ export class ProductsService {
 
   async softDeleteShopProductByIdOrThrow(
     productId: string,
-    userId: string,
+    shopId?: string,
   ): Promise<number> {
-    const foundShop =
-      await this.userShopService.findShopByUserIdOrThrow(userId);
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
+    }
     const deletedCount = await this.productsRepo.softDeleteShopProductById(
       productId,
-      foundShop.id,
+      shopId,
     );
     if (deletedCount !== 1) {
       throw new NotFoundException(

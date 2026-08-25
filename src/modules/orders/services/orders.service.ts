@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { OrdersRepository } from '../repositories/orders.repository';
 import { OrderItemsRepository } from '../repositories/order.items.repository';
@@ -30,6 +31,12 @@ import { plainToInstance } from 'class-transformer';
 import { Address } from '../../users/entities/user.address.entity';
 import { UserShopService } from '../../users/services/user.shop.service';
 import { CartItem } from '../../carts/entities/cart.item.entity';
+import { ListResponseDto } from '../../../common/dto/list.response.dto';
+import { FindOrderRequestDto } from '../dto/request/find.order.request.dto';
+import {
+  OrderPatchAction,
+  OrderUpdateRequestDto,
+} from '../dto/request/order.update.request.dto';
 
 interface ReservedOrderItem {
   variant: ProductVariant;
@@ -37,7 +44,7 @@ interface ReservedOrderItem {
   note?: string;
 }
 
-type ReservedItemsByShop = Map<string, ReservedOrderItem[]>;
+export type ReservedItemsByShop = Map<string, ReservedOrderItem[]>;
 
 @Injectable()
 export class OrdersService {
@@ -80,56 +87,62 @@ export class OrdersService {
 
   async findAllUserOrdersWithOptionalStatusesByUserIdOrThrow(
     userId: string,
-    orderStatus?: OrderStatus,
-    paymentStatus?: PaymentStatus,
-  ): Promise<ShopOrderResponseDto[]> {
-    const foundUserOrders =
+    findOrderRequestDto: FindOrderRequestDto,
+  ): Promise<ListResponseDto<ShopOrderResponseDto>> {
+    const [foundUserOrders, count] =
       await this.ordersRepo.findAllUserOrdersWithOptionalStatusesByUserId(
         userId,
-        orderStatus,
-        paymentStatus,
+        findOrderRequestDto.page,
+        findOrderRequestDto.size,
+        findOrderRequestDto.orderStatus,
+        findOrderRequestDto.paymentStatus,
       );
-    if (!foundUserOrders || foundUserOrders.length === 0) {
-      throw new NotFoundException('User orders not found.');
-    }
-    return toListResponseDtos(ShopOrderResponseDto, foundUserOrders, [
+    const response = toListResponseDtos(ShopOrderResponseDto, foundUserOrders, [
       'order-details',
     ]);
+    return new ListResponseDto(
+      response,
+      count,
+      findOrderRequestDto.page,
+      findOrderRequestDto.size,
+    );
   }
 
   async findAllShopOrdersWithOptionStatusesByShopIdOrThrow(
-    userId: string,
-    orderStatus?: OrderStatus,
-    paymentStatus?: PaymentStatus,
-  ): Promise<ShopOrderResponseDto[]> {
-    const userShop =
-      await this.userShopService.findFieldWithOptionByUserIdOrThrow(userId, {
-        id: true,
-      });
-    const foundShopOrders =
-      await this.ordersRepo.findAllShopOrdersWithOptionStatusesByShopId(
-        userShop.id as string,
-        orderStatus,
-        paymentStatus,
-      );
-    if (!foundShopOrders || foundShopOrders.length === 0) {
-      throw new NotFoundException('Shop orders not found.');
+    findOrderRequestDto: FindOrderRequestDto,
+    shopId?: string,
+  ): Promise<ListResponseDto<ShopOrderResponseDto>> {
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
     }
-    return toListResponseDtos(ShopOrderResponseDto, foundShopOrders, [
+    const [foundShopOrders, count] =
+      await this.ordersRepo.findAllShopOrdersWithOptionStatusesByShopId(
+        shopId,
+        findOrderRequestDto.page,
+        findOrderRequestDto.size,
+        findOrderRequestDto.orderStatus,
+        findOrderRequestDto.paymentStatus,
+      );
+    const response = toListResponseDtos(ShopOrderResponseDto, foundShopOrders, [
       'order-details',
     ]);
+    return new ListResponseDto(
+      response,
+      count,
+      findOrderRequestDto.page,
+      findOrderRequestDto.size,
+    );
   }
 
   async findShopOrderByUserIdAndOrderIdOrThrow(
-    userId: string,
     orderId: string,
+    shopId?: string,
   ): Promise<ShopOrderResponseDto> {
-    const userShop =
-      await this.userShopService.findFieldWithOptionByUserIdOrThrow(userId, {
-        id: true,
-      });
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
+    }
     const foundOrder = await this.findOrderEntityByShopIdAndOrderIdOrThrow(
-      userShop.id as string,
+      shopId,
       orderId,
     );
     return toResponseDto(ShopOrderResponseDto, foundOrder, ['order-details']);
@@ -150,18 +163,17 @@ export class OrdersService {
         buyNowRequestDto.variantId,
       );
     const reservedVariant =
-      await this.productVariantsService.validateAndReserveVariantAmountOrThrow(
-        foundVariant,
-        buyNowRequestDto.quantity,
+      await this.productVariantsService.validateAndReserveVariantsAmountOrThrow(
+        [{ variant: foundVariant, quantity: buyNowRequestDto.quantity }],
       );
     const reservedItem: ReservedOrderItem = {
-      variant: reservedVariant,
+      variant: reservedVariant[0],
       quantity: buyNowRequestDto.quantity,
       note: buyNowRequestDto.note,
     };
     const order = await this.createOrderWithItemsForShop(
       userId,
-      reservedVariant.product.shopId,
+      reservedVariant[0].product.shopId,
       shippingAddress.id,
       shippingAddress,
       buyNowRequestDto.paymentMethod,
@@ -248,17 +260,58 @@ export class OrdersService {
         note: request.note,
       };
 
-      await this.productVariantsService.validateAndReserveVariantAmountOrThrow(
-        variant,
-        orderItem.quantity,
-      );
-
       const orderItemsOfShop = ordersByShop.get(variant.product.shopId) ?? [];
       orderItemsOfShop.push(orderItem);
       ordersByShop.set(variant.product.shopId, orderItemsOfShop);
     }
 
+    await this.productVariantsService.validateAndReserveVariantsAmountOrThrow(
+      cartItems,
+    );
+
     return ordersByShop;
+  }
+
+  async shopShipOrderByOrderIdOrThrow(
+    shopId: string,
+    orderId: string,
+  ): Promise<ShopOrderResponseDto> {
+    const result = await this.ordersRepo.shopSendOrderToShipByOrderId(
+      shopId,
+      orderId,
+    );
+    if (!result) {
+      throw new NotFoundException('Order not found or already sent to ship.');
+    }
+    const sentOrder = await this.findOrderEntityByShopIdAndOrderIdOrThrow(
+      shopId,
+      orderId,
+    );
+    return toResponseDto(ShopOrderResponseDto, sentOrder, ['order-details']);
+  }
+
+  async shopProcessOrderByOrderIdOrThrow(
+    userId: string,
+    orderId: string,
+  ): Promise<ShopOrderResponseDto> {
+    const shopId =
+      await this.userShopService.findShopIdByUserIdOrThrowByUserIdOrThrow(
+        userId,
+      );
+    const result = await this.ordersRepo.shopConfirmOrderByOrderId(
+      shopId,
+      orderId,
+    );
+    if (!result) {
+      throw new NotFoundException('Shop order not found');
+    }
+    const processedOrder = await this.findOrderEntityByShopIdAndOrderIdOrThrow(
+      shopId,
+      orderId,
+    );
+    return toResponseDto(ShopOrderResponseDto, processedOrder, [
+      'order-details',
+    ]);
   }
 
   @Transactional()
@@ -266,10 +319,11 @@ export class OrdersService {
     userId: string,
     orderId: string,
   ): Promise<ShopOrderResponseDto> {
-    const foundOrder = await this.ordersRepo.findOrderByUserIdAndOrderIdAndLock(
-      userId,
-      orderId,
-    );
+    const foundOrder =
+      await this.ordersRepo.findOrderByUserIdAndOrderIdAndLockForCancel(
+        userId,
+        orderId,
+      );
     if (!foundOrder) {
       throw new NotFoundException('Order not found.');
     }
@@ -323,36 +377,20 @@ export class OrdersService {
 
   @Transactional()
   async shopConfirmOrderOrThrow(
-    userId: string,
     orderId: string,
+    shopId?: string,
   ): Promise<ShopOrderResponseDto> {
-    const userShop =
-      await this.userShopService.findFieldWithOptionByUserIdOrThrow(userId, {
-        id: true,
-      });
-    const foundLockedOrder =
-      await this.ordersRepo.findOrderByShopIdAndOrderIdAndLock(
-        userShop.id as string,
-        orderId,
-      );
-    if (!foundLockedOrder) {
-      throw new NotFoundException('Order not found.');
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
     }
-    const confirmedOrder =
-      await this.validateAndSetOrderConfirmedOrThrow(foundLockedOrder);
-    return toResponseDto(ShopOrderResponseDto, confirmedOrder, [
-      'order-details',
-    ]);
-  }
-
-  private async validateAndSetOrderConfirmedOrThrow(
-    order: Order,
-  ): Promise<Order> {
-    if (order.orderStatus !== OrderStatus.PENDING) {
-      throw new BadRequestException('Cannot confirm this order.');
+    const confirmResult = await this.ordersRepo.shopConfirmOrderByOrderId(
+      shopId,
+      orderId,
+    );
+    if (!confirmResult) {
+      throw new NotFoundException('Order not found or was already confirmed.');
     }
-    order.orderStatus = OrderStatus.CONFIRMED;
-    return await this.ordersRepo.saveOrder(order);
+    return await this.findShopOrderByUserIdAndOrderIdOrThrow(shopId, orderId);
   }
 
   private calculateGrandTotal(orders: Order[]): number {
@@ -373,6 +411,29 @@ export class OrdersService {
     return grandTotal;
   }
 
+  async updateOrderByOrderId(
+    userId: string,
+    orderId: string,
+    request: OrderUpdateRequestDto,
+  ) {
+    switch (request.patchAction) {
+      case OrderPatchAction.CONFIRM:
+        return await this.shopConfirmOrderOrThrow(userId, orderId);
+      case OrderPatchAction.PROCESS:
+        return await this.shopProcessOrderByOrderIdOrThrow(userId, orderId);
+      case OrderPatchAction.CANCEL:
+        return await this.userCancelOrderOrThrow(userId, orderId);
+      case OrderPatchAction.SHIP:
+        break;
+      case OrderPatchAction.DELIVER:
+        break;
+      case OrderPatchAction.REFUND:
+        break;
+      default:
+        throw new BadRequestException('Action not allowed.');
+    }
+  }
+
   private toCustomerOrderResponse(orders: Order[]): CheckoutResponseDto {
     return plainToInstance(
       CheckoutResponseDto,
@@ -387,10 +448,7 @@ export class OrdersService {
   private validateCheckoutRequestNotEmpty(
     checkoutRequestDto: CheckoutRequestDto,
   ) {
-    if (
-      !checkoutRequestDto.orderItems ||
-      checkoutRequestDto.orderItems.length === 0
-    ) {
+    if (checkoutRequestDto.orderItems.length === 0) {
       throw new BadRequestException('Cart items must not be empty.');
     }
   }

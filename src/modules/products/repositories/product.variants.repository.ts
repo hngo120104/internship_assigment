@@ -5,6 +5,14 @@ import { ProductVariant } from '../entities/product.variant.entity';
 import { ProductVariantCreateRequestDto } from '../dto/product.variants/request/product.variant.create.request.dto';
 import { ShopStatus } from '../../users/entities/shop.entity';
 
+interface QueryResult {
+  affectedRows: number;
+  insertId: number;
+  info: string;
+  serverStatus: number;
+  warningStatus: number;
+}
+
 @Injectable()
 export class ProductVariantsRepository {
   constructor(
@@ -12,13 +20,15 @@ export class ProductVariantsRepository {
     private readonly variantsRepo: Repository<ProductVariant>,
   ) {}
 
-  async findVariantByIdAndProductId(
-    id: string,
-    productId: string,
-  ): Promise<ProductVariant | null> {
-    return await this.variantsRepo.findOne({
-      where: { id: id, productId: productId },
-      relations: { product: true },
+  async findActiveVariantsByIds(
+    variantIds: string[],
+  ): Promise<ProductVariant[]> {
+    return await this.variantsRepo.find({
+      where: { id: In(variantIds), isActive: true, isDeleted: false },
+      relations: {
+        product: true,
+        cartItems: true,
+      },
     });
   }
 
@@ -74,26 +84,6 @@ export class ProductVariantsRepository {
     });
   }
 
-  async findPurchasableProductVariantByIdAndProductId(
-    variantId: string,
-    productId: string,
-  ): Promise<ProductVariant | null> {
-    return this.variantsRepo.findOne({
-      where: {
-        id: variantId,
-        productId: productId,
-        isActive: true,
-        isDeleted: false,
-        product: {
-          isActive: true,
-          isDeleted: false,
-          shop: { shopStatus: ShopStatus.ACTIVE, isDeleted: false },
-        },
-      },
-      relations: { product: true },
-    });
-  }
-
   async findActiveVariantByIdAndAndProductIdAndLockForUpdate(
     id: string,
     productId: string,
@@ -142,23 +132,32 @@ export class ProductVariantsRepository {
     return this.variantsRepo.save(variants);
   }
 
-  async reserveVariantAmountByProductIdAndVariantIdAtomically(
-    id: string,
-    productId: string,
-    quantity: number,
+  async reserveVariantsAmountByVariantIdsAtomically(
+    reserveRequests: { variantId: string; quantity: number }[],
   ): Promise<number> {
-    const updateResult = await this.variantsRepo
-      .createQueryBuilder()
-      .update(ProductVariant)
-      .set({ amount: () => 'amount - :quantity' })
-      .where('id = :id AND productId = :productId', {
-        id: id,
-        productId: productId,
-      })
-      .andWhere('amount >= :quantity')
-      .setParameter('quantity', quantity)
-      .execute();
-    return updateResult.affected ?? 0;
+    const variantIds = reserveRequests.map((request) => request.variantId);
+    const whenCases = reserveRequests
+      .map(() => `WHEN id = ? THEN amount - ?`)
+      .join(' ');
+    const conditions = reserveRequests.map(() => `(id = ? AND amount >= ?)`);
+    const whenParameters = reserveRequests.flatMap((request) => [
+      request.variantId,
+      request.quantity,
+    ]);
+    const conditionParameters = reserveRequests.flatMap((request) => [
+      request.variantId,
+      request.quantity,
+    ]);
+
+    const updateResult: QueryResult = await this.variantsRepo.query(
+      `
+        UPDATE product_variants 
+        SET amount = CASE ${whenCases} ELSE amount END
+        WHERE id IN (?) AND (${conditions.join(' OR ')})
+      `,
+      [...whenParameters, variantIds, ...conditionParameters],
+    );
+    return updateResult.affectedRows ?? 0;
   }
 
   async restockVariantAmountByAtomically(

@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ProductVariantCreateRequestDto } from '../dto/product.variants/request/product.variant.create.request.dto';
 import { ProductVariantUpdateRequestDto } from '../dto/product.variants/request/product.variant.update.request.dto';
@@ -25,18 +26,12 @@ export class ProductVariantsService {
     private readonly userShopRepo: UserShopRepository,
   ) {}
 
-  private async findVariantEntityByIdOrThrow(
-    variantId: string,
-    productId: string,
-  ): Promise<ProductVariant> {
-    const foundVariant =
-      await this.productVariantsRepo.findVariantByIdAndProductId(
-        variantId,
-        productId,
-      );
-    if (!foundVariant)
-      throw new NotFoundException('Product variant not found.');
-    return foundVariant;
+  async findActiveVariantsEntitiesByIds(
+    variantIds: string[],
+  ): Promise<ProductVariant[]> {
+    const foundVariants =
+      await this.productVariantsRepo.findActiveVariantsByIds(variantIds);
+    return foundVariants;
   }
 
   async findPurchasableVariantEntityByIdOrThrow(
@@ -79,16 +74,27 @@ export class ProductVariantsService {
     return foundLockedVariant;
   }
 
+  private validateProductVariantCreateRequestNotEmpty(
+    variantCreateDtos: ProductVariantCreateRequestDto[],
+  ): void {
+    if (!variantCreateDtos) {
+      throw new BadRequestException('Product variants cannot be empty.');
+    }
+  }
+
   @Transactional()
   async createProductVariants(
-    userId: string,
     productId: string,
     variantCreateDtos: ProductVariantCreateRequestDto[],
+    shopId?: string,
   ): Promise<ProductVariant[]> {
-    this.validateVariantListNotEmpty(variantCreateDtos);
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
+    }
+    this.validateProductVariantCreateRequestNotEmpty(variantCreateDtos);
     this.validateVariantSizeAndColorAreUnique(variantCreateDtos);
     const product = await this.validateShopExistsAndHasProduct(
-      userId,
+      shopId,
       productId,
     );
     await this.validateVariantsDoNotAlreadyExist(productId, variantCreateDtos);
@@ -99,16 +105,12 @@ export class ProductVariantsService {
   }
 
   private async validateShopExistsAndHasProduct(
-    userId: string,
+    shopId: string,
     productId: string,
   ): Promise<Product> {
-    const userShop = await this.userShopRepo.findActiveShopByUserId(userId);
-    if (!userShop) {
-      throw new NotFoundException('User shop not found.');
-    }
     const product = await this.productsRepo.findProductByIdAndShopId(
       productId,
-      userShop.id,
+      shopId,
     );
     if (!product) {
       throw new NotFoundException('Product not found.');
@@ -118,17 +120,20 @@ export class ProductVariantsService {
 
   @Transactional()
   async updateProductVariant(
-    userId: string,
     variantId: string,
     productId: string,
     variantUpdateDto: ProductVariantUpdateRequestDto,
+    shopId?: string,
   ): Promise<ProductVariantResponseDto> {
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
+    }
     const variant =
       await this.findActiveVariantEntityByIdAndProductIdAndLockForUpdateOrThrow(
         variantId,
         productId,
       );
-    await this.validateVariantOfProductOfShop(userId, variant);
+    await this.validateVariantOfProductOfShop(shopId, variant);
     const setKeysOfSizeAndColor = {
       size: variantUpdateDto.size ?? variant.size,
       color: variantUpdateDto.color ?? variant.color,
@@ -148,35 +153,32 @@ export class ProductVariantsService {
   }
 
   private async validateVariantOfProductOfShop(
-    userId: string,
+    shopId: string,
     variant: ProductVariant,
   ) {
-    const userShop = await this.userShopRepo.findActiveShopByUserId(userId);
     const product = await this.productsRepo.findActiveProductByVariantId(
       variant.id,
     );
-    if (!userShop) {
-      throw new NotFoundException('User shop not found.');
-    }
     if (!product) {
       throw new NotFoundException('Product of variant not found.');
     }
-    if (product.shopId !== userShop.id) {
+    if (product.shopId !== shopId) {
       throw new NotFoundException('Product does not belong to shop.');
     }
   }
 
   async softDeleteProductVariantOrThrow(
-    userId: string,
     variantId: string,
     productId: string,
+    shopId?: string,
   ): Promise<number> {
-    const shop =
-      await this.userShopsService.findShopEntityByUserIdOrThrow(userId);
+    if (!shopId) {
+      throw new UnauthorizedException('User does not have shop.');
+    }
     const foundVariant =
       await this.productVariantsRepo.findVariantByIdAndProductIdAndShopId(
         variantId,
-        shop.id,
+        shopId,
         productId,
       );
     if (!foundVariant) {
@@ -195,10 +197,10 @@ export class ProductVariantsService {
     variantId: string,
     quantity: number,
   ): Promise<void> {
-    const variant =
-      await this.findPurchasableVariantEntityByIdOrThrow(variantId);
     this.validateRequestedQuantityIsPositiveInteger(quantity);
-    this.validateVariantHasSufficientStock(variant, quantity);
+    const variantToValidate =
+      await this.findPurchasableVariantEntityByIdOrThrow(variantId);
+    this.validateVariantHasSufficientStock(variantToValidate, quantity);
   }
 
   @Transactional()
@@ -218,32 +220,31 @@ export class ProductVariantsService {
     return this.findPurchasableVariantEntityByIdOrThrow(variantId);
   }
 
-  async validateAndReserveVariantAmountOrThrow(
-    variant: ProductVariant,
-    quantity: number,
-  ): Promise<ProductVariant> {
-    this.validateRequestedQuantityIsPositiveInteger(quantity);
-    this.validateVariantHasSufficientStock(variant, quantity);
-    const reservedResult =
-      await this.productVariantsRepo.reserveVariantAmountByProductIdAndVariantIdAtomically(
-        variant.id,
-        variant.productId,
-        quantity,
-      );
-    if (!reservedResult)
-      throw new NotFoundException('Product variant not found.');
-    return await this.findVariantEntityByIdOrThrow(
-      variant.id,
-      variant.productId,
-    );
-  }
-
-  private validateVariantListNotEmpty(
-    variantCreateDtos: ProductVariantCreateRequestDto[],
-  ): void {
-    if (!variantCreateDtos.length) {
-      throw new BadRequestException('Product must have at least one variant.');
+  async validateAndReserveVariantsAmountOrThrow(
+    variantItems: {
+      variant: ProductVariant;
+      quantity: number;
+    }[],
+  ): Promise<ProductVariant[]> {
+    for (const item of variantItems) {
+      this.validateVariantHasSufficientStock(item.variant, item.quantity);
+      await this.validateVariantQuantity(item.variant.id, item.quantity);
     }
+
+    const reservedResult =
+      await this.productVariantsRepo.reserveVariantsAmountByVariantIdsAtomically(
+        variantItems.map((item) => {
+          return {
+            variantId: item.variant.id,
+            quantity: item.quantity,
+          };
+        }),
+      );
+    if (reservedResult !== variantItems.length)
+      throw new NotFoundException('Product variant not found.');
+    return await this.findActiveVariantsEntitiesByIds(
+      variantItems.map((item) => item.variant.id),
+    );
   }
 
   private validateVariantSizeAndColorAreUnique(

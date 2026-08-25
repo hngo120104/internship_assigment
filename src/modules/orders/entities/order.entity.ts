@@ -58,7 +58,8 @@ export class Order {
     name: 'order_code',
     unique: true,
     length: 36,
-    nullable: true,
+    type: 'uuid',
+    default: '() => randomUUID()',
   })
   orderCode?: string;
 
@@ -75,11 +76,17 @@ export class Order {
   shippingFee!: number;
 
   @ManyToOne(() => User, (user) => user.orders, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({
+    name: 'user_id',
+    foreignKeyConstraintName: 'FK_orders_user_id',
+  })
   user!: User;
 
   @ManyToOne(() => Shop, (shop) => shop.orders, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'shop_id' })
+  @JoinColumn({
+    name: 'shop_id',
+    foreignKeyConstraintName: 'FK_orders_shop_id',
+  })
   shop!: Shop;
 
   @Column({
@@ -112,7 +119,10 @@ export class Order {
   @ManyToOne(() => Address, (address) => address.orders, {
     onDelete: 'RESTRICT',
   })
-  @JoinColumn({ name: 'recipient_address_id' })
+  @JoinColumn({
+    name: 'recipient_address_id',
+    foreignKeyConstraintName: 'FK_orders_recipient_address_id',
+  })
   shipAddress!: Address;
 
   @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })

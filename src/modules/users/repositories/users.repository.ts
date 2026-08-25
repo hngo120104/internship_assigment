@@ -55,8 +55,8 @@ export class UsersRepository {
     });
   }
 
-  findManyActiveUsers(page: number, limit: number): Promise<User[]> {
-    return this.userRepo.find({
+  findManyActiveUsers(page: number, size: number): Promise<[User[], number]> {
+    return this.userRepo.findAndCount({
       where: { isDeleted: false, userStatus: UserStatus.ACTIVE },
       relations: {
         userRoles: { role: true },
@@ -64,8 +64,8 @@ export class UsersRepository {
         shop: true,
         addresses: true,
       },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: (page - 1) * size,
+      take: size,
       order: {
         userName: 'ASC',
       },

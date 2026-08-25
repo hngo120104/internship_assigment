@@ -24,9 +24,9 @@ export class ProductsRepository {
   async findAllUserShopProductByShopId(
     shopId: string,
     page: number,
-    limit: number,
-  ): Promise<Product[]> {
-    return await this.productsRepo.find({
+    size: number,
+  ): Promise<[Product[], number]> {
+    return await this.productsRepo.findAndCount({
       where: {
         shopId: shopId,
         isDeleted: false,
@@ -34,8 +34,8 @@ export class ProductsRepository {
       relations: {
         variants: true,
       },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: (page - 1) * size,
+      take: size,
       order: {
         createdAt: 'DESC',
       },
@@ -50,13 +50,12 @@ export class ProductsRepository {
     });
   }
 
-  async createProduct(
+  async createProductOrThrow(
     shopId: string,
     productCreateDto: ProductCreateRequestDto,
   ): Promise<Product> {
     const product = this.productsRepo.create({
       shop: { id: shopId },
-      shopId,
       name: productCreateDto.name,
       description: productCreateDto.description,
       isActive: productCreateDto.isActive,
@@ -66,9 +65,9 @@ export class ProductsRepository {
 
   findManyLatestActiveProducts(
     page: number,
-    limit: number,
-  ): Promise<Product[]> {
-    return this.productsRepo.find({
+    size: number,
+  ): Promise<[Product[], number]> {
+    return this.productsRepo.findAndCount({
       where: {
         isActive: true,
         isDeleted: false,
@@ -83,16 +82,20 @@ export class ProductsRepository {
         variants: true,
         productCategories: { category: true },
       },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: (page - 1) * size,
+      take: size,
       order: {
         createdAt: 'DESC',
       },
     });
   }
 
-  async findLatestActiveShopProducts(shopId: string): Promise<Product[]> {
-    return this.productsRepo.find({
+  async findLatestActiveShopProducts(
+    shopId: string,
+    page: number,
+    size: number,
+  ): Promise<[Product[], number]> {
+    return this.productsRepo.findAndCount({
       where: {
         isActive: true,
         isDeleted: false,
@@ -111,6 +114,8 @@ export class ProductsRepository {
       order: {
         createdAt: 'DESC',
       },
+      skip: (page - 1) * size,
+      take: size,
     });
   }
 

@@ -106,7 +106,7 @@ export class ShopOrderResponseDto {
   @Type(() => OrderItemResponseDto)
   orderItems!: OrderItemResponseDto[];
 
-  @Expose({ name: 'sub_total', groups: ['order-details', 'customer-order'] })
+  @Expose({ name: 'userId_total', groups: ['order-details', 'customer-order'] })
   @Transform(
     ({ obj }) => {
       const order = obj as Order;
@@ -118,7 +118,7 @@ export class ShopOrderResponseDto {
     },
     { toClassOnly: true },
   )
-  subTotal!: number;
+  userIdTotal!: number;
 
   @Expose({ name: 'created_at', groups: ['customer-order', 'order-details'] })
   @Transform(

@@ -18,9 +18,9 @@ export enum CartItemStatus {
   EXPIRED = 'EXPIRED',
 }
 
-@Check('CHK_cart_items_quantity_non_negative', '`quantity` > 0')
 @Index('IDX_cart_items_user_id', ['userId'])
 @Index('IDX_cart_items_variant_id', ['variantId'])
+@Check('CHK_cart_items_quantity_non_negative', '`quantity` > 0')
 @Entity('cart_items')
 export class CartItem {
   @PrimaryGeneratedColumn('uuid')
@@ -41,7 +41,7 @@ export class CartItem {
   })
   @JoinColumn({
     name: 'variant_id',
-    foreignKeyConstraintName: 'FK_cart_items_variant',
+    foreignKeyConstraintName: 'FK_cart_items_variant_id',
   })
   variant!: ProductVariant;
 

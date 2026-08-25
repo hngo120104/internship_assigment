@@ -29,7 +29,7 @@ export class UserCartResponseDto {
   @Type(() => CartItemResponseDto)
   cartItems!: CartItemResponseDto[];
 
-  @Expose({ name: 'sub_total' })
+  @Expose({ name: 'userId_total' })
   @Transform(({ obj }: { obj: UserCartLike }) => {
     const items = obj.cartItems;
     return items.reduce(
@@ -40,5 +40,5 @@ export class UserCartResponseDto {
       0,
     );
   })
-  subTotal!: number;
+  userIdTotal!: number;
 }

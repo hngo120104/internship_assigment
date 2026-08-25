@@ -7,6 +7,8 @@ import {
   toListResponseDtos,
   toResponseDto,
 } from '../../../utils/to.dto.response';
+import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
+import { ListResponseDto } from '../../../common/dto/list.response.dto';
 
 @Injectable()
 export class CategoriesService {
@@ -29,12 +31,23 @@ export class CategoriesService {
   }
 
   async findManyActiveCategories(
-    page: number,
-    limit: number,
-  ): Promise<CategoryResponseDto[]> {
-    const foundActiveCategories =
-      await this.categoriesRepo.findManyActiveCategories(page, limit);
-    return toListResponseDtos(CategoryResponseDto, foundActiveCategories);
+    paginationRequest: PaginationQueryDto,
+  ): Promise<ListResponseDto<CategoryResponseDto>> {
+    const [foundActiveCategories, count] =
+      await this.categoriesRepo.findManyActiveCategories(
+        paginationRequest.page,
+        paginationRequest.size,
+      );
+    const response = toListResponseDtos(
+      CategoryResponseDto,
+      foundActiveCategories,
+    );
+    return new ListResponseDto(
+      response,
+      count,
+      paginationRequest.page,
+      paginationRequest.size,
+    );
   }
 
   async updateCategory(

@@ -18,7 +18,8 @@ import {
   toListResponseDtos,
   toResponseDto,
 } from '../../../utils/to.dto.response';
-import { FindOptionsSelect } from 'typeorm';
+import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
+import { ListResponseDto } from '../../../common/dto/list.response.dto';
 
 @Injectable()
 export class UserShopService {
@@ -29,18 +30,15 @@ export class UserShopService {
     private readonly userRolesRepo: UserRolesRepository,
   ) {}
 
-  async findFieldWithOptionByUserIdOrThrow(
+  async findShopIdByUserIdOrThrowByUserIdOrThrow(
     userId: string,
-    field: FindOptionsSelect<Shop>,
-  ): Promise<Partial<Shop>> {
-    const foundField = await this.userShopRepo.findFieldWithOptionByUserId(
-      userId,
-      field,
-    );
-    if (!foundField) {
-      throw new NotFoundException('Field not found.');
+  ): Promise<string> {
+    const foundShopId =
+      await this.userShopRepo.findShopIdByUserIdByUserId(userId);
+    if (!foundShopId) {
+      throw new NotFoundException('Shop not found.');
     }
-    return foundField;
+    return foundShopId;
   }
 
   private async validateShopRegistration(
@@ -123,14 +121,20 @@ export class UserShopService {
   }
 
   async findManyActiveShops(
-    pages: number,
-    limit: number,
-  ): Promise<UserShopResponseDto[]> {
-    const foundActiveShops = await this.userShopRepo.findManyActiveShops(
-      pages,
-      limit,
+    paginationRequest: PaginationQueryDto,
+  ): Promise<ListResponseDto<UserShopResponseDto>> {
+    const [foundActiveShops, count] =
+      await this.userShopRepo.findManyActiveShops(
+        paginationRequest.page,
+        paginationRequest.size,
+      );
+    const response = toListResponseDtos(UserShopResponseDto, foundActiveShops);
+    return new ListResponseDto(
+      response,
+      count,
+      paginationRequest.page,
+      paginationRequest.size,
     );
-    return toListResponseDtos(UserShopResponseDto, foundActiveShops);
   }
 
   async updateShopDetails(

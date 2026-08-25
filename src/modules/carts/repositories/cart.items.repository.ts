@@ -80,27 +80,11 @@ export class CartItemsRepository {
     });
   }
 
-  async findAllActiveCartItems(): Promise<CartItem[]> {
-    return await this.cartItemsRepo.find({
-      where: {
-        isDeleted: false,
-        cartItemStatus: CartItemStatus.ACTIVE,
-      },
-      relations: {
-        variant: { product: true },
-      },
-      order: {
-        userId: 'ASC',
-        createdAt: 'ASC',
-      },
-    });
-  }
-
   async findAllActiveCartItemsPaginated(
     page: number,
-    limit: number,
-  ): Promise<CartItem[]> {
-    return await this.cartItemsRepo.find({
+    size: number,
+  ): Promise<[CartItem[], number]> {
+    return await this.cartItemsRepo.findAndCount({
       where: {
         isDeleted: false,
         cartItemStatus: CartItemStatus.ACTIVE,
@@ -112,8 +96,8 @@ export class CartItemsRepository {
         userId: 'ASC',
         createdAt: 'ASC',
       },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: (page - 1) * size,
+      take: size,
     });
   }
 
@@ -146,6 +130,18 @@ export class CartItemsRepository {
     return await this.cartItemsRepo.save(newCartItem);
   }
 
+  async lockAndUpdateUserCartItemQuantityById(
+    userId: string,
+    cartItemId: string,
+    quantity: number,
+  ): Promise<boolean> {
+    const updateResult = await this.cartItemsRepo.update(
+      { id: cartItemId, userId: userId },
+      { quantity: quantity },
+    );
+    return updateResult.affected === 1;
+  }
+
   async saveCartItem(cartItem: CartItem): Promise<CartItem> {
     return this.cartItemsRepo.save(cartItem);
   }
@@ -169,37 +165,6 @@ export class CartItemsRepository {
     return deleteResult.affected ?? 0;
   }
 
-  async softDeleteCartItem(cartItemId: string): Promise<number> {
-    const deleteResult = await this.cartItemsRepo.update(
-      {
-        id: cartItemId,
-        isDeleted: false,
-        cartItemStatus: CartItemStatus.ACTIVE,
-      },
-      {
-        isDeleted: true,
-        cartItemStatus: CartItemStatus.EXPIRED,
-      },
-    );
-    return deleteResult.affected ?? 0;
-  }
-
-  async softDeleteSomeCartItemsOfUser(
-    userId: string,
-    cartItemIds: string[],
-  ): Promise<number> {
-    const cartItemToDelete = await this.cartItemsRepo.update(
-      {
-        userId: userId,
-        id: In(cartItemIds),
-        isDeleted: false,
-        cartItemStatus: CartItemStatus.ACTIVE,
-      },
-      { isDeleted: true, cartItemStatus: CartItemStatus.EXPIRED },
-    );
-    return cartItemToDelete.affected ?? 0;
-  }
-
   async softDeleteAllCartItemsOfUser(userId: string): Promise<number> {
     const cartItemToDelete = await this.cartItemsRepo.update(
       {
@@ -212,7 +177,7 @@ export class CartItemsRepository {
     return cartItemToDelete.affected ?? 0;
   }
 
-  async markActiveCartItemsOfUserAsOrdered(
+  async markUserActiveCartItemsAsOrdered(
     userId: string,
     cartItemIds: string[],
   ): Promise<number> {

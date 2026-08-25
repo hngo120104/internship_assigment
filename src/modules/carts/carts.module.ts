@@ -7,9 +7,10 @@ import { CartItemsRepository } from './repositories/cart.items.repository';
 import { ProductsModule } from '../products/products.module';
 import { CartItemsService } from './services/cart.items.service';
 import { CartItemCronJob } from './cron/cart.items.cron';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CartItem]), ProductsModule],
+  imports: [TypeOrmModule.forFeature([CartItem]), ProductsModule, UsersModule],
   controllers: [CartsController],
   providers: [CartItemsService, CartItemsRepository, CartItemCronJob],
   exports: [CartItemsService],

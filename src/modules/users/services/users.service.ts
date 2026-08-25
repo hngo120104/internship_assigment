@@ -20,6 +20,8 @@ import {
   toResponseDto,
 } from '../../../utils/to.dto.response';
 import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
+import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
+import { ListResponseDto } from '../../../common/dto/list.response.dto';
 
 @Injectable()
 export class UsersService {
@@ -31,11 +33,19 @@ export class UsersService {
   ) {}
 
   async findManyActiveUsers(
-    page: number,
-    limit: number,
-  ): Promise<UserResponseDto[]> {
-    const foundUsers = await this.usersRepo.findManyActiveUsers(page, limit);
-    return toListResponseDtos(UserResponseDto, foundUsers);
+    paginationRequest: PaginationQueryDto,
+  ): Promise<ListResponseDto<UserResponseDto>> {
+    const [foundUsers, count] = await this.usersRepo.findManyActiveUsers(
+      paginationRequest.page,
+      paginationRequest.size,
+    );
+    const response = toListResponseDtos(UserResponseDto, foundUsers);
+    return new ListResponseDto(
+      response,
+      count,
+      paginationRequest.page,
+      paginationRequest.size,
+    );
   }
 
   async findActiveUserByUserIdOrThrow(

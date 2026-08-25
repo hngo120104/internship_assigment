@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  Unique,
 } from 'typeorm';
 import { User } from './user.entity';
 import { Product } from '../../products/entities/product.entity';
@@ -19,6 +20,7 @@ export enum ShopStatus {
   REJECTED = 'REJECTED',
 }
 
+@Unique('UQ_shops_user_id', ['userId'])
 @Entity('shops')
 export class Shop {
   @PrimaryGeneratedColumn('uuid')
@@ -33,7 +35,7 @@ export class Shop {
   @Column({ nullable: true })
   address!: string;
 
-  @Column({ name: 'user_id', type: 'varchar', length: 36 })
+  @Column({ name: 'user_id', type: 'varchar', length: 36, unique: true })
   userId!: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
@@ -54,7 +56,7 @@ export class Shop {
   shopStatus!: ShopStatus;
 
   @OneToOne(() => User, (user) => user.shop, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'user_id', foreignKeyConstraintName: 'FK_shops_user_id' })
   user!: User;
 
   @OneToMany(() => Product, (product) => product.shop, { cascade: true })
