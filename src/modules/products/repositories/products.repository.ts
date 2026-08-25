@@ -73,7 +73,7 @@ export class ProductsRepository {
         isDeleted: false,
         variants: {
           isActive: true,
-          isDeleted: true,
+          isDeleted: false,
         },
       },
       relations: {
@@ -102,7 +102,7 @@ export class ProductsRepository {
         shopId: shopId,
         variants: {
           isActive: true,
-          isDeleted: true,
+          isDeleted: false,
         },
       },
       relations: {
@@ -127,7 +127,7 @@ export class ProductsRepository {
         isDeleted: false,
         variants: {
           isActive: true,
-          isDeleted: true,
+          isDeleted: false,
         },
       },
       relations: {
