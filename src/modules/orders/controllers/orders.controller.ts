@@ -31,7 +31,7 @@ export class OrdersController {
     @CurrentUser() user: CurrentUserPayload,
     @Query() findOrderRequestDto: FindOrderRequestDto,
   ): Promise<ListResponseDto<ShopOrderResponseDto>> {
-    return await this.ordersService.findAllUserOrdersWithOptionalStatusesByUserIdOrThrow(
+    return await this.ordersService.findAllUserOrdersWithOptionalStatusesByUserId(
       user.userId,
       findOrderRequestDto,
     );
@@ -59,9 +59,9 @@ export class OrdersController {
     @Body() request: OrderUpdateRequestDto,
   ) {
     return await this.ordersService.updateOrderByOrderId(
-      user.userId,
       orderId,
       request,
+      user.userId,
     );
   }
 
@@ -85,7 +85,7 @@ export class OrdersController {
     @CurrentUser() user: CurrentUserPayload,
     @Param('orderId') orderId: string,
   ): Promise<ShopOrderResponseDto> {
-    return await this.ordersService.findShopOrderByUserIdAndOrderIdOrThrow(
+    return await this.ordersService.findShopOrderByShopIdAndOrderIdOrThrow(
       orderId,
       user.shopId,
     );
@@ -97,9 +97,12 @@ export class OrdersController {
   async shopConfirmOrder(
     @CurrentUser() user: CurrentUserPayload,
     @Param('orderId') orderId: string,
+    @Body() request: OrderUpdateRequestDto,
   ): Promise<ShopOrderResponseDto> {
-    return await this.ordersService.shopConfirmOrderOrThrow(
+    return await this.ordersService.updateOrderByOrderId(
       orderId,
+      request,
+      user.userId,
       user.shopId,
     );
   }

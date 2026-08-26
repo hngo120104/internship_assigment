@@ -120,11 +120,11 @@ export class UserShopService {
     return foundShop;
   }
 
-  async findManyActiveShops(
+  async findAllActiveShops(
     paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<UserShopResponseDto>> {
     const [foundActiveShops, count] =
-      await this.userShopRepo.findManyActiveShops(
+      await this.userShopRepo.findAllActiveShops(
         paginationRequest.page,
         paginationRequest.size,
       );

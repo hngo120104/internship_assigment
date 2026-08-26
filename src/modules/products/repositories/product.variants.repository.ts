@@ -113,6 +113,9 @@ export class ProductVariantsRepository {
           shop: { shopStatus: ShopStatus.ACTIVE, isDeleted: false },
         },
       },
+      order: {
+        createdAt: 'DESC',
+      },
     });
   }
 

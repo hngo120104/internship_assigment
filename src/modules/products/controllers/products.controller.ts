@@ -36,7 +36,7 @@ export class ProductsController {
 
   @Public()
   @Get()
-  async findManyActiveLatestProducts(
+  async findAllActiveLatestProducts(
     @Query() paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<ProductResponseDto>> {
     return await this.productsService.findLatestActiveProducts(
@@ -160,9 +160,9 @@ export class ProductsController {
   ): Promise<DeleteCountResponseDto> {
     const deletedCount =
       await this.productVariantsService.softDeleteProductVariantOrThrow(
-        user.userId,
         variantId,
         productId,
+        user.shopId,
       );
     return new DeleteCountResponseDto(deletedCount);
   }
@@ -176,7 +176,7 @@ export class ProductsController {
     const deletedCount =
       await this.productsService.softDeleteShopProductByIdOrThrow(
         deleteProductId,
-        user.userId,
+        user.shopId,
       );
     return new DeleteCountResponseDto(deletedCount);
   }

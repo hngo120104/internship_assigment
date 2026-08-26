@@ -33,10 +33,10 @@ export class UsersController {
 
   @Get('active')
   @Roles(Role.ADMIN)
-  async findManyActiveUsers(
+  async findAllActiveUsers(
     @Query() paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<UserResponseDto>> {
-    return await this.usersService.findManyActiveUsers(paginationRequest);
+    return await this.usersService.findAllActiveUsers(paginationRequest);
   }
 
   @Post(':userId/ban')

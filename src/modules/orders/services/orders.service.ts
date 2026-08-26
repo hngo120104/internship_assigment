@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -85,7 +86,7 @@ export class OrdersService {
     return toResponseDto(ShopOrderResponseDto, foundOrder, ['order-details']);
   }
 
-  async findAllUserOrdersWithOptionalStatusesByUserIdOrThrow(
+  async findAllUserOrdersWithOptionalStatusesByUserId(
     userId: string,
     findOrderRequestDto: FindOrderRequestDto,
   ): Promise<ListResponseDto<ShopOrderResponseDto>> {
@@ -134,7 +135,7 @@ export class OrdersService {
     );
   }
 
-  async findShopOrderByUserIdAndOrderIdOrThrow(
+  async findShopOrderByShopIdAndOrderIdOrThrow(
     orderId: string,
     shopId?: string,
   ): Promise<ShopOrderResponseDto> {
@@ -273,8 +274,8 @@ export class OrdersService {
   }
 
   async shopShipOrderByOrderIdOrThrow(
-    shopId: string,
     orderId: string,
+    shopId: string,
   ): Promise<ShopOrderResponseDto> {
     const result = await this.ordersRepo.shopSendOrderToShipByOrderId(
       shopId,
@@ -291,13 +292,9 @@ export class OrdersService {
   }
 
   async shopProcessOrderByOrderIdOrThrow(
-    userId: string,
     orderId: string,
+    shopId: string,
   ): Promise<ShopOrderResponseDto> {
-    const shopId =
-      await this.userShopService.findShopIdByUserIdOrThrowByUserIdOrThrow(
-        userId,
-      );
     const result = await this.ordersRepo.shopConfirmOrderByOrderId(
       shopId,
       orderId,
@@ -378,11 +375,8 @@ export class OrdersService {
   @Transactional()
   async shopConfirmOrderOrThrow(
     orderId: string,
-    shopId?: string,
+    shopId: string,
   ): Promise<ShopOrderResponseDto> {
-    if (!shopId) {
-      throw new UnauthorizedException('User does not have shop.');
-    }
     const confirmResult = await this.ordersRepo.shopConfirmOrderByOrderId(
       shopId,
       orderId,
@@ -390,7 +384,7 @@ export class OrdersService {
     if (!confirmResult) {
       throw new NotFoundException('Order not found or was already confirmed.');
     }
-    return await this.findShopOrderByUserIdAndOrderIdOrThrow(shopId, orderId);
+    return await this.findShopOrderByShopIdAndOrderIdOrThrow(orderId, shopId);
   }
 
   private calculateGrandTotal(orders: Order[]): number {
@@ -412,25 +406,35 @@ export class OrdersService {
   }
 
   async updateOrderByOrderId(
-    userId: string,
     orderId: string,
     request: OrderUpdateRequestDto,
-  ) {
+    userId: string,
+    shopId?: string,
+  ): Promise<ShopOrderResponseDto> {
     switch (request.patchAction) {
       case OrderPatchAction.CONFIRM:
-        return await this.shopConfirmOrderOrThrow(userId, orderId);
+        this.ensureShopId(shopId);
+        return await this.shopConfirmOrderOrThrow(orderId, shopId);
       case OrderPatchAction.PROCESS:
-        return await this.shopProcessOrderByOrderIdOrThrow(userId, orderId);
+        this.ensureShopId(shopId);
+        return await this.shopProcessOrderByOrderIdOrThrow(orderId, shopId);
+      case OrderPatchAction.SHIP:
+        this.ensureShopId(shopId);
+        return await this.shopShipOrderByOrderIdOrThrow(orderId, shopId);
+      // case OrderPatchAction.DELIVER:
+      //   break;
+      // case OrderPatchAction.REFUND:
+      //   break;
       case OrderPatchAction.CANCEL:
         return await this.userCancelOrderOrThrow(userId, orderId);
-      case OrderPatchAction.SHIP:
-        break;
-      case OrderPatchAction.DELIVER:
-        break;
-      case OrderPatchAction.REFUND:
-        break;
       default:
         throw new BadRequestException('Action not allowed.');
+    }
+  }
+
+  private ensureShopId(shopId?: string): asserts shopId is string {
+    if (!shopId) {
+      throw new ForbiddenException('Action now allowed.');
     }
   }
 

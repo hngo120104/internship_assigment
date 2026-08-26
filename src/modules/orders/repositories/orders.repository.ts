@@ -33,6 +33,9 @@ export class OrdersRepository {
       relations: { shipAddress: true, orderItems: true },
       skip: (page - 1) * size,
       take: size,
+      order: {
+        createdAt: 'DESC',
+      },
     });
   }
 
@@ -53,6 +56,9 @@ export class OrdersRepository {
       relations: { shipAddress: true, orderItems: true },
       skip: (page - 1) * size,
       take: size,
+      order: {
+        createdAt: 'DESC',
+      },
     });
   }
 
@@ -162,8 +168,8 @@ export class OrdersRepository {
     orderId: string,
   ): Promise<boolean> {
     const result = await this.ordersRepo.update(
-      { id: orderId, shopId: shopId, orderStatus: OrderStatus.CONFIRMED },
-      { orderStatus: OrderStatus.PROCESSING },
+      { id: orderId, shopId: shopId, orderStatus: OrderStatus.PROCESSING },
+      { orderStatus: OrderStatus.SHIPPING },
     );
     return result.affected === 1;
   }

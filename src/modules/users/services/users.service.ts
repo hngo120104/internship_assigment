@@ -32,10 +32,10 @@ export class UsersService {
     private readonly userPhotosService: UserPhotosService,
   ) {}
 
-  async findManyActiveUsers(
+  async findAllActiveUsers(
     paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<UserResponseDto>> {
-    const [foundUsers, count] = await this.usersRepo.findManyActiveUsers(
+    const [foundUsers, count] = await this.usersRepo.findAllActiveUsers(
       paginationRequest.page,
       paginationRequest.size,
     );

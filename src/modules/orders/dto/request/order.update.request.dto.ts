@@ -1,6 +1,8 @@
+import { IsEnum } from 'class-validator';
+
 export enum OrderPatchAction {
   CONFIRM = 'CONFIRM',
-  PROCESS = 'PROCES',
+  PROCESS = 'PROCESS',
   CANCEL = 'CANCEL',
   REFUND = 'REFUND',
   SHIP = 'SHIP',
@@ -8,5 +10,6 @@ export enum OrderPatchAction {
 }
 
 export class OrderUpdateRequestDto {
+  @IsEnum(OrderPatchAction)
   patchAction!: OrderPatchAction;
 }

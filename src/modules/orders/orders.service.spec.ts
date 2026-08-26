@@ -132,7 +132,7 @@ describe('OrdersService order creation flows', () => {
     expect(orderItemsRepo.createOrderItem).not.toHaveBeenCalled();
   });
 
-  it('buy-now creates a BANKING order and returns its item and userIdtotal', async () => {
+  it('buy-now creates a BANKING order and returns its item and subTotal', async () => {
     const address = { id: 'address-id' };
     const variant = {
       id: 'variant-id',
@@ -195,7 +195,7 @@ describe('OrdersService order creation flows', () => {
         quantity: 2,
       }),
     ]);
-    expect(result.userIdTotal).toBe(200);
+    expect(result.subTotal).toBe(200);
   });
 
   it('checkout creates one COD order per shop and returns the combined total', async () => {
@@ -312,7 +312,7 @@ describe('OrdersService order creation flows', () => {
       orderItems: [],
     });
 
-    const result = await service.findShopOrderByUserIdAndOrderIdOrThrow(
+    const result = await service.findShopOrderByShopIdAndOrderIdOrThrow(
       'seller-id',
       'order-id',
     );

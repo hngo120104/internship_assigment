@@ -23,10 +23,10 @@ export class CategoriesController {
 
   @Get()
   @Public()
-  async findManyActiveCategories(
+  async findAllActiveCategories(
     @Query() paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<CategoryResponseDto>> {
-    return await this.categoriesService.findManyActiveCategories(
+    return await this.categoriesService.findAllActiveCategories(
       paginationRequest,
     );
   }

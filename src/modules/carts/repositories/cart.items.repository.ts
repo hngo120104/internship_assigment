@@ -77,6 +77,9 @@ export class CartItemsRepository {
       relations: {
         variant: { product: true },
       },
+      order: {
+        updatedAt: 'DESC',
+      },
     });
   }
 
@@ -93,7 +96,6 @@ export class CartItemsRepository {
         variant: { product: true },
       },
       order: {
-        userId: 'ASC',
         createdAt: 'ASC',
       },
       skip: (page - 1) * size,
@@ -130,7 +132,7 @@ export class CartItemsRepository {
     return await this.cartItemsRepo.save(newCartItem);
   }
 
-  async lockAndUpdateUserCartItemQuantityById(
+  async updateUserCartItemQuantity(
     userId: string,
     cartItemId: string,
     quantity: number,

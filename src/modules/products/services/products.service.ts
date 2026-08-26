@@ -115,7 +115,7 @@ export class ProductsService {
     paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<ProductResponseDto>> {
     const [foundLatestProducts, count] =
-      await this.productsRepo.findManyLatestActiveProducts(
+      await this.productsRepo.findAllLatestActiveProducts(
         paginationRequest.page,
         paginationRequest.size,
       );

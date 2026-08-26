@@ -25,7 +25,7 @@ export class CartItemsService {
 
   async getUserActiveCart(userId: string): Promise<UserCartResponseDto> {
     const foundUserActiveCartItems =
-      await this.findAllUserActiveCartItemEntitiesByUserIdOrThrow(userId);
+      await this.findAllUserActiveCartItemEntitiesByUserId(userId);
     const userCartObj = {
       userId: userId,
       cartItems: foundUserActiveCartItems,
@@ -43,24 +43,16 @@ export class CartItemsService {
         userId,
         variantIds,
       );
-    if (!foundLockedCartItems.length) {
-      throw new NotFoundException('No user cart item found.');
-    }
     if (foundLockedCartItems.length !== expectedCount) {
       throw new BadRequestException('One or more cart items not found.');
     }
     return foundLockedCartItems;
   }
 
-  private async findAllUserActiveCartItemEntitiesByUserIdOrThrow(
+  private async findAllUserActiveCartItemEntitiesByUserId(
     userId: string,
   ): Promise<CartItem[]> {
-    const foundCartItems =
-      await this.cartItemsRepo.findAllUserActiveCartItemsByUserId(userId);
-    if (foundCartItems.length === 0) {
-      throw new NotFoundException('Cart items not found.');
-    }
-    return foundCartItems;
+    return await this.cartItemsRepo.findAllUserActiveCartItemsByUserId(userId);
   }
 
   private async findActiveCartItemEntityByUserIdAndCartItemIdOrThrow(
@@ -185,12 +177,11 @@ export class CartItemsService {
       foundCartItemBelongsToUser.variantId,
       updatedQuantity,
     );
-    const updateResult =
-      await this.cartItemsRepo.lockAndUpdateUserCartItemQuantityById(
-        userId,
-        cartItemId,
-        updatedQuantity,
-      );
+    const updateResult = await this.cartItemsRepo.updateUserCartItemQuantity(
+      userId,
+      cartItemId,
+      updatedQuantity,
+    );
     if (!updateResult) {
       throw new NotFoundException('Cart item not found or already updated.');
     }

@@ -22,7 +22,7 @@ export class UserShopRepository {
       .getRawOne();
   }
 
-  async findManyActiveShops(
+  async findAllActiveShops(
     page: number,
     size: number,
   ): Promise<[Shop[], number]> {
@@ -30,6 +30,9 @@ export class UserShopRepository {
       where: { shopStatus: ShopStatus.ACTIVE, isDeleted: false },
       skip: size * (page - 1),
       take: size,
+      order: {
+        shopName: 'ASC',
+      },
     });
   }
 

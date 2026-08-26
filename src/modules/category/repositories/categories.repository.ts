@@ -21,7 +21,7 @@ export class CategoriesRepository {
     return await this.categoriesRepo.save(newCategory);
   }
 
-  async findManyActiveCategories(
+  async findAllActiveCategories(
     page: number,
     size: number,
   ): Promise<[Category[], number]> {
@@ -30,6 +30,9 @@ export class CategoriesRepository {
       relations: { parent: true, children: true },
       skip: (page - 1) * size,
       take: size,
+      order: {
+        name: 'ASC',
+      },
     });
 
     return foundActiveCategories;
@@ -38,6 +41,7 @@ export class CategoriesRepository {
   async findActiveCategoryById(categoryId: string): Promise<Category | null> {
     const foundActiveCategories = await this.categoriesRepo.findOneBy({
       id: categoryId,
+      isActive: true,
     });
 
     return foundActiveCategories;

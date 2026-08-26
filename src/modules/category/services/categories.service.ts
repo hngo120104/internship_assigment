@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CategoriesRepository } from '../repositories/categories.repository';
 import { CategoryCreateRequestDto } from '../dto/request/category.create.request.dto';
 import { CategoryResponseDto } from '../dto/response/category.response.dto';
@@ -30,11 +34,11 @@ export class CategoriesService {
     return toResponseDto(CategoryResponseDto, createdCategory);
   }
 
-  async findManyActiveCategories(
+  async findAllActiveCategories(
     paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<CategoryResponseDto>> {
     const [foundActiveCategories, count] =
-      await this.categoriesRepo.findManyActiveCategories(
+      await this.categoriesRepo.findAllActiveCategories(
         paginationRequest.page,
         paginationRequest.size,
       );
@@ -54,6 +58,11 @@ export class CategoriesService {
     categoryId: string,
     categoryUpdateDto: CategoryUpdateRequestDto,
   ): Promise<CategoryResponseDto> {
+    if (categoryUpdateDto.parentId === categoryId) {
+      throw new BadRequestException(
+        'Parent category and child category must not be the same.',
+      );
+    }
     const updatedCategory = await this.categoriesRepo.updateCategory(
       categoryId,
       categoryUpdateDto,

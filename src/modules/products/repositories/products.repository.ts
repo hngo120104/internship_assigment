@@ -63,7 +63,7 @@ export class ProductsRepository {
     return this.productsRepo.save(product);
   }
 
-  findManyLatestActiveProducts(
+  findAllLatestActiveProducts(
     page: number,
     size: number,
   ): Promise<[Product[], number]> {
@@ -125,10 +125,6 @@ export class ProductsRepository {
         id: productId,
         isActive: true,
         isDeleted: false,
-        variants: {
-          isActive: true,
-          isDeleted: false,
-        },
       },
       relations: {
         shop: true,

@@ -25,10 +25,10 @@ export class ShopsController {
 
   @Get('active')
   @Roles(Role.ADMIN)
-  async findManyActiveShops(
+  async findAllActiveShops(
     @Query() paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<UserShopResponseDto>> {
-    return await this.userShopService.findManyActiveShops(paginationRequest);
+    return await this.userShopService.findAllActiveShops(paginationRequest);
   }
 
   @Post('register')
