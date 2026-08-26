@@ -40,7 +40,7 @@ export class UserPhoto {
   @ManyToOne(() => User, (user) => user.photos, { onDelete: 'RESTRICT' })
   @JoinColumn({
     name: 'user_id',
-    foreignKeyConstraintName: 'FK_user_photos_user-id',
+    foreignKeyConstraintName: 'FK_user_photos_user_id',
   })
   user!: User;
 }

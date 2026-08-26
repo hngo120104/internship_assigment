@@ -5,9 +5,11 @@ import {
   OneToMany,
   JoinColumn,
   PrimaryGeneratedColumn,
+  Unique,
 } from 'typeorm';
 import { ProductCategories } from '../../products/entities/product.categories.entity';
 
+@Unique('categories_name', ['name'])
 @Entity('categories')
 export class Category {
   @PrimaryGeneratedColumn('uuid')

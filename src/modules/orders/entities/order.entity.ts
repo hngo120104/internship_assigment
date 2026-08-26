@@ -8,6 +8,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
@@ -38,6 +39,7 @@ export enum PaymentMethod {
 
 @Index('IDX_orders_shop_id', ['shopId'])
 @Index('IDX_orders_user_id', ['userId'])
+@Unique('UQ_order_code', ['orderCode'])
 @Check('CHK_orders_discount_non_negative', '`discount` >= 0')
 @Check('CHK_orders_shipping_fee_non_negative', '`shipping_fee` >= 0')
 @Entity('orders')
@@ -56,9 +58,8 @@ export class Order {
 
   @Column({
     name: 'order_code',
-    unique: true,
     length: 36,
-    type: 'uuid',
+    type: 'varchar',
     default: '() => randomUUID()',
   })
   orderCode?: string;

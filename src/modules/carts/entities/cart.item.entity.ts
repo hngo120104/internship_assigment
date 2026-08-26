@@ -30,7 +30,10 @@ export class CartItem {
   userId!: string;
 
   @ManyToOne(() => User, (user) => user.cartItems, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({
+    name: 'user_id',
+    foreignKeyConstraintName: 'FK_cart_items_user_id',
+  })
   user?: User;
 
   @Column({ name: 'variant_id', type: 'varchar', length: 36 })
@@ -54,7 +57,7 @@ export class CartItem {
   cartItemStatus!: CartItemStatus;
 
   @Column({
-    type: 'integer',
+    type: 'int',
   })
   quantity!: number;
 

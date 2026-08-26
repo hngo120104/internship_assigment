@@ -93,6 +93,7 @@ CREATE TABLE
         `parent_id` varchar(36) DEFAULT NULL,
         `is_active` tinyint (1) NOT NULL DEFAULT 1,
         PRIMARY KEY (`id`),
+        UNIQUE KEY `categories_name` (`name`),
         CONSTRAINT `FK_categories_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
@@ -115,6 +116,7 @@ CREATE TABLE
     `product_variants` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `product_id` varchar(36) NOT NULL,
+        `variant_name` varchar(100) NOT NULL,
         `size` enum ('S', 'M', 'L', 'XL') DEFAULT NULL,
         `color` varchar(50) DEFAULT NULL,
         `amount` int NOT NULL DEFAULT 0,
@@ -125,8 +127,8 @@ CREATE TABLE
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         KEY `IDX_product_variants_product_id` (`product_id`),
-        UNIQUE KEY `UQ_product_variants_size_color` (`product_id`, `size`, `color`),
-        CONSTRAINT `FK_product_id_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
+        UNIQUE KEY `UQ_variant_name` (`variant_name`),
+        CONSTRAINT `FK_product_variants_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
         CONSTRAINT `CHK_product_variants_amount_non_negative` CHECK (`amount` >= 0),
         CONSTRAINT `CHK_product_variants_price_non_negative` CHECK (`price` >= 0)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
@@ -135,7 +137,7 @@ CREATE Table
     `product_categories` (
         `product_id` varchar(36) NOT NULL,
         `category_id` varchar(36) NOT NULL,
-        `is_deleted` tinyint NOT NULL DEFAULT '0',
+        `is_deleted` tinyint NOT NULL DEFAULT 0,
         PRIMARY KEY (`product_id`, `category_id`),
         KEY `IDX_product_categories_category_id` (`category_id`),
         CONSTRAINT `FK_product_categories_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -146,6 +148,7 @@ CREATE TABLE
     `product_photos` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `product_id` varchar(36) NOT NULL,
+        `variant_id` varchar(36) NOT NULL,
         `url` varchar(2048) NOT NULL,
         `description` text DEFAULT NULL,
         `is_primary` tinyint (1) DEFAULT 0,
@@ -154,7 +157,8 @@ CREATE TABLE
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         KEY `IDX_product_photos_product_id` (`product_id`),
-        CONSTRAINT `FK_product_photos_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
+        CONSTRAINT `FK_product_photos_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
+        CONSTRAINT `FK_product_photos_variant_id` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE

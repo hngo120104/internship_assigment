@@ -35,7 +35,7 @@ export class Shop {
   @Column({ nullable: true })
   address!: string;
 
-  @Column({ name: 'user_id', type: 'varchar', length: 36, unique: true })
+  @Column({ name: 'user_id', type: 'varchar', length: 36 })
   userId!: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })

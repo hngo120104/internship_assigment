@@ -10,14 +10,16 @@ import {
   Index,
   OneToMany,
   Unique,
+  OneToOne,
 } from 'typeorm';
 import { Product } from './product.entity';
 import { CartItem } from '../../carts/entities/cart.item.entity';
 import { OrderItem } from '../../orders/entities/order.item.entity';
 import { ProductSize } from '../enum/product.size.enum';
+import { ProductPhoto } from './product.photo.entity';
 
 @Index('IDX_product_variants_product_id', ['productId'])
-@Unique('UQ_product_id_size_color', ['productId', 'size', 'color'])
+@Unique('UQ_variant_name', ['variantName'])
 @Check('CHK_product_variants_amount_non_negative', '`amount` >= 0')
 @Check('CHK_product_variants_price_non_negative', '`price` >= 0')
 @Entity('product_variants')
@@ -27,6 +29,13 @@ export class ProductVariant {
 
   @Column({ name: 'product_id', type: 'varchar', length: 36 })
   productId!: string;
+
+  @Column({
+    name: 'variant_name',
+    type: 'varchar',
+    length: 100,
+  })
+  variantName!: string;
 
   @Column({ type: 'enum', enum: ProductSize, nullable: true })
   size?: ProductSize;
@@ -57,9 +66,12 @@ export class ProductVariant {
   })
   @JoinColumn({
     name: 'product_id',
-    foreignKeyConstraintName: 'FK_product_variants_product',
+    foreignKeyConstraintName: 'FK_product_variants_product_id',
   })
   product!: Product;
+
+  @OneToOne(() => ProductPhoto, (photo) => photo.variant)
+  photo!: ProductPhoto;
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.variant)
   cartItems!: CartItem[];

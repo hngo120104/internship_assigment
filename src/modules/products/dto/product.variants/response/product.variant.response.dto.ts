@@ -5,6 +5,9 @@ export class ProductVariantResponseDto {
   @Expose()
   id!: string;
 
+  @Expose()
+  name!: string;
+
   @Expose({ name: 'product_id' })
   @Transform(
     ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
