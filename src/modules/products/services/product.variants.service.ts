@@ -92,7 +92,6 @@ export class ProductVariantsService {
       throw new UnauthorizedException('User does not have shop.');
     }
     this.validateProductVariantCreateRequestNotEmpty(variantCreateDtos);
-    this.validateVariantSizeAndColorAreUnique(variantCreateDtos);
     const product = await this.validateShopExistsAndHasProduct(
       shopId,
       productId,
@@ -245,15 +244,6 @@ export class ProductVariantsService {
     return await this.findActiveVariantsEntitiesByIds(
       variantItems.map((item) => item.variant.id),
     );
-  }
-
-  private validateVariantSizeAndColorAreUnique(
-    variants: Array<Pick<ProductVariantCreateRequestDto, 'size' | 'color'>>,
-  ): void {
-    const keys = variants.map((variant) => this.toSizeColorKey(variant));
-    if (new Set(keys).size !== keys.length) {
-      throw new ConflictException('Product variants cannot be duplicated.');
-    }
   }
 
   private async validateVariantsDoNotAlreadyExist(

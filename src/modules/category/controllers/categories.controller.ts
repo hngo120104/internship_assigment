@@ -13,7 +13,7 @@ import { CategoryResponseDto } from '../dto/response/category.response.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
-import { Role } from '../../auth/guards/role/role.enum';
+import { RoleType } from '../../users/entities/role.entity';
 import { CategoryCreateRequestDto } from '../dto/request/category.create.request.dto';
 import { CategoryUpdateRequestDto } from '../dto/request/category.update.request.dto';
 
@@ -32,7 +32,7 @@ export class CategoriesController {
   }
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Roles(RoleType.ADMIN)
   async createNewCategory(
     @Body() categoryCreateDto: CategoryCreateRequestDto,
   ): Promise<CategoryResponseDto> {
@@ -42,7 +42,7 @@ export class CategoriesController {
   }
 
   @Patch(':categoryId')
-  @Roles(Role.ADMIN)
+  @Roles(RoleType.ADMIN)
   async updateCategory(
     @Param('categoryId') categoryId: string,
     @Body() categoryUpdateDto: CategoryUpdateRequestDto,

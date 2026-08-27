@@ -4,14 +4,7 @@ import { In, Repository } from 'typeorm';
 import { ProductVariant } from '../entities/product.variant.entity';
 import { ProductVariantCreateRequestDto } from '../dto/product.variants/request/product.variant.create.request.dto';
 import { ShopStatus } from '../../users/entities/shop.entity';
-
-interface QueryResult {
-  affectedRows: number;
-  insertId: number;
-  info: string;
-  serverStatus: number;
-  warningStatus: number;
-}
+import { QueryResult } from 'typeorm';
 
 @Injectable()
 export class ProductVariantsRepository {
@@ -160,7 +153,7 @@ export class ProductVariantsRepository {
       `,
       [...whenParameters, variantIds, ...conditionParameters],
     );
-    return updateResult.affectedRows ?? 0;
+    return updateResult.affected ?? 0;
   }
 
   async restockVariantAmountByAtomically(

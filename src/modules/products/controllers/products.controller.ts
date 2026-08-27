@@ -7,12 +7,13 @@ import {
   Param,
   Delete,
   Query,
+  Put,
 } from '@nestjs/common';
 import { ProductsService } from '../services/products.service';
 import { ProductCreateRequestDto } from '../dto/products/request/product.create.request.dto';
 import { ProductUpdateRequestDto } from '../dto/products/request/product.update.request.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
-import { Role } from '../../auth/guards/role/role.enum';
+import { RoleType } from '../../users/entities/role.entity';
 import { Public } from '../../auth/public.decorator';
 import { ProductResponseDto } from '../dto/products/response/product.response.dto';
 import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
@@ -45,7 +46,7 @@ export class ProductsController {
   }
 
   @Post()
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   async createProductOrThrow(
     @CurrentUser() user: CurrentUserPayload,
     @Body() productCreateDto: ProductCreateRequestDto,
@@ -56,7 +57,7 @@ export class ProductsController {
     );
   }
 
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   @Get('shops')
   async sellerViewShopProducts(
     @CurrentUser() user: CurrentUserPayload,
@@ -89,7 +90,7 @@ export class ProductsController {
   }
 
   @Patch(':productId')
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   async updateShopProductMetadata(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') updateProductId: string,
@@ -102,8 +103,8 @@ export class ProductsController {
     );
   }
 
-  @Patch('categories/:productId')
-  @Roles(Role.SELLER)
+  @Put(':productId/categories')
+  @Roles(RoleType.SELLER)
   async updateShopProductCategoriesOrThrow(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') updateProductId: string,
@@ -117,7 +118,7 @@ export class ProductsController {
   }
 
   @Post(':productId/variants')
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   async addProductVariants(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') productId: string,
@@ -136,7 +137,7 @@ export class ProductsController {
   }
 
   @Patch(':productId/:variantId')
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   async updateProductVariant(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') productId: string,
@@ -152,7 +153,7 @@ export class ProductsController {
   }
 
   @Delete(':productId/:variantId')
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   async deleteProductVariant(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') productId: string,
@@ -168,7 +169,7 @@ export class ProductsController {
   }
 
   @Delete(':productId')
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   async deleteShopProduct(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') deleteProductId: string,

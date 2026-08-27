@@ -22,7 +22,7 @@ export class ProductPhoto {
   productId!: string;
 
   @Column({ name: 'variant_id', type: 'varchar', length: 36 })
-  variantId!: string;
+  variantId?: string;
 
   @Column({ type: 'varchar', length: 2048 })
   url!: string;

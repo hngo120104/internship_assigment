@@ -1,7 +1,6 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductCategories } from '../entities/product.categories.entity';
-import { QueryFailedError, Repository } from 'typeorm';
-import { BadRequestException } from '@nestjs/common';
+import { In, QueryDeepPartialEntity, Repository } from 'typeorm';
 
 export class ProductCategoriesRepository {
   constructor(
@@ -19,30 +18,41 @@ export class ProductCategoriesRepository {
         categoryId: categoryId,
       });
     });
-
     return await this.productCategoriesRepo.save(createdProductCategories);
   }
 
-  async updateProductCategories(
+  async upsertProductCategories(productId: string, categoryIds: string[]) {
+    await this.productCategoriesRepo.update(
+      {
+        productId: productId,
+      },
+      { isDeleted: true },
+    );
+    const values: QueryDeepPartialEntity<ProductCategories>[] = categoryIds.map(
+      (id) => ({
+        productId: productId,
+        categoryId: id,
+        isDeleted: false,
+      }),
+    );
+    const upsertResult = this.productCategoriesRepo
+      .createQueryBuilder()
+      .insert()
+      .into(ProductCategories)
+      .values(values)
+      .orUpdate(['product_id', 'category_id', 'is_deleted'])
+      .execute();
+    return upsertResult;
+  }
+
+  async softDeleteProductCategories(
     productId: string,
     categoryIds: string[],
-  ): Promise<void> {
-    const updatedProductCategories = categoryIds.map((categoryId) => {
-      return {
-        productId: productId,
-        categoryId: categoryId,
-      };
-    });
-    try {
-      await this.productCategoriesRepo.upsert(updatedProductCategories, [
-        'productId',
-        'categoryId',
-      ]);
-    } catch (error) {
-      if (error instanceof QueryFailedError) {
-        throw new BadRequestException('Wrong product or category ids.');
-      }
-      throw error;
-    }
+  ): Promise<number> {
+    const deleteResult = await this.productCategoriesRepo.update(
+      { productId: productId, categoryId: In(categoryIds), isDeleted: false },
+      { isDeleted: true },
+    );
+    return deleteResult.affected ?? 0;
   }
 }

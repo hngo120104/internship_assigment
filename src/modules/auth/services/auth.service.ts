@@ -7,8 +7,8 @@ import { LoginResponseDto } from '../dto/response/login.response.dto';
 import { User } from '../../users/entities/user.entity';
 import { UserCreateRequestDto } from '../../users/dto/users/request/user.create.request.dto';
 import { UserCreateResponseDto } from '../../users/dto/users/response/user.create.response.dto';
-import { RoleResponseDto } from '../../users/dto/role/response/role.response.dto';
 import { toResponseDto } from '../../../utils/to.dto.response';
+import { RoleType } from '../../users/entities/role.entity';
 
 @Injectable()
 export class AuthService {
@@ -39,12 +39,12 @@ export class AuthService {
 
   private signAccessToken(
     userId: string,
-    roles: RoleResponseDto[],
+    roles: RoleType[],
     shopId?: string,
   ): string {
     return this.jwtService.sign({
       userId: userId,
-      roles: roles.map((role) => role.name),
+      roles: roles.map((role) => role),
       shopId: shopId,
     });
   }
@@ -52,21 +52,25 @@ export class AuthService {
   async registerUser(
     userCreateDto: UserCreateRequestDto,
   ): Promise<UserCreateResponseDto> {
-    const createdUserResponse =
+    const createdUser =
       await this.usersService.createDefaultUser(userCreateDto);
     const accessToken = this.signAccessToken(
-      createdUserResponse.id,
-      createdUserResponse.roles,
+      createdUser.id,
+      createdUser.userRoles.map((ur) => ur.role.roleType),
     );
-    createdUserResponse.accessToken = accessToken;
-    return createdUserResponse;
+    const registrationResponse = toResponseDto(
+      UserCreateResponseDto,
+      createdUser,
+    );
+    registrationResponse.accessToken = accessToken;
+    return registrationResponse;
   }
 
   async login(loginDto: LoginRequestDto): Promise<LoginResponseDto> {
     const validatedUser = await this.validateLoginUser(loginDto);
     const validatedUserAccessToken = this.signAccessToken(
       validatedUser.id,
-      validatedUser.userRoles.map((userRoles) => userRoles.role),
+      validatedUser.userRoles.map((userRoles) => userRoles.role.roleType),
       validatedUser.shop?.id,
     );
     const loginResponse = toResponseDto(LoginResponseDto, validatedUser);

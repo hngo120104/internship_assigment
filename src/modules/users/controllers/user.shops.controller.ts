@@ -14,7 +14,7 @@ import { UserShopUpdateRequestDto } from '../dto/user.shop/request/user.shop.upd
 import { UserShopCreateRequestDto } from '../dto/user.shop/request/user.shop.create.request.dto';
 import { UserShopResponseDto } from '../dto/user.shop/response/user.shop.response.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
-import { Role } from '../../auth/guards/role/role.enum';
+import { RoleType } from '../entities/role.entity';
 import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
@@ -24,7 +24,7 @@ export class ShopsController {
   constructor(private readonly userShopService: UserShopService) {}
 
   @Get('active')
-  @Roles(Role.ADMIN)
+  @Roles(RoleType.ADMIN)
   async findAllActiveShops(
     @Query() paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<UserShopResponseDto>> {
@@ -40,7 +40,7 @@ export class ShopsController {
   }
 
   @Patch()
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   async updateShopDetails(
     @CurrentUser() user: CurrentUserPayload,
     @Body() userShopUpdateDto: UserShopUpdateRequestDto,
@@ -52,7 +52,7 @@ export class ShopsController {
   }
 
   @Delete()
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   async deleteShop(
     @CurrentUser() user: CurrentUserPayload,
   ): Promise<DeleteCountResponseDto> {

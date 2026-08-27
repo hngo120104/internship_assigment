@@ -13,7 +13,6 @@ import { UserPhotoInsertRequestDto } from '../dto/user.photos/request/user.photo
 import { RolesRepository } from '../repositories/role.repository';
 
 import { UserResponseDto } from '../dto/users/response/user.response.dto';
-import { UserCreateResponseDto } from '../dto/users/response/user.create.response.dto';
 import { UserRolesRepository } from '../repositories/user.roles.repository';
 import {
   toListResponseDtos,
@@ -118,9 +117,7 @@ export class UsersService {
   }
 
   @Transactional()
-  async createDefaultUser(
-    userCreateDto: UserCreateRequestDto,
-  ): Promise<UserCreateResponseDto> {
+  async createDefaultUser(userCreateDto: UserCreateRequestDto): Promise<User> {
     await this.validateUserRegistration(userCreateDto);
 
     const newUserWithPasswordHashed =
@@ -134,7 +131,7 @@ export class UsersService {
       );
     }
 
-    return toResponseDto(UserCreateResponseDto, newUserWithPasswordHashed);
+    return newUserWithPasswordHashed;
   }
 
   async updateUserPassword(

@@ -79,7 +79,9 @@ export class ProductsRepository {
       relations: {
         shop: true,
         photos: true,
-        variants: true,
+        // variants: {
+        //   photo: true,
+        // },
         productCategories: { category: true },
       },
       skip: (page - 1) * size,
@@ -108,7 +110,6 @@ export class ProductsRepository {
       relations: {
         shop: true,
         photos: true,
-        variants: true,
         productCategories: { category: true },
       },
       order: {
@@ -125,11 +126,16 @@ export class ProductsRepository {
         id: productId,
         isActive: true,
         isDeleted: false,
+        productCategories: {
+          isDeleted: false,
+        },
       },
       relations: {
         shop: true,
         photos: true,
-        variants: true,
+        variants: {
+          photo: true,
+        },
         productCategories: {
           category: true,
         },

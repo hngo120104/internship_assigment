@@ -16,7 +16,7 @@ import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
 import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
 import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
-import { Role } from '../../auth/guards/role/role.enum';
+import { RoleType } from '../entities/role.entity';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 
@@ -32,7 +32,7 @@ export class UsersController {
   }
 
   @Get('active')
-  @Roles(Role.ADMIN)
+  @Roles(RoleType.ADMIN)
   async findAllActiveUsers(
     @Query() paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<UserResponseDto>> {
@@ -40,7 +40,7 @@ export class UsersController {
   }
 
   @Post(':userId/ban')
-  @Roles(Role.ADMIN)
+  @Roles(RoleType.ADMIN)
   async banUser(@Param('userId') userId: string): Promise<UserResponseDto> {
     return await this.usersService.banUser(userId);
   }

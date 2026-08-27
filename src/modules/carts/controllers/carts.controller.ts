@@ -20,7 +20,7 @@ import { DeleteCountResponseDto } from '../../../common/dto/delete.count.respons
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
-import { Role } from '../../auth/guards/role/role.enum';
+import { RoleType } from '../../users/entities/role.entity';
 
 @Controller('carts')
 export class CartsController {
@@ -34,7 +34,7 @@ export class CartsController {
   }
 
   @Get('users')
-  @Roles(Role.ADMIN)
+  @Roles(RoleType.ADMIN)
   async findActiveUsersCarts(
     @Query() paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<UserCartResponseDto>> {

@@ -5,20 +5,21 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from './role.decorator';
-import { Role } from './role.enum';
+import { RoleType } from '../../../users/entities/role.entity';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredRoles = this.reflector.getAllAndOverride<RoleType[]>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (!requiredRoles?.length) {
       return true;
@@ -30,10 +31,12 @@ export class RolesGuard implements CanActivate {
     if (!user) {
       throw new UnauthorizedException('You need to login first.');
     }
-    const userRoles: Role[] = request.user.roles ?? [];
+    const userRoles: RoleType[] = user.roles ?? [];
 
-    if (!userRoles || userRoles.length === 0) {
-      throw new UnauthorizedException('Need to login first.');
+    if (!userRoles.length) {
+      throw new ForbiddenException(
+        'You do not have permission to perform this action.',
+      );
     }
 
     return requiredRoles.some((requiredRole) =>

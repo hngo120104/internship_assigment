@@ -11,7 +11,6 @@ import { ProductResponseDto } from '../dto/products/response/product.response.dt
 import { ProductPhotosRepository } from '../repositories/product.photo.repository';
 import { ProductPhotoInsertRequestDto } from '../dto/product.photos/request/product.photos.insert.request.dto';
 import { Transactional } from 'typeorm-transactional';
-import { UserShopService } from '../../users/services/user.shop.service';
 import { ProductCategoriesRepository } from '../repositories/product.categories.repository';
 import { ProductVariantsService } from './product.variants.service';
 import {
@@ -20,15 +19,16 @@ import {
 } from '../../../utils/to.dto.response';
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
+import { CategoriesService } from '../../category/services/categories.service';
 
 @Injectable()
 export class ProductsService {
   constructor(
     private readonly productsRepo: ProductsRepository,
     private readonly productPhotosRepo: ProductPhotosRepository,
-    private readonly userShopService: UserShopService,
     private readonly productCategoriesRepo: ProductCategoriesRepository,
     private readonly productVariantsService: ProductVariantsService,
+    private readonly categoriesService: CategoriesService,
   ) {}
 
   async findAllUserShopProductsOrThrow(
@@ -172,6 +172,7 @@ export class ProductsService {
     return foundProduct;
   }
 
+  //TODO: need better validate
   async updateShopProductCategoriesOrThrow(
     productId: string,
     categoryIds: string[],
@@ -180,14 +181,19 @@ export class ProductsService {
     if (!shopId) {
       throw new UnauthorizedException('User does not have shop.');
     }
+    await this.categoriesService.checkCategoriesExistingByIdsOrThrow(
+      categoryIds,
+    );
     const product = await this.findActiveProductEntityByIdOrThrow(productId);
     if (product.shopId !== shopId) {
       throw new NotFoundException('Product does not exist in your shop.');
     }
-    await this.productCategoriesRepo.updateProductCategories(
-      productId,
-      categoryIds,
-    );
+    const upsertResult =
+      await this.productCategoriesRepo.upsertProductCategories(
+        productId,
+        categoryIds,
+      );
+    console.log(upsertResult);
     return this.findActiveProductByIdOrThrow(productId);
   }
 

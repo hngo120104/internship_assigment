@@ -16,7 +16,7 @@ import { CheckoutRequestDto } from '../dto/request/checkout.request.dto';
 import { BuyNowRequestDto } from '../dto/request/buynow.request.dto';
 import { CheckoutResponseDto } from '../dto/response/customer.order.response.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
-import { Role } from '../../auth/guards/role/role.enum';
+import { RoleType } from '../../users/entities/role.entity';
 import { FindOrderRequestDto } from '../dto/request/find.order.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
 import { OrderUpdateRequestDto } from '../dto/request/order.update.request.dto';
@@ -66,7 +66,7 @@ export class OrdersController {
   }
 
   @Get('shops')
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   @SerializeOptions({ groups: ['order-details'] })
   async findAllShopOrdersWithQueryOptions(
     @CurrentUser() user: CurrentUserPayload,
@@ -79,7 +79,7 @@ export class OrdersController {
   }
 
   @Get('shops/:orderId')
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   @SerializeOptions({ groups: ['order-details'] })
   async findShopOrderDetails(
     @CurrentUser() user: CurrentUserPayload,
@@ -93,7 +93,7 @@ export class OrdersController {
 
   @Patch('shops/:orderId/confirmation')
   @SerializeOptions({ groups: ['order-details'] })
-  @Roles(Role.SELLER)
+  @Roles(RoleType.SELLER)
   async shopConfirmOrder(
     @CurrentUser() user: CurrentUserPayload,
     @Param('orderId') orderId: string,

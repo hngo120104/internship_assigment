@@ -17,7 +17,7 @@ import { ProductVariantCreateRequestDto } from '../../product.variants/request/p
 export class ProductCreateRequestDto {
   @IsString()
   @IsNotEmpty()
-  @Length(10, 255, { message: 'Name must be between 10 and 255 characters.' })
+  @Length(5, 255, { message: 'Name must be between 5 and 255 characters.' })
   name!: string;
 
   @IsNotEmpty()
@@ -42,7 +42,7 @@ export class ProductCreateRequestDto {
   @ArrayMinSize(1)
   @ArrayUnique(
     (variant: ProductVariantCreateRequestDto) =>
-      `${variant.size ?? ''}:${variant.color?.trim().toLowerCase() ?? ''}`,
+      `${variant.variantName ?? ''.trim().toLowerCase()}`,
     { message: 'Product variants cannot be duplicated.' },
   )
   @ValidateNested({ each: true })

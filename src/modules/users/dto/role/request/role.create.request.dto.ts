@@ -1,4 +1,6 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { RoleType } from '../../../entities/role.entity';
+import { Expose } from 'class-transformer';
 
 export class RoleCreateRequestDto {
   @IsString()
@@ -8,4 +10,9 @@ export class RoleCreateRequestDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsEnum(RoleType)
+  @IsNotEmpty()
+  @Expose({ name: 'role_type' })
+  roleType!: RoleType;
 }

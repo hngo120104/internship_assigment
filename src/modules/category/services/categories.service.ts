@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -29,9 +30,27 @@ export class CategoriesService {
         throw new NotFoundException('Parent category not found.');
       }
     }
+    if (
+      await this.categoriesRepo.checkCategoryNameExisting(
+        categoryCreateDto.name,
+      )
+    ) {
+      throw new ConflictException('Category name already exists.');
+    }
     const createdCategory =
       await this.categoriesRepo.createCategory(categoryCreateDto);
     return toResponseDto(CategoryResponseDto, createdCategory);
+  }
+
+  async checkCategoriesExistingByIdsOrThrow(
+    categoryIds: string[],
+  ): Promise<boolean> {
+    const matched =
+      await this.categoriesRepo.checkCategoryNameExistingMatched(categoryIds);
+    if (!matched) {
+      throw new BadRequestException('One or more categories might not exist.');
+    }
+    return true;
   }
 
   async findAllActiveCategories(

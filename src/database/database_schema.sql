@@ -1,13 +1,14 @@
-CREATE DATABASE IF NOT EXISTS `internship_assignment` CHARACTER
+CREATE DATABASE IF NOT EXISTS `commerce` CHARACTER
 SET
     utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
-USE `internship_assignment`;
+USE `commerce`;
 
 CREATE TABLE
     `roles` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `name` varchar(255) NOT NULL DEFAULT 'CUSTOMER',
+        `role_type` enum ('CUSTOMER', 'SELLER', 'ADMIN') DEFAULT 'CUSTOMER',
         `description` VARCHAR(255) DEFAULT NULL,
         PRIMARY KEY (`id`),
         UNIQUE KEY `UQ_roles_name` (`name`)
@@ -32,7 +33,7 @@ CREATE TABLE
         `user_id` varchar(36) NOT NULL,
         `role_id` varchar(36) NOT NULL,
         `is_deleted` tinyint (1) DEFAULT 0,
-        PRIMARY KEY (`user_id`, `role_id`), -- Tránh 1 user bị gán trùng 1 role nhiều lần
+        PRIMARY KEY (`user_id`, `role_id`),
         CONSTRAINT `FK_user_roles_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
         CONSTRAINT `FK_user_roles_role_id` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
@@ -148,7 +149,7 @@ CREATE TABLE
     `product_photos` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `product_id` varchar(36) NOT NULL,
-        `variant_id` varchar(36) NOT NULL,
+        `variant_id` varchar(36) DEFAULT NULL,
         `url` varchar(2048) NOT NULL,
         `description` text DEFAULT NULL,
         `is_primary` tinyint (1) DEFAULT 0,

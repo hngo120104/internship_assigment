@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from '../entities/category.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CategoryCreateRequestDto } from '../dto/request/category.create.request.dto';
 import { CategoryUpdateRequestDto } from '../dto/request/category.update.request.dto';
 
@@ -11,6 +11,19 @@ export class CategoriesRepository {
     @InjectRepository(Category)
     private readonly categoriesRepo: Repository<Category>,
   ) {}
+
+  async checkCategoryNameExistingMatched(
+    categoryIds: string[],
+  ): Promise<boolean> {
+    const foundCategories = await this.categoriesRepo.count({
+      where: { id: In(categoryIds) },
+    });
+    return foundCategories !== categoryIds.length;
+  }
+
+  async checkCategoryNameExisting(name: string): Promise<boolean> {
+    return await this.categoriesRepo.existsBy({ name });
+  }
 
   async createCategory(
     categoryCreateDto: CategoryCreateRequestDto,

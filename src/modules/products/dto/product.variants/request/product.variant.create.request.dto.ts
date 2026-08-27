@@ -14,10 +14,11 @@ import {
 import { ProductSize } from '../../../enum/product.size.enum';
 
 export class ProductVariantCreateRequestDto {
+  @Expose({ name: 'variant_name' })
   @IsString()
   @IsNotEmpty()
   @Length(1, 100)
-  name!: string;
+  variantName!: string;
 
   @IsOptional()
   @IsEnum(ProductSize)

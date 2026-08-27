@@ -1,12 +1,10 @@
-import { Expose, Transform, TransformFnParams } from 'class-transformer';
+import { Expose, Transform, TransformFnParams, Type } from 'class-transformer';
 import { ProductSize } from '../../../enum/product.size.enum';
+import { ProductPhotoResponseDto } from '../../product.photos/response/product.photos.insert.response.dto';
 
 export class ProductVariantResponseDto {
   @Expose()
   id!: string;
-
-  @Expose()
-  name!: string;
 
   @Expose({ name: 'product_id' })
   @Transform(
@@ -16,6 +14,19 @@ export class ProductVariantResponseDto {
     },
   )
   productId!: string;
+
+  @Expose({ name: 'variant_name' })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
+  variantName!: string;
+
+  @Expose()
+  @Type(() => ProductPhotoResponseDto)
+  photo!: ProductPhotoResponseDto;
 
   @Expose()
   size?: ProductSize;
