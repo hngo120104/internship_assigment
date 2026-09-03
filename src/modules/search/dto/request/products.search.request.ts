@@ -1,7 +1,6 @@
 import {
   IsArray,
   IsEnum,
-  IsInt,
   IsOptional,
   IsString,
   IsUUID,
@@ -10,6 +9,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../common/dto/pagination.request.dto';
+import { Expose, Type } from 'class-transformer';
 
 export enum ProductSearchSort {
   RELAVANCE = 'RELEVANCE',
@@ -30,16 +30,19 @@ export class ProductsSearchRequestDto extends PaginationQueryDto {
   categoryIds?: string[];
 
   @IsOptional()
-  @IsInt()
+  @Type(() => Number)
   @Min(0)
+  @Expose({ name: 'min_price' })
   minPrice?: number;
 
   @IsOptional()
-  @IsInt()
   @Max(100000000)
+  @Type(() => Number)
+  @Expose({ name: 'max_price' })
   maxPrice?: number;
 
   @IsOptional()
   @IsEnum(ProductSearchSort)
+  @Expose({ name: 'sort_order' })
   sortOrder?: ProductSearchSort;
 }

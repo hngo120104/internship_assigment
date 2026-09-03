@@ -11,6 +11,6 @@ export class PaginationQueryDto {
   @Type(() => Number)
   @IsNotEmpty()
   @IsNumber()
-  @Min(0)
+  @Min(30)
   size!: number;
 }

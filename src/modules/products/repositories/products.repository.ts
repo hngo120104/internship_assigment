@@ -37,6 +37,7 @@ export class ProductsRepository {
           subQuery
             .select('v.productId', 'product_id')
             .addSelect('MIN(v.price)', 'min_price')
+            .addSelect('MAX(v.price)', 'max_price')
             .from(ProductVariant, 'v')
             .where('v.isDeleted = :vIsDeleted AND v.isActive = :vIsActive', {
               vIsDeleted: false,
@@ -84,7 +85,7 @@ export class ProductsRepository {
       qb.andWhere('pv.min_price >= :minPrice', { minPrice: minPrice });
     }
     if (maxPrice !== undefined) {
-      qb.andWhere('pv.min_price <= :maxPrice', { maxPrice: maxPrice });
+      qb.andWhere('pv.max_price <= :maxPrice', { maxPrice: maxPrice });
     }
 
     switch (orderBy) {
