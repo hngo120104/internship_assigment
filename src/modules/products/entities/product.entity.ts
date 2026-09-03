@@ -41,6 +41,9 @@ export class Product {
   @Column({ name: 'is_deleted', type: 'tinyint', default: 0 })
   isDeleted!: boolean;
 
+  @Column({ name: 'search_document', type: 'text', nullable: true })
+  searchDocument?: string;
+
   // Relations
   @ManyToOne(() => Shop, (shop) => shop.products, { onDelete: 'RESTRICT' })
   @JoinColumn({

@@ -108,8 +108,10 @@ CREATE TABLE
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
+        `search_document` TEXT,
         PRIMARY KEY (`id`),
         KEY `IDX_products_shop_id` (`shop_id`),
+        FULLTEXT KEY `FT_product_search` (`search_document`),
         CONSTRAINT `FK_products_shop_id` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 

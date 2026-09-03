@@ -16,6 +16,7 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
 import { CategoriesModule } from './modules/category/categories.module';
 import { AdminModules } from './modules/admin/admin.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ProductsModule,
     CategoriesModule,
     AdminModules,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [

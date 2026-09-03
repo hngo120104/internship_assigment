@@ -4,6 +4,10 @@ import { Repository } from 'typeorm';
 import { ProductCreateRequestDto } from '../dto/products/request/product.create.request.dto';
 import { ProductUpdateRequestDto } from '../dto/products/request/product.update.request.dto';
 import { Injectable } from '@nestjs/common';
+import { ProductVariant } from '../entities/product.variant.entity';
+import { ProductSearchSort } from '../../search/dto/request/products.search.request';
+import { ProductRaw } from '../../../common/interfaces/products.search.response.interface';
+import { ProductCategories } from '../entities/product.categories.entity';
 
 @Injectable()
 export class ProductsRepository {
@@ -12,12 +16,122 @@ export class ProductsRepository {
     private readonly productsRepo: Repository<Product>,
   ) {}
 
+  async findPurchasableProductsByText(
+    formattedQuery: string,
+    page: number,
+    size: number,
+    minPrice?: number,
+    maxPrice?: number,
+    categoryIds?: string[],
+    orderBy?: ProductSearchSort,
+  ): Promise<[ProductRaw[], number]> {
+    const qb = this.productsRepo.createQueryBuilder('p');
+    qb.leftJoin(
+      'p.photos',
+      'pp',
+      'pp.isPrimary = :ppIsPrimary AND pp.isDeleted = :ppIsDeleted',
+      { ppIsPrimary: true, ppIsDeleted: false },
+    )
+      .innerJoin(
+        (subQuery) =>
+          subQuery
+            .select('v.productId', 'product_id')
+            .addSelect('MIN(v.price)', 'min_price')
+            .from(ProductVariant, 'v')
+            .where('v.isDeleted = :vIsDeleted AND v.isActive = :vIsActive', {
+              vIsDeleted: false,
+              vIsActive: true,
+            })
+            .groupBy('v.productId'),
+        'pv',
+        'pv.product_id = p.id',
+      )
+      .select([
+        'p.id AS id',
+        'p.name AS productName',
+        'pp.url AS thumbnail',
+        'pv.min_price AS minPrice',
+      ])
+      .addSelect(
+        'MATCH (p.search_document) AGAINST (:formattedQuery IN BOOLEAN MODE)',
+        'relevance',
+      )
+      .where(
+        'MATCH (p.search_document) AGAINST (:formattedQuery IN BOOLEAN MODE)',
+        { formattedQuery: formattedQuery },
+      )
+      .andWhere('p.isDeleted = :pIsDeleted', { pIsDeleted: false })
+      .andWhere('p.isActive = :pIsActive', { pIsActive: true });
+    if (categoryIds && categoryIds.length > 0) {
+      qb.andWhere(
+        (subQuery) => {
+          const sq = subQuery
+            .select('1')
+            .from(ProductCategories, 'pc')
+            .where('pc.productId = p.id')
+            .andWhere('pc.isDeleted = :pcIsDeleted')
+            .andWhere('pc.categoryId IN (:...categoryIds)')
+            .getQuery();
+          return `EXISTS ${sq}`;
+        },
+        {
+          pcIsDeleted: false,
+          categoryIds: categoryIds,
+        },
+      );
+    }
+    if (minPrice !== undefined) {
+      qb.andWhere('pv.min_price >= :minPrice', { minPrice: minPrice });
+    }
+    if (maxPrice !== undefined) {
+      qb.andWhere('pv.min_price <= :maxPrice', { maxPrice: maxPrice });
+    }
+
+    switch (orderBy) {
+      case ProductSearchSort.RELAVANCE:
+        qb.orderBy('relevance', 'DESC');
+        break;
+      case ProductSearchSort.NEWEST:
+        qb.orderBy('p.createdAt', 'DESC');
+        break;
+      case ProductSearchSort.PRICEASC:
+        qb.orderBy('pv.min_price', 'ASC');
+        break;
+      case ProductSearchSort.PRICEDESC:
+        qb.orderBy('pv.min_price', 'DESC');
+        break;
+      default:
+        qb.orderBy('relevance', 'DESC');
+        break;
+    }
+    const dataQb = qb.clone();
+    const countQb = qb.clone();
+    const [items, totalCount] = await Promise.all([
+      dataQb
+        .take(page)
+        .skip((page - 1) * size)
+        .getRawMany<ProductRaw>(),
+
+      countQb
+        .select(`COUNT(DISTINCT p.id)`, 'total')
+        .orderBy()
+        .getRawOne<{ total: string }>(),
+    ]);
+    const total = Number(totalCount?.total ?? 0);
+
+    return [items, total];
+  }
+
   async findProductByIdAndShopId(
     productId: string,
     shopId: string,
   ): Promise<Product | null> {
     return this.productsRepo.findOne({
-      where: { id: productId, shopId: shopId, isDeleted: false },
+      where: {
+        id: productId,
+        shopId: shopId,
+        isDeleted: false,
+      },
     });
   }
 
@@ -29,7 +143,6 @@ export class ProductsRepository {
     return await this.productsRepo.findAndCount({
       where: {
         shopId: shopId,
-        isDeleted: false,
       },
       relations: {
         variants: true,
@@ -79,9 +192,6 @@ export class ProductsRepository {
       relations: {
         shop: true,
         photos: true,
-        // variants: {
-        //   photo: true,
-        // },
         productCategories: { category: true },
       },
       skip: (page - 1) * size,
@@ -102,10 +212,6 @@ export class ProductsRepository {
         isActive: true,
         isDeleted: false,
         shopId: shopId,
-        variants: {
-          isActive: true,
-          isDeleted: false,
-        },
       },
       relations: {
         shop: true,

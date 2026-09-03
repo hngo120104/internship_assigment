@@ -92,7 +92,6 @@ export class CartItemsService {
         paginationRequest.size,
       );
     const itemsByUserId = new Map<string, CartItem[]>();
-
     for (const cartItem of activeCartItems) {
       const userCartItems = itemsByUserId.get(cartItem.userId) ?? [];
       userCartItems.push(cartItem);
