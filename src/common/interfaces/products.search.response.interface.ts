@@ -1,5 +1,5 @@
 export interface ProductRaw {
-  id: string;
+  productId: string;
   productName: string;
   thumbnail: string;
   minPrice: number;

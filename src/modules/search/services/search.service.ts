@@ -29,27 +29,19 @@ export class SearchService {
     }
   }
 
-  async findProductsByText(
+  async findProductsWithOptionalQueryParams(
     query: ProductsSearchRequestDto,
   ): Promise<ListResponseDto<ProductsSearchResponseDto>> {
-    const formattedQuery = this.formatSearchQuery(query.keyword);
-    console.log('formatted query: ', formattedQuery);
-    if (query.minPrice && query.maxPrice)
+    const formattedKeyword = this.formatSearchQuery(query.keyword);
+
+    if (query.minPrice !== undefined && query.maxPrice !== undefined) {
       this.validatePriceRange(query.minPrice, query.maxPrice);
-    if (!formattedQuery.length) {
-      const [products, count] =
-        await this.productsRepo.findAllLatestActiveProducts(
-          query.page,
-          query.size,
-        );
-      const responses = toListResponseDtos(ProductsSearchResponseDto, products);
-      return new ListResponseDto(responses, count, query.page, query.size);
     }
     const [rawProducts, count] =
-      await this.productsRepo.findPurchasableProductsByText(
-        formattedQuery,
+      await this.productsRepo.findActiveProductsWithOptionalQueryParams(
         query.page,
         query.size,
+        formattedKeyword,
         query.minPrice,
         query.maxPrice,
         query.categoryIds,

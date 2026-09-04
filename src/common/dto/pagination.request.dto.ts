@@ -1,16 +1,18 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, Max, Min } from 'class-validator';
 
 export class PaginationQueryDto {
   @Type(() => Number)
   @IsNotEmpty()
-  @IsNumber()
+  @IsInt()
   @Min(1)
+  @Max(9999)
   page!: number;
 
   @Type(() => Number)
   @IsNotEmpty()
-  @IsNumber()
-  @Min(30)
+  @IsInt()
+  @Min(10)
+  @Max(100)
   size!: number;
 }

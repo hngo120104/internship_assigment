@@ -111,17 +111,17 @@ export class ProductsService {
     return toResponseDto(ProductResponseDto, createdProduct);
   }
 
-  async findLatestActiveProducts(
+  async findNewestActiveProducts(
     paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<ProductResponseDto>> {
-    const [foundLatestProducts, count] =
-      await this.productsRepo.findAllLatestActiveProducts(
+    const [foundNewestProducts, count] =
+      await this.productsRepo.findAllNewestActiveProducts(
         paginationRequest.page,
         paginationRequest.size,
       );
     const response = toListResponseDtos(
       ProductResponseDto,
-      foundLatestProducts,
+      foundNewestProducts,
     );
     return new ListResponseDto(
       response,
@@ -131,19 +131,19 @@ export class ProductsService {
     );
   }
 
-  async findLatestActiveShopProducts(
+  async findNewestActiveShopProducts(
     shopId: string,
     paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<ProductResponseDto>> {
-    const [foundShopLatestProducts, count] =
-      await this.productsRepo.findLatestActiveShopProducts(
+    const [foundShopNewestProducts, count] =
+      await this.productsRepo.findNewestActiveShopProducts(
         shopId,
         paginationRequest.page,
         paginationRequest.size,
       );
     const response = toListResponseDtos(
       ProductResponseDto,
-      foundShopLatestProducts,
+      foundShopNewestProducts,
     );
     return new ListResponseDto(
       response,

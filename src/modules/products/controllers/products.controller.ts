@@ -37,10 +37,10 @@ export class ProductsController {
 
   @Public()
   @Get()
-  async findAllActiveLatestProducts(
+  async findAllActiveNewestProducts(
     @Query() paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<ProductResponseDto>> {
-    return await this.productsService.findLatestActiveProducts(
+    return await this.productsService.findNewestActiveProducts(
       paginationRequest,
     );
   }
@@ -71,11 +71,11 @@ export class ProductsController {
 
   @Public()
   @Get('shops/:shopId')
-  async findLatestActiveProductsByShop(
+  async findNewestActiveProductsByShop(
     @Param('shopId') shopId: string,
     @Query() paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<ProductResponseDto>> {
-    return await this.productsService.findLatestActiveShopProducts(
+    return await this.productsService.findNewestActiveShopProducts(
       shopId,
       paginationRequest,
     );

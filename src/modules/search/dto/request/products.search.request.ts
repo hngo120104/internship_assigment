@@ -12,7 +12,7 @@ import { PaginationQueryDto } from '../../../../common/dto/pagination.request.dt
 import { Expose, Type } from 'class-transformer';
 
 export enum ProductSearchSort {
-  RELAVANCE = 'RELEVANCE',
+  RELEVANCY = 'RELEVANCY',
   NEWEST = 'NEWEST',
   PRICEASC = 'PRICEASC',
   PRICEDESC = 'PRICEDESC',
@@ -32,10 +32,12 @@ export class ProductsSearchRequestDto extends PaginationQueryDto {
   @IsOptional()
   @Type(() => Number)
   @Min(0)
+  @Max(100000000)
   @Expose({ name: 'min_price' })
   minPrice?: number;
 
   @IsOptional()
+  @Min(0)
   @Max(100000000)
   @Type(() => Number)
   @Expose({ name: 'max_price' })

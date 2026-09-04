@@ -16,111 +16,119 @@ export class ProductsRepository {
     private readonly productsRepo: Repository<Product>,
   ) {}
 
-  async findPurchasableProductsByText(
-    formattedQuery: string,
+  async findActiveProductsWithOptionalQueryParams(
     page: number,
     size: number,
+    formattedKeyword?: string,
     minPrice?: number,
     maxPrice?: number,
     categoryIds?: string[],
     orderBy?: ProductSearchSort,
   ): Promise<[ProductRaw[], number]> {
-    const qb = this.productsRepo.createQueryBuilder('p');
-    qb.leftJoin(
+    const createQb = (alias: string) => {
+      const qb = this.productsRepo.createQueryBuilder(alias);
+
+      qb.innerJoin(
+        (subQ) =>
+          subQ
+            .select('v.productId', 'productId')
+            .addSelect('MIN(v.price)', 'minPrice')
+            .addSelect('MAX(v.price)', 'maxPrice')
+            .from(ProductVariant, 'v')
+            .where('v.isActive = 1')
+            .andWhere('v.isDeleted = 0')
+            .groupBy('productId'),
+        'pv',
+        `pv.productId = ${alias}.id`,
+      );
+      qb.where(`${alias}.isActive = 1`).andWhere(`${alias}.isDeleted = 0`);
+
+      if (formattedKeyword) {
+        qb.andWhere(
+          `MATCH (${alias}.search_document) AGAINST (:keyword IN BOOLEAN MODE)`,
+          { keyword: formattedKeyword },
+        );
+      }
+
+      if (minPrice !== undefined) {
+        qb.andWhere(`pv.maxPrice >= :minPrice`, { minPrice: minPrice });
+      }
+
+      if (maxPrice !== undefined) {
+        qb.andWhere(`pv.minPrice <= :maxPrice`, { maxPrice: maxPrice });
+      }
+
+      if (categoryIds && categoryIds.length > 0) {
+        qb.andWhere(
+          (subQuery) => {
+            const sq = subQuery
+              .select('1')
+              .from(ProductCategories, 'pc')
+              .where(`pc.productId = ${alias}.id`)
+              .andWhere('pc.isDeleted = :pcIsDeleted')
+              .andWhere('pc.categoryId IN (:...categoryIds)')
+              .getQuery();
+            return `EXISTS ${sq}`;
+          },
+          { pcIsDeleted: false, categoryIds },
+        );
+      }
+      return qb;
+    };
+
+    const dataQb = createQb('p');
+    dataQb.leftJoin(
       'p.photos',
       'pp',
       'pp.isPrimary = :ppIsPrimary AND pp.isDeleted = :ppIsDeleted',
-      { ppIsPrimary: true, ppIsDeleted: false },
-    )
-      .innerJoin(
-        (subQuery) =>
-          subQuery
-            .select('v.productId', 'product_id')
-            .addSelect('MIN(v.price)', 'min_price')
-            .addSelect('MAX(v.price)', 'max_price')
-            .from(ProductVariant, 'v')
-            .where('v.isDeleted = :vIsDeleted AND v.isActive = :vIsActive', {
-              vIsDeleted: false,
-              vIsActive: true,
-            })
-            .groupBy('v.productId'),
-        'pv',
-        'pv.product_id = p.id',
-      )
-      .select([
-        'p.id AS id',
-        'p.name AS productName',
-        'pp.url AS thumbnail',
-        'pv.min_price AS minPrice',
-      ])
-      .addSelect(
-        'MATCH (p.search_document) AGAINST (:formattedQuery IN BOOLEAN MODE)',
-        'relevance',
-      )
-      .where(
-        'MATCH (p.search_document) AGAINST (:formattedQuery IN BOOLEAN MODE)',
-        { formattedQuery: formattedQuery },
-      )
-      .andWhere('p.isDeleted = :pIsDeleted', { pIsDeleted: false })
-      .andWhere('p.isActive = :pIsActive', { pIsActive: true });
-    if (categoryIds && categoryIds.length > 0) {
-      qb.andWhere(
-        (subQuery) => {
-          const sq = subQuery
-            .select('1')
-            .from(ProductCategories, 'pc')
-            .where('pc.productId = p.id')
-            .andWhere('pc.isDeleted = :pcIsDeleted')
-            .andWhere('pc.categoryId IN (:...categoryIds)')
-            .getQuery();
-          return `EXISTS ${sq}`;
-        },
-        {
-          pcIsDeleted: false,
-          categoryIds: categoryIds,
-        },
+      {
+        ppIsPrimary: true,
+        ppIsDeleted: false,
+      },
+    );
+    dataQb.select([
+      'p.id AS productId',
+      'p.name AS productName',
+      'pp.url AS thumbnail',
+      'pv.minPrice AS minPrice',
+    ]);
+
+    if (formattedKeyword) {
+      dataQb.addSelect(
+        `MATCH (p.search_document) AGAINST (:keyword IN BOOLEAN MODE)`,
+        'relevancy',
       );
-    }
-    if (minPrice !== undefined) {
-      qb.andWhere('pv.min_price >= :minPrice', { minPrice: minPrice });
-    }
-    if (maxPrice !== undefined) {
-      qb.andWhere('pv.max_price <= :maxPrice', { maxPrice: maxPrice });
     }
 
     switch (orderBy) {
-      case ProductSearchSort.RELAVANCE:
-        qb.orderBy('relevance', 'DESC');
+      case ProductSearchSort.RELEVANCY:
+        if (formattedKeyword) dataQb.orderBy('relevancy', 'DESC');
+        else dataQb.orderBy('p.createdAt', 'DESC');
         break;
       case ProductSearchSort.NEWEST:
-        qb.orderBy('p.createdAt', 'DESC');
+        dataQb.orderBy('p.createdAt', 'DESC');
         break;
       case ProductSearchSort.PRICEASC:
-        qb.orderBy('pv.min_price', 'ASC');
+        dataQb.orderBy('pv.minPrice', 'ASC');
         break;
       case ProductSearchSort.PRICEDESC:
-        qb.orderBy('pv.min_price', 'DESC');
+        dataQb.orderBy('pv.minPrice', 'DESC');
         break;
       default:
-        qb.orderBy('relevance', 'DESC');
+        if (formattedKeyword) dataQb.orderBy('relevancy', 'DESC');
+        else dataQb.orderBy('p.createdAt', 'DESC');
         break;
     }
-    const dataQb = qb.clone();
-    const countQb = qb.clone();
-    const [items, totalCount] = await Promise.all([
-      dataQb
-        .take(page)
-        .skip((page - 1) * size)
-        .getRawMany<ProductRaw>(),
 
-      countQb
-        .select(`COUNT(DISTINCT p.id)`, 'total')
-        .orderBy()
-        .getRawOne<{ total: string }>(),
+    dataQb.limit(size).offset((page - 1) * size);
+
+    const countQb = createQb('p').select('COUNT(DISTINCT p.id)', 'count');
+
+    const [items, count] = await Promise.all([
+      dataQb.getRawMany<ProductRaw>(),
+      countQb.getRawOne<{ count: string }>(),
     ]);
-    const total = Number(totalCount?.total ?? 0);
-
-    return [items, total];
+    return [items, Number(count?.count ?? 0)];
   }
 
   async findProductByIdAndShopId(
@@ -177,7 +185,7 @@ export class ProductsRepository {
     return this.productsRepo.save(product);
   }
 
-  findAllLatestActiveProducts(
+  findAllNewestActiveProducts(
     page: number,
     size: number,
   ): Promise<[Product[], number]> {
@@ -203,7 +211,7 @@ export class ProductsRepository {
     });
   }
 
-  async findLatestActiveShopProducts(
+  async findNewestActiveShopProducts(
     shopId: string,
     page: number,
     size: number,

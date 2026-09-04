@@ -1,7 +1,13 @@
 import { Expose, Transform, TransformFnParams } from 'class-transformer';
 export class ProductsSearchResponseDto {
-  @Expose()
-  id!: string;
+  @Expose({ name: 'product_id' })
+  @Transform(
+    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
+    {
+      toClassOnly: true,
+    },
+  )
+  productId!: string;
 
   @Expose({ name: 'product_name' })
   @Transform(

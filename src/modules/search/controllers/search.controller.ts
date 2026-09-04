@@ -14,6 +14,6 @@ export class SearchController {
   async findProductByText(
     @Query() query: ProductsSearchRequestDto,
   ): Promise<ListResponseDto<ProductsSearchResponseDto>> {
-    return await this.searchService.findProductsByText(query);
+    return await this.searchService.findProductsWithOptionalQueryParams(query);
   }
 }
