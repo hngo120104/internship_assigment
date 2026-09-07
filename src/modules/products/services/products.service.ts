@@ -20,6 +20,7 @@ import {
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
 import { CategoriesService } from '../../category/services/categories.service';
+import { ProductsSearchResponseDto } from '../../search/dto/response/products.search.response.dto';
 
 @Injectable()
 export class ProductsService {
@@ -34,17 +35,20 @@ export class ProductsService {
   async findAllUserShopProductsOrThrow(
     paginationRequest: PaginationQueryDto,
     shopId?: string,
-  ): Promise<ListResponseDto<ProductResponseDto>> {
+  ): Promise<ListResponseDto<ProductsSearchResponseDto>> {
     if (!shopId) {
       throw new UnauthorizedException('User does not have shop.');
     }
     const [userShopProducts, count] =
-      await this.productsRepo.findAllUserShopProductByShopId(
+      await this.productsRepo.findAllUserShopProductsByShopId(
         shopId,
         paginationRequest.page,
         paginationRequest.size,
       );
-    const response = toListResponseDtos(ProductResponseDto, userShopProducts);
+    const response = toListResponseDtos(
+      ProductsSearchResponseDto,
+      userShopProducts,
+    );
     return new ListResponseDto(
       response,
       count,

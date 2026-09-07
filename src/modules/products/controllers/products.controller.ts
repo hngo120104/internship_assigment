@@ -27,6 +27,7 @@ import { ProductVariantsCreateRequestDto } from '../dto/product.variants/request
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
 import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
+import { ProductsSearchResponseDto } from '../../search/dto/response/products.search.response.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -62,7 +63,7 @@ export class ProductsController {
   async sellerViewShopProducts(
     @CurrentUser() user: CurrentUserPayload,
     @Query() paginationRequest: PaginationQueryDto,
-  ): Promise<ListResponseDto<ProductResponseDto>> {
+  ): Promise<ListResponseDto<ProductsSearchResponseDto>> {
     return await this.productsService.findAllUserShopProductsOrThrow(
       paginationRequest,
       user.shopId,

@@ -9,7 +9,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../common/dto/pagination.request.dto';
-import { Expose, Type } from 'class-transformer';
+import { Expose, Transform, Type } from 'class-transformer';
 
 export enum ProductSearchSort {
   RELEVANCY = 'RELEVANCY',
@@ -27,6 +27,10 @@ export class ProductsSearchRequestDto extends PaginationQueryDto {
   @IsOptional()
   @IsUUID('all', { each: true })
   @IsArray()
+  @Transform(({ value }) => {
+    if (typeof value === 'string')
+      return value.includes(',') ? value.split(',') : [value];
+  })
   categoryIds?: string[];
 
   @IsOptional()

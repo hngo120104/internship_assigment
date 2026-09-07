@@ -14,7 +14,7 @@ export class SearchService {
     return query
       .trim()
       .toLowerCase()
-      .replace(/[^\w\s]/gi, '')
+      .replace(/[^\p{L}\p{N}\s]/gu, '')
       .split(/\s+/)
       .filter((word) => word.length > 0)
       .map((word) => `+${word}*`)
@@ -33,7 +33,7 @@ export class SearchService {
     query: ProductsSearchRequestDto,
   ): Promise<ListResponseDto<ProductsSearchResponseDto>> {
     const formattedKeyword = this.formatSearchQuery(query.keyword);
-
+    console.log(query);
     if (query.minPrice !== undefined && query.maxPrice !== undefined) {
       this.validatePriceRange(query.minPrice, query.maxPrice);
     }
@@ -47,7 +47,6 @@ export class SearchService {
         query.categoryIds,
         query.sortOrder,
       );
-    console.log('raw products:\n', rawProducts);
     const responses = toListResponseDtos(
       ProductsSearchResponseDto,
       rawProducts,
