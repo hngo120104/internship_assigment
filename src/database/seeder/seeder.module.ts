@@ -5,13 +5,13 @@ import { DataSource } from 'typeorm';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 import { User } from '../../modules/users/entities/user.entity';
 import { Role } from '../../modules/users/entities/role.entity';
-import { Address } from '../../modules/users/entities/user.address.entity';
+import { UserAddress } from '../../modules/users/entities/user-address.entity';
 import { Shop } from '../../modules/users/entities/shop.entity';
-import { UserPhoto } from '../../modules/users/entities/user.photo.entity';
+import { UserPhoto } from '../../modules/users/entities/user-photo.entity';
 import { Product } from '../../modules/products/entities/product.entity';
-import { Category } from '../../modules/category/entities/category.entity';
-import { CartItem } from '../../modules/carts/entities/cart.item.entity';
-import { ProductPhoto } from '../../modules/products/entities/product.photo.entity';
+import { Category } from '../../modules/categories/entities/category.entity';
+import { CartItem } from '../../modules/carts/entities/cart-item.entity';
+import { ProductPhoto } from '../../modules/products/entities/product-photo.entity';
 import { SeederService } from './services/seeder.service';
 
 @Module({
@@ -19,7 +19,7 @@ import { SeederService } from './services/seeder.service';
     TypeOrmModule.forFeature([
       User,
       Role,
-      Address,
+      UserAddress,
       Shop,
       UserPhoto,
       Product,

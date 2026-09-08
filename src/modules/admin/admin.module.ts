@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AdminService } from './services/admin.service';
 import { AdminController } from './controllers/admin.controller';
 import { UsersModule } from '../users/users.module';
-import { CategoriesModule } from '../category/categories.module';
+import { CategoriesModule } from '../categories/categories.module';
 import { CartsModule } from '../carts/carts.module';
 
 @Module({
@@ -11,4 +11,4 @@ import { CartsModule } from '../carts/carts.module';
   providers: [AdminService],
   exports: [],
 })
-export class AdminModules {}
+export class AdminModule {}

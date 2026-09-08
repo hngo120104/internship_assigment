@@ -5,36 +5,36 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConflictException, Injectable } from '@nestjs/common';
 
 import { User } from '../entities/user.entity';
-import { UserPhoto } from '../entities/user.photo.entity';
+import { UserPhoto } from '../entities/user-photo.entity';
 import { UsersRepository } from '../repositories/users.repository';
-import { UserPhotosService } from './user.photos.service';
-import { UserCreateRequestDto } from '../dto/users/request/user.create.request.dto';
-import { UserPhotoInsertRequestDto } from '../dto/user.photos/request/user.photos.insert.request.dto';
-import { RolesRepository } from '../repositories/role.repository';
+import { UserPhotosService } from './user-photos.service';
+import { UserCreateRequestDto } from '../dto/users/request/user-create.request.dto';
+import { UserPhotoInsertRequestDto } from '../dto/user-photos/request/user-photo-insert.request.dto';
+import { RolesRepository } from '../repositories/roles.repository';
 
 import { UserResponseDto } from '../dto/users/response/user.response.dto';
-import { UserRolesRepository } from '../repositories/user.roles.repository';
+import { UserRolesRepository } from '../repositories/user-roles.repository';
 import {
   toListResponseDtos,
   toResponseDto,
-} from '../../../utils/to.dto.response';
-import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
+} from '../../../utils/response-dto.mapper';
+import { DeleteCountResponseDto } from '../../../common/dto/delete-count.response.dto';
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
-    private readonly usersRepo: UsersRepository,
-    private readonly roleRepo: RolesRepository,
-    private readonly userRolesRepo: UserRolesRepository,
+    private readonly usersRepository: UsersRepository,
+    private readonly rolesRepository: RolesRepository,
+    private readonly userRolesRepository: UserRolesRepository,
     private readonly userPhotosService: UserPhotosService,
   ) {}
 
   async findAllActiveUsers(
     paginationRequest: PaginationQueryDto,
   ): Promise<ListResponseDto<UserResponseDto>> {
-    const [foundUsers, count] = await this.usersRepo.findAllActiveUsers(
+    const [foundUsers, count] = await this.usersRepository.findAllActiveUsers(
       paginationRequest.page,
       paginationRequest.size,
     );
@@ -50,7 +50,7 @@ export class UsersService {
   async findActiveUserByUserIdOrThrow(
     userId: string,
   ): Promise<UserResponseDto> {
-    const foundUser = await this.usersRepo.findActiveUserById(userId);
+    const foundUser = await this.usersRepository.findActiveUserById(userId);
     if (!foundUser) {
       throw new NotFoundException('User not found.');
     }
@@ -59,7 +59,7 @@ export class UsersService {
 
   async findActiveUserByEmailOrThrow(email: string): Promise<User> {
     const foundUserWithEmail =
-      await this.usersRepo.findActiveUserByEmail(email);
+      await this.usersRepository.findActiveUserByEmail(email);
     if (!foundUserWithEmail) {
       throw new NotFoundException(`User with email ${email} does not exist.`);
     }
@@ -67,9 +67,8 @@ export class UsersService {
   }
 
   private async validateUserRegistration(userCreateDto: UserCreateRequestDto) {
-    const existingUserWithEmail = await this.usersRepo.findActiveUserByEmail(
-      userCreateDto.email,
-    );
+    const existingUserWithEmail =
+      await this.usersRepository.findActiveUserByEmail(userCreateDto.email);
 
     if (existingUserWithEmail) {
       throw new ConflictException('Email already exists.');
@@ -79,11 +78,11 @@ export class UsersService {
   private async createUserWithPasswordHashed(
     userCreateDto: UserCreateRequestDto,
   ): Promise<User> {
-    const passwordHashed = await bcrypt.hash(userCreateDto.password, 12);
+    const hashedPassword = await bcrypt.hash(userCreateDto.password, 12);
 
-    const newUserWithPasswordHashed = await this.usersRepo.createUser(
+    const newUserWithPasswordHashed = await this.usersRepository.createUser(
       userCreateDto,
-      passwordHashed,
+      hashedPassword,
     );
     return newUserWithPasswordHashed;
   }
@@ -105,14 +104,12 @@ export class UsersService {
   async processCreateUser(userCreateDto: UserCreateRequestDto): Promise<User> {
     const newUserWithPasswordHashed =
       await this.createUserWithPasswordHashed(userCreateDto);
-    const defaultRole = await this.roleRepo.findByRoleName('CUSTOMER');
-    const savedUserRoles = await this.userRolesRepo.saveUserRoles(
+    const defaultRole = await this.rolesRepository.findByRoleName('CUSTOMER');
+    const savedUserRole = await this.userRolesRepository.saveUserRole(
       newUserWithPasswordHashed,
       defaultRole,
     );
-    newUserWithPasswordHashed.userRoles = savedUserRoles
-      ? [savedUserRoles]
-      : [];
+    newUserWithPasswordHashed.userRoles = savedUserRole ? [savedUserRole] : [];
     return newUserWithPasswordHashed;
   }
 
@@ -139,7 +136,7 @@ export class UsersService {
     newPassword: string,
     oldPassword: string,
   ): Promise<UserResponseDto> {
-    const user = await this.usersRepo.findActiveUserById(userId);
+    const user = await this.usersRepository.findActiveUserById(userId);
 
     if (!user) throw new NotFoundException('User does not exist.');
     const userOldPassword = user.passwordHashed;
@@ -151,23 +148,23 @@ export class UsersService {
     if (!matchedOldPassword)
       throw new BadRequestException('Password does not match.');
 
-    const newPasswordHashed = await bcrypt.hash(newPassword, 12);
-    const updatedUser = await this.usersRepo.updateUserPassword(
+    const newHashedPassword = await bcrypt.hash(newPassword, 12);
+    const updatedUser = await this.usersRepository.updateUserPassword(
       user,
-      newPasswordHashed,
+      newHashedPassword,
     );
     return toResponseDto(UserResponseDto, updatedUser);
   }
 
   async banUser(userId: string): Promise<UserResponseDto> {
-    const bannedUser = await this.usersRepo.banUser(userId);
+    const bannedUser = await this.usersRepository.banUser(userId);
     return toResponseDto(UserResponseDto, bannedUser);
   }
 
   async deleteUserByUserIdOrThrow(
     userId: string,
   ): Promise<DeleteCountResponseDto> {
-    const deleteResult = await this.usersRepo.softDeleteUser(userId);
+    const deleteResult = await this.usersRepository.softDeleteUser(userId);
     if (!deleteResult) {
       throw new NotFoundException('User not found.');
     }

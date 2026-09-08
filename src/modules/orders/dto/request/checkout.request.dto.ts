@@ -9,7 +9,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PaymentMethod } from '../../entities/order.entity';
-import { OrderItemCreateRequestDto } from './order.item.create.request.dto';
+import { OrderItemCreateRequestDto } from './order-item-create.request.dto';
 
 export class CheckoutRequestDto {
   @Expose({ name: 'ship_address_id' })

@@ -3,31 +3,31 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ProductCreateRequestDto } from '../dto/products/request/product.create.request.dto';
-import { ProductUpdateRequestDto } from '../dto/products/request/product.update.request.dto';
+import { ProductCreateRequestDto } from '../dto/products/request/product-create.request.dto';
+import { ProductUpdateRequestDto } from '../dto/products/request/product-update.request.dto';
 import { Product } from '../entities/product.entity';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ProductResponseDto } from '../dto/products/response/product.response.dto';
-import { ProductPhotosRepository } from '../repositories/product.photo.repository';
-import { ProductPhotoInsertRequestDto } from '../dto/product.photos/request/product.photos.insert.request.dto';
+import { ProductPhotosRepository } from '../repositories/product-photos.repository';
+import { ProductPhotoInsertRequestDto } from '../dto/product-photos/request/product-photo-insert.request.dto';
 import { Transactional } from 'typeorm-transactional';
-import { ProductCategoriesRepository } from '../repositories/product.categories.repository';
-import { ProductVariantsService } from './product.variants.service';
+import { ProductCategoriesRepository } from '../repositories/product-categories.repository';
+import { ProductVariantsService } from './product-variants.service';
 import {
   toListResponseDtos,
   toResponseDto,
-} from '../../../utils/to.dto.response';
+} from '../../../utils/response-dto.mapper';
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
-import { CategoriesService } from '../../category/services/categories.service';
-import { ProductsSearchResponseDto } from '../../search/dto/response/products.search.response.dto';
+import { CategoriesService } from '../../categories/services/categories.service';
+import { ProductSearchResponseDto } from '../../search/dto/response/product-search.response.dto';
 
 @Injectable()
 export class ProductsService {
   constructor(
-    private readonly productsRepo: ProductsRepository,
-    private readonly productPhotosRepo: ProductPhotosRepository,
-    private readonly productCategoriesRepo: ProductCategoriesRepository,
+    private readonly productsRepository: ProductsRepository,
+    private readonly productPhotosRepository: ProductPhotosRepository,
+    private readonly productCategoriesRepository: ProductCategoriesRepository,
     private readonly productVariantsService: ProductVariantsService,
     private readonly categoriesService: CategoriesService,
   ) {}
@@ -35,18 +35,18 @@ export class ProductsService {
   async findAllUserShopProductsOrThrow(
     paginationRequest: PaginationQueryDto,
     shopId?: string,
-  ): Promise<ListResponseDto<ProductsSearchResponseDto>> {
+  ): Promise<ListResponseDto<ProductSearchResponseDto>> {
     if (!shopId) {
       throw new UnauthorizedException('User does not have shop.');
     }
     const [userShopProducts, count] =
-      await this.productsRepo.findAllUserShopProductsByShopId(
+      await this.productsRepository.findAllUserShopProductsByShopId(
         shopId,
         paginationRequest.page,
         paginationRequest.size,
       );
     const response = toListResponseDtos(
-      ProductsSearchResponseDto,
+      ProductSearchResponseDto,
       userShopProducts,
     );
     return new ListResponseDto(
@@ -62,10 +62,11 @@ export class ProductsService {
     createdProduct: Product,
     productPhotosInsertDto: ProductPhotoInsertRequestDto[],
   ) {
-    const insertedPhotos = await this.productPhotosRepo.insertPhotosIntoProduct(
-      productId,
-      productPhotosInsertDto,
-    );
+    const insertedPhotos =
+      await this.productPhotosRepository.insertPhotosIntoProduct(
+        productId,
+        productPhotosInsertDto,
+      );
     createdProduct.photos = insertedPhotos;
   }
 
@@ -73,7 +74,7 @@ export class ProductsService {
     shopId: string,
     productCreateDto: ProductCreateRequestDto,
   ): Promise<Product> {
-    const createdProduct = await this.productsRepo.createProductOrThrow(
+    const createdProduct = await this.productsRepository.createProductOrThrow(
       shopId,
       productCreateDto,
     );
@@ -84,7 +85,7 @@ export class ProductsService {
         shopId,
       );
     const createdProductCategories =
-      await this.productCategoriesRepo.saveProductCategories(
+      await this.productCategoriesRepository.saveProductCategories(
         createdProduct.id,
         productCreateDto.categoryIds,
       );
@@ -117,14 +118,15 @@ export class ProductsService {
 
   async findNewestActiveProducts(
     paginationRequest: PaginationQueryDto,
-  ): Promise<ListResponseDto<ProductResponseDto>> {
+  ): Promise<ListResponseDto<ProductSearchResponseDto>> {
     const [foundNewestProducts, count] =
-      await this.productsRepo.findAllNewestActiveProducts(
+      await this.productsRepository.findAllNewestActiveProducts(
         paginationRequest.page,
         paginationRequest.size,
       );
+    console.log(foundNewestProducts);
     const response = toListResponseDtos(
-      ProductResponseDto,
+      ProductSearchResponseDto,
       foundNewestProducts,
     );
     return new ListResponseDto(
@@ -138,15 +140,15 @@ export class ProductsService {
   async findNewestActiveShopProducts(
     shopId: string,
     paginationRequest: PaginationQueryDto,
-  ): Promise<ListResponseDto<ProductResponseDto>> {
+  ): Promise<ListResponseDto<ProductSearchResponseDto>> {
     const [foundShopNewestProducts, count] =
-      await this.productsRepo.findNewestActiveShopProducts(
+      await this.productsRepository.findNewestActiveShopProducts(
         shopId,
         paginationRequest.page,
         paginationRequest.size,
       );
     const response = toListResponseDtos(
-      ProductResponseDto,
+      ProductSearchResponseDto,
       foundShopNewestProducts,
     );
     return new ListResponseDto(
@@ -161,7 +163,7 @@ export class ProductsService {
     productId: string,
   ): Promise<ProductResponseDto> {
     const foundProduct =
-      await this.productsRepo.findActiveProductById(productId);
+      await this.productsRepository.findActiveProductById(productId);
     if (!foundProduct) throw new NotFoundException('Product not found.');
     return toResponseDto(ProductResponseDto, foundProduct);
   }
@@ -170,7 +172,7 @@ export class ProductsService {
     productId: string,
   ): Promise<Product> {
     const foundProduct =
-      await this.productsRepo.findActiveProductById(productId);
+      await this.productsRepository.findActiveProductById(productId);
     if (!foundProduct) throw new NotFoundException('Product not found.');
 
     return foundProduct;
@@ -193,7 +195,7 @@ export class ProductsService {
       throw new NotFoundException('Product does not exist in your shop.');
     }
     const upsertResult =
-      await this.productCategoriesRepo.upsertProductCategories(
+      await this.productCategoriesRepository.upsertProductCategories(
         productId,
         categoryIds,
       );
@@ -209,7 +211,7 @@ export class ProductsService {
     if (!shopId) {
       throw new UnauthorizedException('User does not have shop.');
     }
-    const updateResult = await this.productsRepo.updateShopProductById(
+    const updateResult = await this.productsRepository.updateShopProductById(
       productId,
       shopId,
       updateProductDto,
@@ -218,7 +220,7 @@ export class ProductsService {
       throw new NotFoundException('Product not found.');
     }
     const updatedProduct =
-      await this.productsRepo.findActiveProductById(productId);
+      await this.productsRepository.findActiveProductById(productId);
     if (!updatedProduct) {
       throw new NotFoundException('Updated product not found.');
     }
@@ -232,10 +234,11 @@ export class ProductsService {
     if (!shopId) {
       throw new UnauthorizedException('User does not have shop.');
     }
-    const deletedCount = await this.productsRepo.softDeleteShopProductById(
-      productId,
-      shopId,
-    );
+    const deletedCount =
+      await this.productsRepository.softDeleteShopProductById(
+        productId,
+        shopId,
+      );
     if (deletedCount !== 1) {
       throw new NotFoundException(
         'Product does not exist or is already deleted.',

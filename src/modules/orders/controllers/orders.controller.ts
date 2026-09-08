@@ -9,17 +9,17 @@ import {
   SerializeOptions,
 } from '@nestjs/common';
 import { OrdersService } from '../services/orders.service';
-import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
-import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
-import { ShopOrderResponseDto } from '../dto/response/shop.order.response.dto';
+import { CurrentUser } from '../../../custom-decorators/current-user.decorator';
+import type { CurrentUserPayload } from '../../../custom-decorators/current-user.decorator';
+import { ShopOrderResponseDto } from '../dto/response/shop-order.response.dto';
 import { CheckoutRequestDto } from '../dto/request/checkout.request.dto';
-import { BuyNowRequestDto } from '../dto/request/buynow.request.dto';
-import { CheckoutResponseDto } from '../dto/response/customer.order.response.dto';
+import { BuyNowRequestDto } from '../dto/request/buy-now.request.dto';
+import { CheckoutResponseDto } from '../dto/response/checkout.response.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { RoleType } from '../../users/entities/role.entity';
-import { FindOrderRequestDto } from '../dto/request/find.order.request.dto';
+import { FindOrderRequestDto } from '../dto/request/find-order.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
-import { OrderUpdateRequestDto } from '../dto/request/order.update.request.dto';
+import { OrderUpdateRequestDto } from '../dto/request/order-update.request.dto';
 
 @Controller('orders')
 export class OrdersController {

@@ -1,35 +1,37 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserCreateRequestDto } from '../dto/users/request/user.create.request.dto';
+import { UserCreateRequestDto } from '../dto/users/request/user-create.request.dto';
 import { User, UserStatus } from '../entities/user.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class UsersRepository {
-  constructor(@InjectRepository(User) private userRepo: Repository<User>) {}
+  constructor(
+    @InjectRepository(User) private usersRepository: Repository<User>,
+  ) {}
 
   async createUser(
     userCreateDto: UserCreateRequestDto,
-    passwordHashed: string,
+    hashedPassword: string,
   ): Promise<User> {
-    const newUser = this.userRepo.create({
+    const newUser = this.usersRepository.create({
       userName: userCreateDto.userName,
       email: userCreateDto.email,
-      passwordHashed: passwordHashed,
+      passwordHashed: hashedPassword,
     });
-    return this.userRepo.save(newUser);
+    return this.usersRepository.save(newUser);
   }
 
   async updateUserPassword(
     user: User,
-    newPasswordHashed: string,
+    newHashedPassword: string,
   ): Promise<User> {
-    user.passwordHashed = newPasswordHashed;
-    return await this.userRepo.save(user);
+    user.passwordHashed = newHashedPassword;
+    return await this.usersRepository.save(user);
   }
 
   async banUser(userId: string): Promise<User> {
-    const bannedUser = await this.userRepo.update(
+    const bannedUser = await this.usersRepository.update(
       { id: userId, userStatus: UserStatus.ACTIVE, isDeleted: false },
       { userStatus: UserStatus.BANNED },
     );
@@ -38,25 +40,25 @@ export class UsersRepository {
       throw new NotFoundException('User does not exists.');
     }
 
-    return await this.userRepo.findOneByOrFail({ id: userId });
+    return await this.usersRepository.findOneByOrFail({ id: userId });
   }
 
   findActiveUserById(userId: string): Promise<User | null> {
-    return this.userRepo.findOne({
+    return this.usersRepository.findOne({
       where: { id: userId, isDeleted: false, userStatus: UserStatus.ACTIVE },
       relations: { userRoles: { role: true }, shop: true, addresses: true },
     });
   }
 
   findActiveUserByEmail(email: string): Promise<User | null> {
-    return this.userRepo.findOne({
+    return this.usersRepository.findOne({
       where: { email: email, isDeleted: false, userStatus: UserStatus.ACTIVE },
       relations: { userRoles: { role: true }, shop: true, addresses: true },
     });
   }
 
   findAllActiveUsers(page: number, size: number): Promise<[User[], number]> {
-    return this.userRepo.findAndCount({
+    return this.usersRepository.findAndCount({
       where: { isDeleted: false, userStatus: UserStatus.ACTIVE },
       relations: {
         userRoles: { role: true },
@@ -73,11 +75,11 @@ export class UsersRepository {
   }
 
   async saveUser(user: User): Promise<User> {
-    return await this.userRepo.save(user);
+    return await this.usersRepository.save(user);
   }
 
   async softDeleteUser(userId: string): Promise<boolean> {
-    const result = await this.userRepo.update(
+    const result = await this.usersRepository.update(
       { id: userId, isDeleted: false },
       { isDeleted: true },
     );

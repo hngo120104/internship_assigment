@@ -11,10 +11,10 @@ import {
 
 import { UsersService } from '../services/users.service';
 import { UserResponseDto } from '../dto/users/response/user.response.dto';
-import { UserPasswordUpdateRequestDto } from '../dto/users/request/user.password.update.request.dto';
-import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
-import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
-import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
+import { UserPasswordUpdateRequestDto } from '../dto/users/request/user-password-update.request.dto';
+import { CurrentUser } from '../../../custom-decorators/current-user.decorator';
+import type { CurrentUserPayload } from '../../../custom-decorators/current-user.decorator';
+import { DeleteCountResponseDto } from '../../../common/dto/delete-count.response.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { RoleType } from '../entities/role.entity';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';

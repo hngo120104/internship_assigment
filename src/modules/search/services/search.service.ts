@@ -1,20 +1,35 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ProductsRepository } from '../../products/repositories/products.repository';
-import { ProductsSearchRequestDto } from '../dto/request/products.search.request';
+import { ProductSearchRequestDto } from '../dto/request/product-search.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
-import { ProductsSearchResponseDto } from '../dto/response/products.search.response.dto';
-import { toListResponseDtos } from '../../../utils/to.dto.response';
+import { ProductSearchResponseDto } from '../dto/response/product-search.response.dto';
+import { toListResponseDtos } from '../../../utils/response-dto.mapper';
+import { ProductSearchOptions } from '../../products/interfaces/product-search-options.interface';
 
 @Injectable()
 export class SearchService {
-  constructor(private readonly productsRepo: ProductsRepository) {}
+  constructor(private readonly productsRepository: ProductsRepository) {}
 
-  private formatSearchQuery(query: string | undefined): string {
-    if (!query) return '';
-    return query
+  private mapSearchOptionDtoToInterface(
+    productSearchDto: ProductSearchRequestDto,
+  ): ProductSearchOptions {
+    return {
+      page: productSearchDto.page,
+      size: productSearchDto.size,
+      formattedKeyword: this.formatSearchQuery(productSearchDto.keyword),
+      minPrice: productSearchDto.minPrice,
+      maxPrice: productSearchDto.maxPrice,
+      categoryIds: productSearchDto.categoryIds,
+      orderBy: productSearchDto.sortOrder,
+    };
+  }
+
+  private formatSearchQuery(productSearchRequest: string | undefined): string {
+    if (!productSearchRequest) return '';
+    return productSearchRequest
       .trim()
       .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s]/gu, '')
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
       .split(/\s+/)
       .filter((word) => word.length > 0)
       .map((word) => `+${word}*`)
@@ -30,27 +45,29 @@ export class SearchService {
   }
 
   async findProductsWithOptionalQueryParams(
-    query: ProductsSearchRequestDto,
-  ): Promise<ListResponseDto<ProductsSearchResponseDto>> {
-    const formattedKeyword = this.formatSearchQuery(query.keyword);
-    console.log(query);
-    if (query.minPrice !== undefined && query.maxPrice !== undefined) {
-      this.validatePriceRange(query.minPrice, query.maxPrice);
-    }
-    const [rawProducts, count] =
-      await this.productsRepo.findActiveProductsWithOptionalQueryParams(
-        query.page,
-        query.size,
-        formattedKeyword,
-        query.minPrice,
-        query.maxPrice,
-        query.categoryIds,
-        query.sortOrder,
+    productSearchRequest: ProductSearchRequestDto,
+  ): Promise<ListResponseDto<ProductSearchResponseDto>> {
+    if (
+      productSearchRequest.minPrice !== undefined &&
+      productSearchRequest.maxPrice !== undefined
+    ) {
+      this.validatePriceRange(
+        productSearchRequest.minPrice,
+        productSearchRequest.maxPrice,
       );
-    const responses = toListResponseDtos(
-      ProductsSearchResponseDto,
-      rawProducts,
+    }
+    const productSearchOptions =
+      this.mapSearchOptionDtoToInterface(productSearchRequest);
+    const [rawProducts, count] =
+      await this.productsRepository.findActiveProductsWithOptionalQueryParams(
+        productSearchOptions,
+      );
+    const responses = toListResponseDtos(ProductSearchResponseDto, rawProducts);
+    return new ListResponseDto(
+      responses,
+      count,
+      productSearchRequest.page,
+      productSearchRequest.size,
     );
-    return new ListResponseDto(responses, count, query.page, query.size);
   }
 }

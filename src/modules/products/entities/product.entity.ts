@@ -10,9 +10,9 @@ import {
   Index,
 } from 'typeorm';
 import { Shop } from '../../users/entities/shop.entity';
-import { ProductPhoto } from './product.photo.entity';
-import { ProductCategories } from './product.categories.entity';
-import { ProductVariant } from './product.variant.entity';
+import { ProductPhoto } from './product-photo.entity';
+import { ProductCategory } from './product-category.entity';
+import { ProductVariant } from './product-variant.entity';
 
 @Index('IDX_products_shop_id', ['shopId'])
 @Entity('products')
@@ -53,10 +53,10 @@ export class Product {
   shop!: Shop;
 
   @OneToMany(
-    () => ProductCategories,
+    () => ProductCategory,
     (productCategories) => productCategories.product,
   )
-  productCategories!: ProductCategories[];
+  productCategories!: ProductCategory[];
 
   @OneToMany(() => ProductPhoto, (photo) => photo.product)
   photos!: ProductPhoto[];

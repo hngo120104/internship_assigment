@@ -1,8 +1,8 @@
 import { Expose, Transform, TransformFnParams, Type } from 'class-transformer';
-import { CategoryResponseDto } from '../../../../category/dto/response/category.response.dto';
-import { ProductPhotoResponseDto } from '../../product.photos/response/product.photos.insert.response.dto';
+import { CategoryResponseDto } from '../../../../categories/dto/response/category.response.dto';
+import { ProductPhotoResponseDto } from '../../product-photos/response/product-photo.response.dto';
 import { Product } from '../../../entities/product.entity';
-import { ProductVariantResponseDto } from '../../product.variants/response/product.variant.response.dto';
+import { ProductVariantResponseDto } from '../../product-variants/response/product-variant.response.dto';
 
 export class ProductResponseDto {
   @Expose()

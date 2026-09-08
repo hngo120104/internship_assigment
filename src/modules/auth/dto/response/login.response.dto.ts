@@ -1,7 +1,7 @@
 import { Expose, Transform, TransformFnParams, Type } from 'class-transformer';
-import { RoleResponseDto } from '../../../users/dto/role/response/role.response.dto';
+import { RoleResponseDto } from '../../../users/dto/roles/response/role.response.dto';
 import { User } from '../../../users/entities/user.entity';
-import { UserShopResponseDto } from '../../../users/dto/user.shop/response/user.shop.response.dto';
+import { ShopResponseDto } from '../../../users/dto/shops/response/shop.response.dto';
 
 export class LoginResponseDto {
   @Expose()
@@ -19,8 +19,8 @@ export class LoginResponseDto {
   roles!: RoleResponseDto[];
 
   @Expose()
-  @Type(() => UserShopResponseDto)
-  shop?: UserShopResponseDto;
+  @Type(() => ShopResponseDto)
+  shop?: ShopResponseDto;
 
   @Expose({ name: 'access_token' }) accessToken!: string;
 }

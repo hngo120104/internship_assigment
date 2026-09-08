@@ -12,9 +12,9 @@ export class SeederService {
 
   constructor(
     @InjectRepository(Role)
-    private readonly rolesRepo: Repository<Role>,
+    private readonly rolesRepository: Repository<Role>,
     @InjectRepository(User)
-    private readonly usersRepo: Repository<User>,
+    private readonly usersRepository: Repository<User>,
   ) {}
 
   async run() {
@@ -35,10 +35,10 @@ export class SeederService {
       name: 'ADMIN',
       description: 'Admin role',
     };
-    this.customerRole = this.rolesRepo.create(customerRole);
-    this.sellerRole = this.rolesRepo.create(sellerRole);
-    this.adminRole = this.rolesRepo.create(adminRole);
-    await this.rolesRepo.save([
+    this.customerRole = this.rolesRepository.create(customerRole);
+    this.sellerRole = this.rolesRepository.create(sellerRole);
+    this.adminRole = this.rolesRepository.create(adminRole);
+    await this.rolesRepository.save([
       this.customerRole,
       this.sellerRole,
       this.adminRole,
@@ -46,7 +46,7 @@ export class SeederService {
   }
 
   async seedUsers() {
-    // const admin = this.usersRepo.create({
+    // const admin = this.usersRepository.create({
     //   userName: 'ADMIN',
     //   email: 'Admin@gmail.com',
     //   passwordHashed: await bcrypt.hash('Admin0!!!', 12),
@@ -64,7 +64,7 @@ export class SeederService {
     //   ],
     //   isDeleted: false,
     // });
-    // const user1 = this.usersRepo.create({
+    // const user1 = this.usersRepository.create({
     //   userName: 'user01',
     //   email: 'User01@gmail.com',
     //   passwordHashed: await bcrypt.hash('User01!!!', 12),
@@ -82,6 +82,6 @@ export class SeederService {
     //   ],
     //   isDeleted: false,
     // });
-    // await this.usersRepo.save([user1, admin]);
+    // await this.usersRepository.save([user1, admin]);
   }
 }

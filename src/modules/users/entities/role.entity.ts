@@ -5,7 +5,7 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
-import { UserRoles } from './user.roles.entity';
+import { UserRole } from './user-role.entity';
 
 export enum RoleType {
   ADMIN = 'ADMIN',
@@ -19,8 +19,8 @@ export class Role {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @OneToMany(() => UserRoles, (userRoles) => userRoles.role)
-  userRoles!: UserRoles[];
+  @OneToMany(() => UserRole, (userRoles) => userRoles.role)
+  userRoles!: UserRole[];
 
   @Column({
     name: 'role_type',

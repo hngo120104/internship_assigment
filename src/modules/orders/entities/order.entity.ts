@@ -13,8 +13,8 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Shop } from '../../users/entities/shop.entity';
-import { OrderItem } from './order.item.entity';
-import { Address } from '../../users/entities/user.address.entity';
+import { OrderItem } from './order-item.entity';
+import { UserAddress } from '../../users/entities/user-address.entity';
 
 export enum OrderStatus {
   PENDING = 'PENDING',
@@ -117,14 +117,14 @@ export class Order {
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   orderItems!: OrderItem[];
 
-  @ManyToOne(() => Address, (address) => address.orders, {
+  @ManyToOne(() => UserAddress, (address) => address.orders, {
     onDelete: 'RESTRICT',
   })
   @JoinColumn({
     name: 'recipient_address_id',
     foreignKeyConstraintName: 'FK_orders_recipient_address_id',
   })
-  shipAddress!: Address;
+  shipAddress!: UserAddress;
 
   @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
   createdAt!: Date;

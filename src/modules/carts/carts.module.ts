@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { CartItem } from './entities/cart.item.entity';
+import { CartItem } from './entities/cart-item.entity';
 import { CartsController } from './controllers/carts.controller';
-import { CartItemsRepository } from './repositories/cart.items.repository';
+import { CartItemsRepository } from './repositories/cart-items.repository';
 import { ProductsModule } from '../products/products.module';
-import { CartItemsService } from './services/cart.items.service';
-import { CartItemCronJob } from './cron/cart.items.cron';
+import { CartItemsService } from './services/cart-items.service';
+import { CartItemCronJob } from './cron/cart-items.cron';
 import { UsersModule } from '../users/users.module';
 
 @Module({

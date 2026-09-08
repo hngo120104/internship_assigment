@@ -1,0 +1,62 @@
+import {
+  Entity,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  PrimaryGeneratedColumn,
+  Index,
+  OneToOne,
+} from 'typeorm';
+import { Product } from './product.entity';
+import { ProductVariant } from './product-variant.entity';
+
+@Index('IDX_product_photos_product_id', ['productId'])
+@Entity('product_photos')
+export class ProductPhoto {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ name: 'product_id', type: 'varchar', length: 36 })
+  productId!: string;
+
+  @Column({ name: 'variant_id', type: 'varchar', length: 36 })
+  variantId?: string;
+
+  @Column({ type: 'varchar', length: 2048 })
+  url!: string;
+
+  @Column({ type: 'text', nullable: true })
+  description?: string;
+
+  @Column({ name: 'is_primary', type: 'tinyint', default: 0, nullable: true })
+  isPrimary!: boolean;
+
+  @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at', type: 'datetime', precision: 6 })
+  updatedAt!: Date;
+
+  @Column({ name: 'is_deleted', type: 'tinyint', default: 0 })
+  isDeleted!: boolean;
+
+  @ManyToOne(() => Product, (product) => product.photos, {
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({
+    name: 'product_id',
+    foreignKeyConstraintName: 'FK_product_photos_product_id',
+  })
+  product!: Product;
+
+  @OneToOne(() => ProductVariant, (variant) => variant.photo, {
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({
+    name: 'variant_id',
+    foreignKeyConstraintName: 'FK_product_photos_variant_id',
+  })
+  variant!: ProductVariant;
+}

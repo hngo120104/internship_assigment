@@ -6,15 +6,15 @@ import { Product } from './entities/product.entity';
 import { Shop } from '../users/entities/shop.entity';
 import { ProductsRepository } from './repositories/products.repository';
 import { UsersModule } from '../users/users.module';
-import { ProductPhoto } from './entities/product.photo.entity';
-import { ProductPhotosRepository } from './repositories/product.photo.repository';
-import { Category } from '../category/entities/category.entity';
-import { CategoriesModule } from '../category/categories.module';
-import { ProductCategories } from './entities/product.categories.entity';
-import { ProductCategoriesRepository } from './repositories/product.categories.repository';
-import { ProductVariant } from './entities/product.variant.entity';
-import { ProductVariantsRepository } from './repositories/product.variants.repository';
-import { ProductVariantsService } from './services/product.variants.service';
+import { ProductPhoto } from './entities/product-photo.entity';
+import { ProductPhotosRepository } from './repositories/product-photos.repository';
+import { Category } from '../categories/entities/category.entity';
+import { CategoriesModule } from '../categories/categories.module';
+import { ProductCategory } from './entities/product-category.entity';
+import { ProductCategoriesRepository } from './repositories/product-categories.repository';
+import { ProductVariant } from './entities/product-variant.entity';
+import { ProductVariantsRepository } from './repositories/product-variants.repository';
+import { ProductVariantsService } from './services/product-variants.service';
 
 @Module({
   imports: [
@@ -23,7 +23,7 @@ import { ProductVariantsService } from './services/product.variants.service';
       Shop,
       ProductPhoto,
       Category,
-      ProductCategories,
+      ProductCategory,
       ProductVariant,
     ]),
     UsersModule,

@@ -8,10 +8,10 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Shop } from './shop.entity';
-import { UserPhoto } from './user.photo.entity';
-import { CartItem } from '../../carts/entities/cart.item.entity';
-import { Address } from './user.address.entity';
-import { UserRoles } from './user.roles.entity';
+import { UserPhoto } from './user-photo.entity';
+import { CartItem } from '../../carts/entities/cart-item.entity';
+import { UserAddress } from './user-address.entity';
+import { UserRole } from './user-role.entity';
 import { Order } from '../../orders/entities/order.entity';
 
 export enum UserStatus {
@@ -50,11 +50,11 @@ export class User {
   })
   userStatus!: UserStatus;
 
-  @OneToMany(() => UserRoles, (userRoles) => userRoles.user)
-  userRoles!: UserRoles[];
+  @OneToMany(() => UserRole, (userRoles) => userRoles.user)
+  userRoles!: UserRole[];
 
-  @OneToMany(() => Address, (address) => address.user)
-  addresses!: Address[];
+  @OneToMany(() => UserAddress, (address) => address.user)
+  addresses!: UserAddress[];
 
   @OneToOne(() => Shop, (shop) => shop.user, { nullable: true })
   shop?: Shop;

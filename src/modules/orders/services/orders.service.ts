@@ -6,38 +6,38 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { OrdersRepository } from '../repositories/orders.repository';
-import { OrderItemsRepository } from '../repositories/order.items.repository';
+import { OrderItemsRepository } from '../repositories/order-items.repository';
 import { Transactional } from 'typeorm-transactional';
-import { OrderItemCreateRequestDto } from '../dto/request/order.item.create.request.dto';
-import { ProductVariantsService } from '../../products/services/product.variants.service';
-import { OrderItem } from '../entities/order.item.entity';
-import { ProductVariant } from '../../products/entities/product.variant.entity';
-import { BuyNowRequestDto } from '../dto/request/buynow.request.dto';
-import { ShopOrderResponseDto } from '../dto/response/shop.order.response.dto';
-import { UserAddressesService } from '../../users/services/user.addresses.service';
+import { OrderItemCreateRequestDto } from '../dto/request/order-item-create.request.dto';
+import { ProductVariantsService } from '../../products/services/product-variants.service';
+import { OrderItem } from '../entities/order-item.entity';
+import { ProductVariant } from '../../products/entities/product-variant.entity';
+import { BuyNowRequestDto } from '../dto/request/buy-now.request.dto';
+import { ShopOrderResponseDto } from '../dto/response/shop-order.response.dto';
+import { UserAddressesService } from '../../users/services/user-addresses.service';
 import { CheckoutRequestDto } from '../dto/request/checkout.request.dto';
-import { CartItemsService } from '../../carts/services/cart.items.service';
+import { CartItemsService } from '../../carts/services/cart-items.service';
 import {
   toListResponseDtos,
   toResponseDto,
-} from '../../../utils/to.dto.response';
+} from '../../../utils/response-dto.mapper';
 import {
   Order,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
 } from '../entities/order.entity';
-import { CheckoutResponseDto } from '../dto/response/customer.order.response.dto';
+import { CheckoutResponseDto } from '../dto/response/checkout.response.dto';
 import { plainToInstance } from 'class-transformer';
-import { Address } from '../../users/entities/user.address.entity';
-import { UserShopService } from '../../users/services/user.shop.service';
-import { CartItem } from '../../carts/entities/cart.item.entity';
+import { UserAddress } from '../../users/entities/user-address.entity';
+import { ShopsService } from '../../users/services/shops.service';
+import { CartItem } from '../../carts/entities/cart-item.entity';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
-import { FindOrderRequestDto } from '../dto/request/find.order.request.dto';
+import { FindOrderRequestDto } from '../dto/request/find-order.request.dto';
 import {
   OrderPatchAction,
   OrderUpdateRequestDto,
-} from '../dto/request/order.update.request.dto';
+} from '../dto/request/order-update.request.dto';
 
 interface ReservedOrderItem {
   variant: ProductVariant;
@@ -50,10 +50,10 @@ export type ReservedItemsByShop = Map<string, ReservedOrderItem[]>;
 @Injectable()
 export class OrdersService {
   constructor(
-    private readonly ordersRepo: OrdersRepository,
-    private readonly orderItemsRepo: OrderItemsRepository,
+    private readonly ordersRepository: OrdersRepository,
+    private readonly orderItemsRepository: OrderItemsRepository,
     private readonly productVariantsService: ProductVariantsService,
-    private readonly userShopService: UserShopService,
+    private readonly shopsService: ShopsService,
     private readonly userAddressesService: UserAddressesService,
     private readonly cartItemsService: CartItemsService,
   ) {}
@@ -62,7 +62,7 @@ export class OrdersService {
     shopId: string,
     orderId: string,
   ): Promise<Order> {
-    const foundOrder = await this.ordersRepo.findOrderByShopIdAndOrderId(
+    const foundOrder = await this.ordersRepository.findOrderByShopIdAndOrderId(
       shopId,
       orderId,
     );
@@ -76,7 +76,7 @@ export class OrdersService {
     userId: string,
     orderId: string,
   ): Promise<ShopOrderResponseDto> {
-    const foundOrder = await this.ordersRepo.findOrderByUserIdAndOrderId(
+    const foundOrder = await this.ordersRepository.findOrderByUserIdAndOrderId(
       userId,
       orderId,
     );
@@ -91,7 +91,7 @@ export class OrdersService {
     findOrderRequestDto: FindOrderRequestDto,
   ): Promise<ListResponseDto<ShopOrderResponseDto>> {
     const [foundUserOrders, count] =
-      await this.ordersRepo.findAllUserOrdersWithOptionalStatusesByUserId(
+      await this.ordersRepository.findAllUserOrdersWithOptionalStatusesByUserId(
         userId,
         findOrderRequestDto.page,
         findOrderRequestDto.size,
@@ -117,7 +117,7 @@ export class OrdersService {
       throw new UnauthorizedException('User does not have shop.');
     }
     const [foundShopOrders, count] =
-      await this.ordersRepo.findAllShopOrdersWithOptionStatusesByShopId(
+      await this.ordersRepository.findAllShopOrdersWithOptionStatusesByShopId(
         shopId,
         findOrderRequestDto.page,
         findOrderRequestDto.size,
@@ -277,7 +277,7 @@ export class OrdersService {
     orderId: string,
     shopId: string,
   ): Promise<ShopOrderResponseDto> {
-    const result = await this.ordersRepo.shopSendOrderToShipByOrderId(
+    const result = await this.ordersRepository.shopSendOrderToShipByOrderId(
       shopId,
       orderId,
     );
@@ -295,7 +295,7 @@ export class OrdersService {
     orderId: string,
     shopId: string,
   ): Promise<ShopOrderResponseDto> {
-    const result = await this.ordersRepo.shopConfirmOrderByOrderId(
+    const result = await this.ordersRepository.shopConfirmOrderByOrderId(
       shopId,
       orderId,
     );
@@ -317,7 +317,7 @@ export class OrdersService {
     orderId: string,
   ): Promise<ShopOrderResponseDto> {
     const foundOrder =
-      await this.ordersRepo.findOrderByUserIdAndOrderIdAndLockForCancel(
+      await this.ordersRepository.findOrderByUserIdAndOrderIdAndLockForCancel(
         userId,
         orderId,
       );
@@ -358,7 +358,7 @@ export class OrdersService {
       order.paymentMethod === PaymentMethod.BANKING
     )
       order.paymentStatus = PaymentStatus.REFUNDED;
-    return await this.ordersRepo.saveOrder(order);
+    return await this.ordersRepository.saveOrder(order);
   }
 
   private validateOrderStatusToCancel(order: Order) {
@@ -377,7 +377,7 @@ export class OrdersService {
     orderId: string,
     shopId: string,
   ): Promise<ShopOrderResponseDto> {
-    const confirmResult = await this.ordersRepo.shopConfirmOrderByOrderId(
+    const confirmResult = await this.ordersRepository.shopConfirmOrderByOrderId(
       shopId,
       orderId,
     );
@@ -460,7 +460,7 @@ export class OrdersService {
   private async createOrdersForEachShop(
     userId: string,
     shippingAddressId: string,
-    shippingAddress: Address,
+    shippingAddress: UserAddress,
     paymentMethod: PaymentMethod,
     reservedItemsByShop: ReservedItemsByShop,
   ): Promise<Order[]> {
@@ -484,11 +484,11 @@ export class OrdersService {
     userId: string,
     shopId: string,
     shippingAddressId: string,
-    shippingAddress: Address,
+    shippingAddress: UserAddress,
     paymentMethod: PaymentMethod,
     reservedItems: ReservedOrderItem[],
   ): Promise<Order> {
-    const order = await this.ordersRepo.createOrder(
+    const order = await this.ordersRepository.createOrder(
       userId,
       shopId,
       shippingAddressId,
@@ -515,7 +515,7 @@ export class OrdersService {
     variant: ProductVariant,
     note?: string,
   ): Promise<OrderItem> {
-    return await this.orderItemsRepo.createOrderItem(orderId, {
+    return await this.orderItemsRepository.createOrderItem(orderId, {
       variantId: variant.id,
       productName: variant.product.name,
       variantSize: variant.size,

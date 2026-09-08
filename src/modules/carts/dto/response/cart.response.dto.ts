@@ -1,5 +1,5 @@
 import { Expose, Transform, TransformFnParams, Type } from 'class-transformer';
-import { CartItemResponseDto } from './cart.item.response.dto';
+import { CartItemResponseDto } from './cart-item.response.dto';
 
 interface UserCartLike {
   userId: string;

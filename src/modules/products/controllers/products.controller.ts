@@ -10,24 +10,24 @@ import {
   Put,
 } from '@nestjs/common';
 import { ProductsService } from '../services/products.service';
-import { ProductCreateRequestDto } from '../dto/products/request/product.create.request.dto';
-import { ProductUpdateRequestDto } from '../dto/products/request/product.update.request.dto';
+import { ProductCreateRequestDto } from '../dto/products/request/product-create.request.dto';
+import { ProductUpdateRequestDto } from '../dto/products/request/product-update.request.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { RoleType } from '../../users/entities/role.entity';
 import { Public } from '../../auth/public.decorator';
 import { ProductResponseDto } from '../dto/products/response/product.response.dto';
-import { CurrentUser } from '../../../custom.decorators/current.user.decorator';
-import type { CurrentUserPayload } from '../../../custom.decorators/current.user.decorator';
-import { ProductVariantUpdateRequestDto } from '../dto/product.variants/request/product.variant.update.request.dto';
-import { ProductVariantsService } from '../services/product.variants.service';
-import { ProductVariantResponseDto } from '../dto/product.variants/response/product.variant.response.dto';
-import { toListResponseDtos } from '../../../utils/to.dto.response';
-import { ProductCategoriesUpdateRequestDto } from '../dto/products/request/product.categories.update.request.dto';
-import { ProductVariantsCreateRequestDto } from '../dto/product.variants/request/product.variants.create.request.dto';
+import { CurrentUser } from '../../../custom-decorators/current-user.decorator';
+import type { CurrentUserPayload } from '../../../custom-decorators/current-user.decorator';
+import { ProductVariantUpdateRequestDto } from '../dto/product-variants/request/product-variant-update.request.dto';
+import { ProductVariantsService } from '../services/product-variants.service';
+import { ProductVariantResponseDto } from '../dto/product-variants/response/product-variant.response.dto';
+import { toListResponseDtos } from '../../../utils/response-dto.mapper';
+import { ProductCategoriesUpdateRequestDto } from '../dto/products/request/product-categories-update.request.dto';
+import { ProductVariantsCreateRequestDto } from '../dto/product-variants/request/product-variants-create.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
-import { DeleteCountResponseDto } from '../../../common/dto/delete.count.response.dto';
+import { DeleteCountResponseDto } from '../../../common/dto/delete-count.response.dto';
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
-import { ProductsSearchResponseDto } from '../../search/dto/response/products.search.response.dto';
+import { ProductSearchResponseDto } from '../../search/dto/response/product-search.response.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -40,7 +40,7 @@ export class ProductsController {
   @Get()
   async findAllActiveNewestProducts(
     @Query() paginationRequest: PaginationQueryDto,
-  ): Promise<ListResponseDto<ProductResponseDto>> {
+  ): Promise<ListResponseDto<ProductSearchResponseDto>> {
     return await this.productsService.findNewestActiveProducts(
       paginationRequest,
     );
@@ -63,7 +63,7 @@ export class ProductsController {
   async sellerViewShopProducts(
     @CurrentUser() user: CurrentUserPayload,
     @Query() paginationRequest: PaginationQueryDto,
-  ): Promise<ListResponseDto<ProductsSearchResponseDto>> {
+  ): Promise<ListResponseDto<ProductSearchResponseDto>> {
     return await this.productsService.findAllUserShopProductsOrThrow(
       paginationRequest,
       user.shopId,
@@ -75,7 +75,7 @@ export class ProductsController {
   async findNewestActiveProductsByShop(
     @Param('shopId') shopId: string,
     @Query() paginationRequest: PaginationQueryDto,
-  ): Promise<ListResponseDto<ProductResponseDto>> {
+  ): Promise<ListResponseDto<ProductSearchResponseDto>> {
     return await this.productsService.findNewestActiveShopProducts(
       shopId,
       paginationRequest,

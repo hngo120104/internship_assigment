@@ -7,13 +7,13 @@ import {
 } from '../entities/order.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
-import { Address } from '../../users/entities/user.address.entity';
+import { UserAddress } from '../../users/entities/user-address.entity';
 
 @Injectable()
 export class OrdersRepository {
   constructor(
     @InjectRepository(Order)
-    private readonly ordersRepo: Repository<Order>,
+    private readonly ordersRepository: Repository<Order>,
   ) {}
 
   async findAllUserOrdersWithOptionalStatusesByUserId(
@@ -28,7 +28,7 @@ export class OrdersRepository {
     };
     if (orderStatus) whereConditions.orderStatus = orderStatus;
     if (paymentStatus) whereConditions.paymentStatus = paymentStatus;
-    return await this.ordersRepo.findAndCount({
+    return await this.ordersRepository.findAndCount({
       where: whereConditions,
       relations: { shipAddress: true, orderItems: true },
       skip: (page - 1) * size,
@@ -51,7 +51,7 @@ export class OrdersRepository {
     };
     if (orderStatus) whereConditions.orderStatus = orderStatus;
     if (paymentStatus) whereConditions.paymentStatus = paymentStatus;
-    return await this.ordersRepo.findAndCount({
+    return await this.ordersRepository.findAndCount({
       where: whereConditions,
       relations: { shipAddress: true, orderItems: true },
       skip: (page - 1) * size,
@@ -66,7 +66,7 @@ export class OrdersRepository {
     userId: string,
     orderId: string,
   ): Promise<Order | null> {
-    return await this.ordersRepo
+    return await this.ordersRepository
       .createQueryBuilder('orders')
       .setLock('pessimistic_write')
       .leftJoinAndSelect('orders.orderItems', 'orderItems')
@@ -85,7 +85,7 @@ export class OrdersRepository {
     shopId: string,
     orderId: string,
   ): Promise<Order | null> {
-    return await this.ordersRepo
+    return await this.ordersRepository
       .createQueryBuilder('orders')
       .setLock('pessimistic_write')
       .leftJoinAndSelect('orders.orderItems', 'orderItems')
@@ -104,7 +104,7 @@ export class OrdersRepository {
     userId: string,
     orderId: string,
   ): Promise<Order | null> {
-    return await this.ordersRepo.findOne({
+    return await this.ordersRepository.findOne({
       where: { userId: userId, id: orderId },
       relations: { shipAddress: true, orderItems: true },
     });
@@ -114,7 +114,7 @@ export class OrdersRepository {
     shopId: string,
     orderId: string,
   ): Promise<Order | null> {
-    return await this.ordersRepo.findOne({
+    return await this.ordersRepository.findOne({
       where: { shopId: shopId, id: orderId },
       relations: { shipAddress: true, orderItems: true },
     });
@@ -124,10 +124,10 @@ export class OrdersRepository {
     userId: string,
     shopId: string,
     shipAddressId: string,
-    shippingAddress: Address,
+    shippingAddress: UserAddress,
     paymentMethod: PaymentMethod,
   ): Promise<Order> {
-    const createdOrder = this.ordersRepo.create({
+    const createdOrder = this.ordersRepository.create({
       userId,
       shopId,
       shipAddressId: shipAddressId,
@@ -138,14 +138,14 @@ export class OrdersRepository {
       paymentStatus: PaymentStatus.PENDING,
       paymentMethod: paymentMethod,
     });
-    return await this.ordersRepo.save(createdOrder);
+    return await this.ordersRepository.save(createdOrder);
   }
 
   async shopConfirmOrderByOrderId(
     shopId: string,
     orderId: string,
   ): Promise<boolean> {
-    const confirmResult = await this.ordersRepo.update(
+    const confirmResult = await this.ordersRepository.update(
       { id: orderId, shopId: shopId, orderStatus: OrderStatus.PENDING },
       { orderStatus: OrderStatus.CONFIRMED },
     );
@@ -156,7 +156,7 @@ export class OrdersRepository {
     shopId: string,
     orderId: string,
   ): Promise<boolean> {
-    const result = await this.ordersRepo.update(
+    const result = await this.ordersRepository.update(
       { id: orderId, shopId: shopId, orderStatus: OrderStatus.CONFIRMED },
       { orderStatus: OrderStatus.PROCESSING },
     );
@@ -167,7 +167,7 @@ export class OrdersRepository {
     shopId: string,
     orderId: string,
   ): Promise<boolean> {
-    const result = await this.ordersRepo.update(
+    const result = await this.ordersRepository.update(
       { id: orderId, shopId: shopId, orderStatus: OrderStatus.PROCESSING },
       { orderStatus: OrderStatus.SHIPPING },
     );
@@ -175,6 +175,6 @@ export class OrdersRepository {
   }
 
   async saveOrder(order: Order): Promise<Order> {
-    return await this.ordersRepo.save(order);
+    return await this.ordersRepository.save(order);
   }
 }

@@ -1,9 +1,9 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { SearchService } from '../services/search.service';
 import { Public } from '../../auth/public.decorator';
-import { ProductsSearchRequestDto } from '../dto/request/products.search.request';
+import { ProductSearchRequestDto } from '../dto/request/product-search.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
-import { ProductsSearchResponseDto } from '../dto/response/products.search.response.dto';
+import { ProductSearchResponseDto } from '../dto/response/product-search.response.dto';
 
 @Controller('search')
 export class SearchController {
@@ -12,8 +12,8 @@ export class SearchController {
   @Get('/products')
   @Public()
   async findProductByText(
-    @Query() query: ProductsSearchRequestDto,
-  ): Promise<ListResponseDto<ProductsSearchResponseDto>> {
+    @Query() query: ProductSearchRequestDto,
+  ): Promise<ListResponseDto<ProductSearchResponseDto>> {
     return await this.searchService.findProductsWithOptionalQueryParams(query);
   }
 }

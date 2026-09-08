@@ -5,9 +5,9 @@ import { LoginRequestDto } from '../dto/request/login.request.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginResponseDto } from '../dto/response/login.response.dto';
 import { User } from '../../users/entities/user.entity';
-import { UserCreateRequestDto } from '../../users/dto/users/request/user.create.request.dto';
-import { UserCreateResponseDto } from '../../users/dto/users/response/user.create.response.dto';
-import { toResponseDto } from '../../../utils/to.dto.response';
+import { UserCreateRequestDto } from '../../users/dto/users/request/user-create.request.dto';
+import { UserCreateResponseDto } from '../../users/dto/users/response/user-create.response.dto';
+import { toResponseDto } from '../../../utils/response-dto.mapper';
 import { RoleType } from '../../users/entities/role.entity';
 
 @Injectable()

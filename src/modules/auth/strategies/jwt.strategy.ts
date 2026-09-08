@@ -1,19 +1,24 @@
-// import { Injectable } from '@nestjs/common';
-// import { PassportStrategy } from '@nestjs/passport';
-// import { Strategy } from 'passport-jwt';
-// import { JwtPayload}
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { Strategy, ExtractJwt } from 'passport-jwt';
+import type { CurrentUserPayload } from '../../../custom-decorators/current-user.decorator';
 
-// @Injectable()
-// export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-//   constructor() {
-//     super({
-//       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-//       ignoreExpiration: false,
-//       secretOrKey: process.env.JWT_SECRET,
-//     });
-//   }
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor() {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: process.env.JWT_SECRET || 'SECRET_KEY',
+    });
+  }
 
-//   async validate(payload: JwtPayload) {
-
-//   }
-// }
+  validate(payload: CurrentUserPayload): CurrentUserPayload {
+    if (!payload) throw new UnauthorizedException('Unauthorized.');
+    return {
+      userId: payload.userId,
+      roles: payload.roles,
+      shopId: payload.shopId,
+    };
+  }
+}

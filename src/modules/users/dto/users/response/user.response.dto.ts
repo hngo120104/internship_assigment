@@ -1,10 +1,10 @@
 import { Transform, TransformFnParams, Type } from 'class-transformer';
 import { Expose } from 'class-transformer';
-import { RoleResponseDto } from '../../role/response/role.response.dto';
-import { UserPhotoResponseDto } from '../../user.photos/response/user.photos.insert.response.dto';
-import { UserShopResponseDto } from '../../user.shop/response/user.shop.response.dto';
+import { RoleResponseDto } from '../../roles/response/role.response.dto';
+import { UserPhotoResponseDto } from '../../user-photos/response/user-photo.response.dto';
+import { ShopResponseDto } from '../../shops/response/shop.response.dto';
 import { User, UserStatus } from '../../../entities/user.entity';
-import { UserAddressResponseDto } from '../../user.addresses/response/user.address.reponse.dto';
+import { UserAddressResponseDto } from '../../user-addresses/response/user-address.response.dto';
 
 export class UserResponseDto {
   @Expose()
@@ -51,8 +51,8 @@ export class UserResponseDto {
   addresses!: UserAddressResponseDto[];
 
   @Expose()
-  @Type(() => UserShopResponseDto)
-  shop?: UserShopResponseDto;
+  @Type(() => ShopResponseDto)
+  shop?: ShopResponseDto;
 
   @Expose({ name: 'created_at' })
   @Transform(
