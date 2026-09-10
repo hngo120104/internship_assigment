@@ -38,6 +38,7 @@ export class ProductCreateRequestDto {
   @Length(0, 5000, { message: 'Description must not exceed 5000 characters.' })
   description?: string;
 
+  @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
   @ArrayUnique(

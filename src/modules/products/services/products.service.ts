@@ -78,16 +78,21 @@ export class ProductsService {
       shopId,
       productCreateDto,
     );
-    createdProduct.variants =
-      await this.productVariantsService.createProductVariants(
-        createdProduct.id,
-        productCreateDto.variants,
-        shopId,
+    // createdProduct.variants =
+    //   await this.productVariantsService.createProductVariants(
+    //     createdProduct.id,
+    //     productCreateDto.variants,
+    //     shopId,
+    //   );
+    const productCategories =
+      await this.categoriesService.findActiveCategoriesEntitiesByIdsOrThrow(
+        productCreateDto.categoryIds,
       );
+
     const createdProductCategories =
       await this.productCategoriesRepository.saveProductCategories(
-        createdProduct.id,
-        productCreateDto.categoryIds,
+        createdProduct,
+        productCategories,
       );
     createdProduct.productCategories = createdProductCategories;
 

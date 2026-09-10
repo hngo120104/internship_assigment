@@ -60,6 +60,17 @@ export class CategoriesRepository {
     return foundActiveCategories;
   }
 
+  async findActiveCategoriesByIds(categoryIds: string[]): Promise<Category[]> {
+    const foundActiveCategories = await this.categoriesRepository.find({
+      where: {
+        id: In(categoryIds),
+        isActive: true,
+      },
+    });
+
+    return foundActiveCategories;
+  }
+
   async updateCategory(
     categoryId: string,
     categoryUpdateDto: CategoryUpdateRequestDto,

@@ -19,7 +19,7 @@ import { ProductSize } from '../enums/product-size.enum';
 import { ProductPhoto } from './product-photo.entity';
 
 @Index('IDX_product_variants_product_id', ['productId'])
-@Unique('UQ_variant_name', ['variantName'])
+@Unique('UQ_variant_name', ['productId', 'variantName'])
 @Check('CHK_product_variants_amount_non_negative', '`amount` >= 0')
 @Check('CHK_product_variants_price_non_negative', '`price` >= 0')
 @Entity('product_variants')

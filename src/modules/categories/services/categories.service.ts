@@ -14,6 +14,7 @@ import {
 } from '../../../utils/response-dto.mapper';
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
+import { Category } from '../entities/category.entity';
 
 @Injectable()
 export class CategoriesService {
@@ -74,6 +75,17 @@ export class CategoriesService {
       paginationRequest.page,
       paginationRequest.size,
     );
+  }
+
+  async findActiveCategoriesEntitiesByIdsOrThrow(
+    categoryIds: string[],
+  ): Promise<Category[]> {
+    const foundActiveCategories =
+      await this.categoriesRepository.findActiveCategoriesByIds(categoryIds);
+    if (foundActiveCategories.length !== categoryIds.length) {
+      throw new NotFoundException('One or more categories not found.');
+    }
+    return foundActiveCategories;
   }
 
   async updateCategory(

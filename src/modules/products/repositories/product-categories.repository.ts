@@ -1,6 +1,8 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductCategory } from '../entities/product-category.entity';
 import { In, QueryDeepPartialEntity, Repository } from 'typeorm';
+import { Product } from '../entities/product.entity';
+import { Category } from '../../categories/entities/category.entity';
 
 export class ProductCategoriesRepository {
   constructor(
@@ -9,13 +11,15 @@ export class ProductCategoriesRepository {
   ) {}
 
   async saveProductCategories(
-    productId: string,
-    categoryIds: string[],
+    product: Product,
+    categories: Category[],
   ): Promise<ProductCategory[]> {
-    const createdProductCategories = categoryIds.map((categoryId) => {
+    const createdProductCategories = categories.map((category) => {
       return this.productCategoriesRepository.create({
-        productId: productId,
-        categoryId: categoryId,
+        productId: product.id,
+        product: product,
+        categoryId: category.id,
+        category: category,
       });
     });
     return await this.productCategoriesRepository.save(

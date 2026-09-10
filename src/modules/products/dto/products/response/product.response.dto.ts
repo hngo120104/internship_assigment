@@ -23,6 +23,8 @@ export class ProductResponseDto {
     ({ obj }: TransformFnParams) => {
       const product = obj as Product;
       return product.productCategories?.map((productCategory) => {
+        console.log(productCategory);
+        console.log(productCategory.category);
         const [name, id] = [
           productCategory.category.name,
           productCategory.categoryId,
