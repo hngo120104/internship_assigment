@@ -27,11 +27,11 @@ export class UserResponseDto {
   @Transform(
     ({ obj }: TransformFnParams) => {
       const user = obj as User;
-      return user.userRoles?.map((userRole) => userRole.role) ?? [];
+      return user.userRoles?.map((userRole) => userRole.role.name) ?? [];
     },
     { toClassOnly: true },
   )
-  roles!: RoleResponseDto[];
+  roles!: string[];
 
   @Expose({ name: 'user_status' })
   @Transform(

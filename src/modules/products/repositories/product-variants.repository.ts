@@ -4,7 +4,7 @@ import { In, Repository } from 'typeorm';
 import { ProductVariant } from '../entities/product-variant.entity';
 import { ProductVariantCreateRequestDto } from '../dto/product-variants/request/product-variant-create.request.dto';
 import { ShopStatus } from '../../users/entities/shop.entity';
-import { QueryResult } from 'typeorm';
+import type { ResultSetHeader } from 'mysql2';
 
 @Injectable()
 export class ProductVariantsRepository {
@@ -71,9 +71,7 @@ export class ProductVariantsRepository {
           },
         },
       },
-      relations: {
-        product: true,
-      },
+      relations: { product: true },
     });
   }
 
@@ -131,6 +129,8 @@ export class ProductVariantsRepository {
   async reserveVariantsAmountByVariantIdsAtomically(
     reserveRequests: { variantId: string; quantity: number }[],
   ): Promise<number> {
+    if (reserveRequests.length === 0) return 0;
+
     const variantIds = reserveRequests.map((request) => request.variantId);
     const whenCases = reserveRequests
       .map(() => `WHEN id = ? THEN amount - ?`)
@@ -144,16 +144,16 @@ export class ProductVariantsRepository {
       request.variantId,
       request.quantity,
     ]);
-
-    const updateResult: QueryResult = await this.variantsRepository.query(
-      `
+    const sql = `
         UPDATE product_variants 
         SET amount = CASE ${whenCases} ELSE amount END
         WHERE id IN (?) AND (${conditions.join(' OR ')})
-      `,
+      `;
+    const updateResult: ResultSetHeader = await this.variantsRepository.query(
+      sql,
       [...whenParameters, variantIds, ...conditionParameters],
     );
-    return updateResult.affected ?? 0;
+    return updateResult.affectedRows;
   }
 
   async restockVariantAmountByAtomically(

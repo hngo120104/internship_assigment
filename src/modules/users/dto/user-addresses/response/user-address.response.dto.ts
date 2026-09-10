@@ -73,7 +73,7 @@ export class UserAddressResponseDto {
   )
   updatedAt!: Date;
 
-  @Expose({ name: 'is_deleted' })
+  // @Expose({ name: 'is_deleted' })
   @Transform(
     ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
     {

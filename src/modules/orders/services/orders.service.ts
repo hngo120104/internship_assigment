@@ -8,7 +8,7 @@ import {
 import { OrdersRepository } from '../repositories/orders.repository';
 import { OrderItemsRepository } from '../repositories/order-items.repository';
 import { Transactional } from 'typeorm-transactional';
-import { OrderItemCreateRequestDto } from '../dto/request/order-item-create.request.dto';
+import { CheckoutItemRequestDto } from '../dto/request/checkout-item.request.dto';
 import { ProductVariantsService } from '../../products/services/product-variants.service';
 import { OrderItem } from '../entities/order-item.entity';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
@@ -189,29 +189,27 @@ export class OrdersService {
     userId: string,
     checkoutRequestDto: CheckoutRequestDto,
   ): Promise<CheckoutResponseDto> {
-    this.validateCheckoutRequestNotEmpty(checkoutRequestDto);
-
+    const cartItemIds =
+      this.validateCheckoutRequestNotEmpty(checkoutRequestDto);
     const shippingAddress =
       await this.userAddressesService.findActiveUserAddressEntityByIdOrThrow(
         userId,
         checkoutRequestDto.shipAddressId,
       );
     const cartItems =
-      await this.cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate(
+      await this.cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow(
         userId,
-        checkoutRequestDto.orderItems.map((item) => item.variantId),
-        checkoutRequestDto.orderItems.length,
+        cartItemIds,
+        cartItemIds.length,
       );
-
     const variants =
       await this.productVariantsService.findPurchasableVariantsEntitiesByIdsOrThrow(
         cartItems.map((item) => item.variantId),
         cartItems.length,
       );
-
     const groupedOrderItemsByShop =
       await this.reserveAndGroupOrderItemsByShopId(
-        checkoutRequestDto.orderItems,
+        checkoutRequestDto.checkoutItems,
         cartItems,
         variants,
       );
@@ -235,25 +233,25 @@ export class OrdersService {
   }
 
   private async reserveAndGroupOrderItemsByShopId(
-    orderItemRequests: OrderItemCreateRequestDto[],
+    orderItemRequests: CheckoutItemRequestDto[],
     cartItems: CartItem[],
     variants: ProductVariant[],
   ) {
-    const requestsByVariantId = new Map(
-      orderItemRequests.map((request) => [request.variantId, request]),
+    const requestsByCartItemId = new Map(
+      orderItemRequests.map((request) => [request.cartItemId, request]),
     );
-    const cartItemsByVariantId = new Map(
-      cartItems.map((item) => [item.variantId, item]),
+    const variantsById = new Map(
+      variants.map((variant) => [variant.id, variant]),
     );
-    const sortedVariants = [...variants].sort((l, r) => {
-      return l.id.localeCompare(r.id);
+    const sortedCartItems = [...cartItems].sort((left, right) => {
+      return left.variantId.localeCompare(right.variantId);
     });
     const ordersByShop: ReservedItemsByShop = new Map();
-    for (const variant of sortedVariants) {
-      const cartItem = cartItemsByVariantId.get(variant.id);
-      const request = requestsByVariantId.get(variant.id);
-      if (!cartItem || !request) {
-        throw new BadRequestException('Check out item doesnot match cart.');
+    for (const cartItem of sortedCartItems) {
+      const variant = variantsById.get(cartItem.variantId);
+      const request = requestsByCartItemId.get(cartItem.id);
+      if (!variant || !request) {
+        throw new BadRequestException('Checkout item does not match cart.');
       }
       const orderItem: ReservedOrderItem = {
         variant: variant,
@@ -266,8 +264,9 @@ export class OrdersService {
       ordersByShop.set(variant.product.shopId, orderItemsOfShop);
     }
 
+    const orders = Array.from(ordersByShop.values()).flat();
     await this.productVariantsService.validateAndReserveVariantsAmountOrThrow(
-      cartItems,
+      orders.map(({ variant, quantity }) => ({ variant, quantity })),
     );
 
     return ordersByShop;
@@ -451,10 +450,11 @@ export class OrdersService {
 
   private validateCheckoutRequestNotEmpty(
     checkoutRequestDto: CheckoutRequestDto,
-  ) {
-    if (checkoutRequestDto.orderItems.length === 0) {
+  ): string[] {
+    if (checkoutRequestDto.checkoutItems.length === 0) {
       throw new BadRequestException('Cart items must not be empty.');
     }
+    return checkoutRequestDto.checkoutItems.map((item) => item.cartItemId);
   }
 
   private async createOrdersForEachShop(

@@ -9,6 +9,7 @@ import { UserCreateRequestDto } from '../../users/dto/users/request/user-create.
 import { UserCreateResponseDto } from '../../users/dto/users/response/user-create.response.dto';
 import { toResponseDto } from '../../../utils/response-dto.mapper';
 import { RoleType } from '../../users/entities/role.entity';
+import { UserResponseDto } from '../../users/dto/users/response/user.response.dto';
 
 @Injectable()
 export class AuthService {
@@ -73,8 +74,10 @@ export class AuthService {
       validatedUser.userRoles.map((userRoles) => userRoles.role.roleType),
       validatedUser.shop?.id,
     );
-    const loginResponse = toResponseDto(LoginResponseDto, validatedUser);
-    loginResponse.accessToken = validatedUserAccessToken;
+    const loginResponse: LoginResponseDto = {
+      user: toResponseDto(UserResponseDto, validatedUser),
+      accessToken: validatedUserAccessToken,
+    };
     return loginResponse;
   }
 }

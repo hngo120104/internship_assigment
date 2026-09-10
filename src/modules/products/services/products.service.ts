@@ -124,7 +124,6 @@ export class ProductsService {
         paginationRequest.page,
         paginationRequest.size,
       );
-    console.log(foundNewestProducts);
     const response = toListResponseDtos(
       ProductSearchResponseDto,
       foundNewestProducts,

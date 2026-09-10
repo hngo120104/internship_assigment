@@ -32,7 +32,7 @@ describe('OrdersService order creation flows', () => {
     findActiveUserAddressEntityByIdOrThrow: jest.Mock;
   };
   let cartItemsService: {
-    findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate: jest.Mock;
+    findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow: jest.Mock;
     markUserCartItemsAsOrderedOrThrow: jest.Mock;
   };
   let shopsService: { findShopIdByUserIdOrThrow: jest.Mock };
@@ -52,8 +52,7 @@ describe('OrdersService order creation flows', () => {
       findActiveUserAddressEntityByIdOrThrow: jest.fn(),
     };
     cartItemsService = {
-      findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate:
-        jest.fn(),
+      findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow: jest.fn(),
       markUserCartItemsAsOrderedOrThrow: jest.fn(),
     };
     shopsService = { findShopIdByUserIdOrThrow: jest.fn() };
@@ -78,13 +77,15 @@ describe('OrdersService order creation flows', () => {
     productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue({
       id: 'variant-id',
     });
-    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue({
-      id: 'variant-id',
-      size: 'M',
-      color: 'Black',
-      price: '12500.50',
-      product: { id: 'product-id', shopId: 'shop-id', name: 'Product name' },
-    });
+    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue([
+      {
+        id: 'variant-id',
+        size: 'M',
+        color: 'Black',
+        price: '12500.50',
+        product: { id: 'product-id', shopId: 'shop-id', name: 'Product name' },
+      },
+    ]);
     userAddressesService.findActiveUserAddressEntityByIdOrThrow.mockResolvedValue(
       address,
     );
@@ -172,9 +173,9 @@ describe('OrdersService order creation flows', () => {
     productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue(
       variant,
     );
-    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue(
+    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue([
       variant,
-    );
+    ]);
     ordersRepository.createOrder.mockResolvedValue(order);
     orderItemsRepository.createOrderItem.mockResolvedValue(orderItem);
 
@@ -225,16 +226,16 @@ describe('OrdersService order creation flows', () => {
     userAddressesService.findActiveUserAddressEntityByIdOrThrow.mockResolvedValue(
       address,
     );
-    cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate.mockResolvedValue(
+    cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow.mockResolvedValue(
       cartItems,
     );
     productsService.findPurchasableVariantsEntitiesByIdsOrThrow.mockResolvedValue(
       [products['variant-a'], products['variant-b']],
     );
-    productsService.validateAndReserveVariantsAmountOrThrow.mockImplementation(
-      (variant: (typeof products)[keyof typeof products]) =>
-        Promise.resolve(variant),
-    );
+    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue([
+      products['variant-a'],
+      products['variant-b'],
+    ]);
     ordersRepository.createOrder.mockImplementation(
       (
         userId: string,
@@ -262,11 +263,23 @@ describe('OrdersService order creation flows', () => {
       shipAddressId: address.id,
       paymentMethod: PaymentMethod.COD,
       orderItems: [
-        { variantId: 'variant-b' },
-        { variantId: 'variant-a', note: 'Fragile' },
+        { cartItemId: 'cart-b' },
+        { cartItemId: 'cart-a', note: 'Fragile' },
       ],
     });
 
+    expect(
+      cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow,
+    ).toHaveBeenCalledWith('user-id', ['cart-b', 'cart-a'], 2);
+    expect(
+      productsService.findPurchasableVariantsEntitiesByIdsOrThrow,
+    ).toHaveBeenCalledWith(['variant-a', 'variant-b'], 2);
+    expect(
+      productsService.validateAndReserveVariantsAmountOrThrow,
+    ).toHaveBeenCalledWith([
+      { variant: products['variant-a'], quantity: 2 },
+      { variant: products['variant-b'], quantity: 1 },
+    ]);
     expect(ordersRepository.createOrder).toHaveBeenCalledTimes(2);
     expect(ordersRepository.createOrder).toHaveBeenNthCalledWith(
       1,
@@ -284,13 +297,13 @@ describe('OrdersService order creation flows', () => {
     expect(result.grandTotal).toBe(40);
   });
 
-  it('checkout rejects a quantity that no longer matches the cart', async () => {
+  it('checkout rejects a cart item that is no longer active', async () => {
     userAddressesService.findActiveUserAddressEntityByIdOrThrow.mockResolvedValue(
       {
         id: 'address-id',
       },
     );
-    cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate.mockRejectedValue(
+    cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow.mockRejectedValue(
       new BadRequestException('Cart item quantity has changed.'),
     );
 
@@ -298,7 +311,7 @@ describe('OrdersService order creation flows', () => {
       service.checkoutCart('user-id', {
         shipAddressId: 'address-id',
         paymentMethod: PaymentMethod.COD,
-        orderItems: [{ variantId: 'variant-a' }],
+        orderItems: [{ cartItemId: 'cart-a' }],
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(
@@ -307,10 +320,7 @@ describe('OrdersService order creation flows', () => {
     expect(ordersRepository.createOrder).not.toHaveBeenCalled();
   });
 
-  it('returns seller order details only through the seller shop', async () => {
-    shopsService.findShopIdByUserIdOrThrow.mockResolvedValue({
-      id: 'shop-id',
-    });
+  it('returns seller order details only through the supplied seller shop', async () => {
     ordersRepository.findOrderByShopIdAndOrderId.mockResolvedValue({
       id: 'order-id',
       shopId: 'shop-id',
@@ -318,14 +328,10 @@ describe('OrdersService order creation flows', () => {
     });
 
     const result = await service.findShopOrderByShopIdAndOrderIdOrThrow(
-      'seller-id',
       'order-id',
+      'shop-id',
     );
 
-    expect(shopsService.findShopIdByUserIdOrThrow).toHaveBeenCalledWith(
-      'seller-id',
-      { id: true },
-    );
     expect(ordersRepository.findOrderByShopIdAndOrderId).toHaveBeenCalledWith(
       'shop-id',
       'order-id',

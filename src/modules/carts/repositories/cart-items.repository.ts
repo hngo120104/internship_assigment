@@ -22,7 +22,7 @@ export class CartItemsRepository {
         isDeleted: false,
       },
       relations: {
-        variant: { product: true },
+        variant: { photo: true },
         user: true,
       },
     });
@@ -33,29 +33,29 @@ export class CartItemsRepository {
     variantId: string,
   ): Promise<CartItem | null> {
     return await this.cartItemsRepository
-      .createQueryBuilder('cart_items')
+      .createQueryBuilder('cartItems')
       .setLock('pessimistic_write')
-      .where('cart_items.userId = :userId', { userId })
-      .andWhere('cart_items.variantId = :variantId', {
+      .where('cartItems.userId = :userId', { userId })
+      .andWhere('cartItems.variantId = :variantId', {
         variantId: variantId,
       })
-      .andWhere('cart_items.cartItemStatus = :status', {
+      .andWhere('cartItems.cartItemStatus = :status', {
         status: CartItemStatus.ACTIVE,
       })
-      .andWhere('cart_items.isDeleted = false')
+      .andWhere('cartItems.isDeleted = false')
       .getOne();
   }
 
-  async findActiveCartItemsByUserIdAndVariantIdsAndLock(
+  async findActiveCartItemsByUserIdAndIdsAndLock(
     userId: string,
-    variantIds: string[],
+    cartItemIds: string[],
   ): Promise<CartItem[]> {
     return await this.cartItemsRepository
       .createQueryBuilder('cart_items')
       .setLock('pessimistic_write')
       .where('cart_items.userId = :userId', { userId })
-      .andWhere('cart_items.variantId IN (:...variantIds)', {
-        variantIds: variantIds,
+      .andWhere('cart_items.id IN (:...cartItemIds)', {
+        cartItemIds: cartItemIds,
       })
       .andWhere('cart_items.cartItemStatus = :status', {
         status: CartItemStatus.ACTIVE,
@@ -75,7 +75,7 @@ export class CartItemsRepository {
         cartItemStatus: CartItemStatus.ACTIVE,
       },
       relations: {
-        variant: { product: true },
+        variant: { photo: true },
       },
       order: {
         updatedAt: 'DESC',
@@ -93,7 +93,7 @@ export class CartItemsRepository {
         cartItemStatus: CartItemStatus.ACTIVE,
       },
       relations: {
-        variant: { product: true },
+        variant: { photo: true },
       },
       order: {
         createdAt: 'ASC',
@@ -114,7 +114,7 @@ export class CartItemsRepository {
         cartItemStatus: CartItemStatus.ACTIVE,
         isDeleted: false,
       },
-      relations: { variant: { product: true } },
+      relations: { variant: { photo: true } },
     });
   }
 

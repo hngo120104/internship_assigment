@@ -4,7 +4,10 @@ import { ProductSearchRequestDto } from '../dto/request/product-search.request.d
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
 import { ProductSearchResponseDto } from '../dto/response/product-search.response.dto';
 import { toListResponseDtos } from '../../../utils/response-dto.mapper';
-import { ProductSearchOptions } from '../../products/interfaces/product-search-options.interface';
+import {
+  ProductSearchOptions,
+  ProductSearchTerms,
+} from '../../products/interfaces/product-search-options.interface';
 
 @Injectable()
 export class SearchService {
@@ -16,7 +19,7 @@ export class SearchService {
     return {
       page: productSearchDto.page,
       size: productSearchDto.size,
-      formattedKeyword: this.formatSearchQuery(productSearchDto.keyword),
+      searchTerms: this.buildSearchTerms(productSearchDto.keyword),
       minPrice: productSearchDto.minPrice,
       maxPrice: productSearchDto.maxPrice,
       categoryIds: productSearchDto.categoryIds,
@@ -24,18 +27,28 @@ export class SearchService {
     };
   }
 
-  private formatSearchQuery(productSearchRequest: string | undefined): string {
-    if (!productSearchRequest) return '';
-    return productSearchRequest
-      .trim()
+  private normalizeKeyword(keyword?: string): string {
+    return (keyword ?? '')
+      .normalize('NFKC')
       .toLowerCase()
       .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-      .split(/\s+/)
-      .filter((word) => word.length > 0)
-      .map((word) => `+${word}*`)
-      .join(' ');
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
+  private buildSearchTerms(keyword?: string): ProductSearchTerms | undefined {
+    const rawKeyword = this.normalizeKeyword(keyword);
+    if (!rawKeyword) return undefined;
+
+    const terms = rawKeyword.split(/\s+/);
+
+    return {
+      rawKeyword,
+      relaxedBooleanKeyword: terms.map((term) => `${term}*`).join(' '),
+      strictBooleanKeyword: terms.map((term) => `+${term}*`).join(' '),
+      phraseKeyword: terms.length > 1 ? `"${terms.join(' ')}"` : '',
+    };
+  }
   private validatePriceRange(minPrice: number, maxPrice: number) {
     if (minPrice > maxPrice) {
       throw new BadRequestException(

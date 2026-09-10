@@ -1,6 +1,6 @@
-import { Expose, Transform, TransformFnParams, Type } from 'class-transformer';
+import { Expose, Transform, TransformFnParams } from 'class-transformer';
 import { ProductSize } from '../../../enums/product-size.enum';
-import { ProductPhotoResponseDto } from '../../product-photos/response/product-photo.response.dto';
+import { ProductVariant } from '../../../entities/product-variant.entity';
 
 export class ProductVariantResponseDto {
   @Expose()
@@ -25,8 +25,12 @@ export class ProductVariantResponseDto {
   variantName!: string;
 
   @Expose()
-  @Type(() => ProductPhotoResponseDto)
-  photo!: ProductPhotoResponseDto;
+  @Transform(({ obj }: TransformFnParams) => {
+    const variant = obj as ProductVariant;
+    const photo = variant?.photo;
+    return [photo.id ?? null, photo.url ?? null];
+  })
+  photo!: { id: string; thumbnail: string };
 
   @Expose()
   size?: ProductSize;

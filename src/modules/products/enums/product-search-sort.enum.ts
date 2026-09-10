@@ -1,5 +1,5 @@
 export enum ProductSearchSort {
-  RELEVANCE = 'RELEVANCY',
+  RELEVANCY = 'RELEVANCY',
   NEWEST = 'NEWEST',
   PRICE_ASC = 'PRICEASC',
   PRICE_DESC = 'PRICEDESC',

@@ -10,7 +10,10 @@ import { ProductRaw } from '../interfaces/product-raw.interface';
 import { ProductCategory } from '../entities/product-category.entity';
 import { ProductPhoto } from '../entities/product-photo.entity';
 import { SelectQueryBuilder } from 'typeorm';
-import { ProductSearchOptions } from '../interfaces/product-search-options.interface';
+import {
+  ProductSearchOptions,
+  ProductSearchTerms,
+} from '../interfaces/product-search-options.interface';
 
 @Injectable()
 export class ProductsRepository {
@@ -41,10 +44,13 @@ export class ProductsRepository {
     query: SelectQueryBuilder<Product>,
     productSearchOptions: ProductSearchOptions,
   ): SelectQueryBuilder<Product> {
-    if (productSearchOptions.formattedKeyword) {
+    if (productSearchOptions.searchTerms) {
       query.andWhere(
-        'MATCH (p.search_document) AGAINST (:keyword IN BOOLEAN MODE)',
-        { keyword: productSearchOptions.formattedKeyword },
+        'MATCH (p.search_document) AGAINST (:booleanKeyword IN BOOLEAN MODE)',
+        {
+          booleanKeyword:
+            productSearchOptions.searchTerms.relaxedBooleanKeyword,
+        },
       );
     }
     if (productSearchOptions.minPrice !== undefined) {
@@ -87,9 +93,8 @@ export class ProductsRepository {
     productSearchOptions: ProductSearchOptions,
   ): void {
     switch (productSearchOptions.orderBy) {
-      case ProductSearchSort.RELEVANCE:
-        if (productSearchOptions.formattedKeyword)
-          query.orderBy('relevancy', 'DESC');
+      case ProductSearchSort.RELEVANCY:
+        if (productSearchOptions.searchTerms) this.sortByRelevancy(query);
         else query.orderBy('p.createdAt', 'DESC');
         break;
       case ProductSearchSort.NEWEST:
@@ -102,11 +107,11 @@ export class ProductsRepository {
         query.orderBy('pv.minPrice', 'DESC');
         break;
       default:
-        if (productSearchOptions.formattedKeyword)
-          query.orderBy('relevancy', 'DESC');
+        if (productSearchOptions.searchTerms) this.sortByRelevancy(query);
         else query.orderBy('p.createdAt', 'DESC');
         break;
     }
+    query.addOrderBy('p.id', 'ASC');
   }
 
   private populateProductPrimaryPhoto(
@@ -128,9 +133,62 @@ export class ProductsRepository {
     );
   }
 
+  private addSelectCalculatedRelevancy(
+    query: SelectQueryBuilder<Product>,
+    searchTerms: ProductSearchTerms,
+  ): void {
+    query
+      .addSelect(
+        `CASE WHEN p.name = :rawKeyword THEN 1 ELSE 0 END`,
+        'exactName',
+      )
+      .addSelect(
+        `CASE WHEN p.name LIKE CONCAT(:rawKeyword, '%') THEN 1 ELSE 0 END`,
+        'prefixMatch',
+      )
+      .addSelect(
+        `
+        CASE WHEN :phraseKeyword <> '' AND MATCH(p.search_document) 
+        AGAINST(:phraseKeyword IN BOOLEAN MODE) > 0
+          THEN 1
+          ELSE 0
+        END
+        `,
+        'phraseMatch',
+      )
+      .addSelect(
+        `MATCH (p.search_document) AGAINST (:strictBooleanKeyword IN BOOLEAN MODE)`,
+        'allTermScore',
+      )
+      .addSelect(
+        `MATCH(p.search_document) AGAINST(:rawKeyword IN NATURAL LANGUAGE MODE)`,
+        'naturalScore',
+      )
+      .addSelect(
+        `MATCH(p.search_document) AGAINST(:booleanKeyword IN BOOLEAN MODE)`,
+        'prefixScore',
+      )
+      .setParameters({
+        rawKeyword: searchTerms.rawKeyword,
+        booleanKeyword: searchTerms.relaxedBooleanKeyword,
+        strictBooleanKeyword: searchTerms.strictBooleanKeyword,
+        phraseKeyword: searchTerms.phraseKeyword,
+      });
+  }
+
+  private sortByRelevancy(query: SelectQueryBuilder<Product>) {
+    query
+      .addOrderBy(`exactName`, 'DESC')
+      .addOrderBy(`prefixMatch`, 'DESC')
+      .addOrderBy(`phraseMatch`, 'DESC')
+      .addOrderBy(`(allTermScore > 0)`, 'DESC')
+      .addOrderBy(`naturalScore`, 'DESC')
+      .addOrderBy(`prefixScore`, 'DESC');
+  }
+
   private addProductSearchSelectFields(
     query: SelectQueryBuilder<Product>,
-    formattedKeyword?: string,
+    productSearchOptions?: ProductSearchOptions,
   ): void {
     query.select([
       'p.id AS productId',
@@ -138,10 +196,10 @@ export class ProductsRepository {
       'pph.thumbnail AS thumbnail',
       'pv.minPrice AS minPrice',
     ]);
-    if (formattedKeyword) {
-      query.addSelect(
-        `MATCH (p.search_document) AGAINST (:keyword IN BOOLEAN MODE)`,
-        'relevancy',
+    if (productSearchOptions?.searchTerms) {
+      this.addSelectCalculatedRelevancy(
+        query,
+        productSearchOptions.searchTerms,
       );
     }
   }
@@ -176,13 +234,9 @@ export class ProductsRepository {
     const countQuery = productQuery.clone();
 
     this.populateProductPrimaryPhoto(dataQuery);
-    this.addProductSearchSelectFields(
-      dataQuery,
-      productSearchOptions.formattedKeyword,
-    );
+    this.addProductSearchSelectFields(dataQuery, productSearchOptions);
     this.applyProductSearchSorting(dataQuery, productSearchOptions);
 
-    dataQuery.addOrderBy('p.id', 'ASC');
     dataQuery
       .limit(productSearchOptions.size)
       .offset((productSearchOptions.page - 1) * productSearchOptions.size);

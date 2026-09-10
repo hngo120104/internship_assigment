@@ -33,15 +33,15 @@ export class CartItemsService {
     return toResponseDto(UserCartResponseDto, userCartObj);
   }
 
-  async findLockedActiveCartItemsEntitiesByUserIdAndVariantIdsAndValidate(
+  async findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow(
     userId: string,
-    variantIds: string[],
+    cartItemIds: string[],
     expectedCount: number,
   ): Promise<CartItem[]> {
     const foundLockedCartItems =
-      await this.cartItemsRepository.findActiveCartItemsByUserIdAndVariantIdsAndLock(
+      await this.cartItemsRepository.findActiveCartItemsByUserIdAndIdsAndLock(
         userId,
-        variantIds,
+        cartItemIds,
       );
     if (foundLockedCartItems.length !== expectedCount) {
       throw new BadRequestException('One or more cart items not found.');
@@ -121,16 +121,17 @@ export class CartItemsService {
         userId,
         cartItemsAddDto.variantId,
       );
+    await this.productVariantsService.validateVariantQuantity(
+      cartItemsAddDto.variantId,
+      cartItemsAddDto.quantity,
+    );
     if (foundLockedCartItem) {
       return await this.increaseCartItemQuantity(
         cartItemsAddDto,
         foundLockedCartItem,
       );
     }
-    await this.productVariantsService.validateVariantQuantity(
-      cartItemsAddDto.variantId,
-      cartItemsAddDto.quantity,
-    );
+
     await this.cartItemsRepository.createCartItem(
       userId,
       cartItemsAddDto.variantId,
@@ -241,7 +242,6 @@ export class CartItemsService {
     const cutoffDate = new Date(
       Date.now() - Number(process.env.MONTH_THRESHOLD),
     );
-    console.log('Cleaning up...');
     const deleteCount =
       await this.cartItemsRepository.softDeleteAbandonedCartItems(cutoffDate);
     return deleteCount;

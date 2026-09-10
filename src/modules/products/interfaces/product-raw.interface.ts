@@ -3,6 +3,7 @@ export interface ProductRaw {
   productName: string;
   thumbnail: string;
   minPrice: number;
+  relevancy?: string;
   isActive?: boolean;
   isDeleted?: boolean;
 }

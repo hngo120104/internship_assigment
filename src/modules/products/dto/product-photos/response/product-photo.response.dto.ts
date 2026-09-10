@@ -2,6 +2,9 @@ import { Expose, Transform, TransformFnParams } from 'class-transformer';
 
 export class ProductPhotoResponseDto {
   @Expose()
+  id!: string;
+
+  @Expose()
   url!: string;
 
   @Expose()

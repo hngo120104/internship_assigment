@@ -1,6 +1,4 @@
 import { Expose, Transform, TransformFnParams, Type } from 'class-transformer';
-import { CategoryResponseDto } from '../../../../categories/dto/response/category.response.dto';
-import { ProductPhotoResponseDto } from '../../product-photos/response/product-photo.response.dto';
 import { Product } from '../../../entities/product.entity';
 import { ProductVariantResponseDto } from '../../product-variants/response/product-variant.response.dto';
 
@@ -21,21 +19,30 @@ export class ProductResponseDto {
   name!: string;
 
   @Expose()
-  @Type(() => CategoryResponseDto)
   @Transform(
     ({ obj }: TransformFnParams) => {
       const product = obj as Product;
-      return product.productCategories?.map(
-        (productCategory) => productCategory.categoryId,
-      );
+      return product.productCategories?.map((productCategory) => {
+        const [name, id] = [
+          productCategory.category.name,
+          productCategory.categoryId,
+        ];
+        return { name, id };
+      });
     },
     { toClassOnly: true },
   )
-  categories!: CategoryResponseDto[];
+  categories!: { name: string; id: string }[];
 
   @Expose()
-  @Type(() => ProductPhotoResponseDto)
-  photos!: ProductPhotoResponseDto[];
+  @Transform(({ obj }: TransformFnParams) => {
+    const product = obj as Product;
+    return product.photos?.map((photo) => {
+      const [id, url, isPrimary] = [photo.id, photo.url, photo.isPrimary];
+      return { id, url, isPrimary };
+    });
+  })
+  photos!: { id: string; url: string; is_primary: boolean };
 
   @Expose()
   description?: string;

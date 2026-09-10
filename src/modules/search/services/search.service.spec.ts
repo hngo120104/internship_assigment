@@ -48,7 +48,12 @@ describe('SearchService', () => {
     ).toHaveBeenCalledWith({
       page: 2,
       size: 10,
-      formattedKeyword: '+điện* +thoại* +123*',
+      searchTerms: {
+        rawKeyword: 'điện thoại 123',
+        relaxedBooleanKeyword: 'điện* thoại* 123*',
+        strictBooleanKeyword: '+điện* +thoại* +123*',
+        phraseKeyword: '"điện thoại 123"',
+      },
       minPrice: 100,
       maxPrice: 200,
       categoryIds: ['8ad95aec-7664-4d13-b71b-e3d44811212c'],
@@ -86,7 +91,7 @@ describe('SearchService', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it('passes an empty formatted keyword when no keyword is supplied', async () => {
+  it('omits search terms when no keyword is supplied', async () => {
     productsRepository.findActiveProductsWithOptionalQueryParams.mockResolvedValue(
       [[], 0],
     );
@@ -96,7 +101,23 @@ describe('SearchService', () => {
     expect(
       productsRepository.findActiveProductsWithOptionalQueryParams,
     ).toHaveBeenCalledWith(
-      expect.objectContaining({ formattedKeyword: '', page: 1, size: 10 }),
+      expect.objectContaining({ searchTerms: undefined, page: 1, size: 10 }),
     );
+  });
+
+  it('omits search terms when the keyword contains only whitespace', async () => {
+    productsRepository.findActiveProductsWithOptionalQueryParams.mockResolvedValue(
+      [[], 0],
+    );
+
+    await service.findProductsWithOptionalQueryParams({
+      page: 1,
+      size: 10,
+      keyword: '   ',
+    });
+
+    expect(
+      productsRepository.findActiveProductsWithOptionalQueryParams,
+    ).toHaveBeenCalledWith(expect.objectContaining({ searchTerms: undefined }));
   });
 });

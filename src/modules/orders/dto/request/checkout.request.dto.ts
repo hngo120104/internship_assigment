@@ -1,4 +1,4 @@
-import { Exclude, Expose, Type } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import {
   ArrayMinSize,
   ArrayUnique,
@@ -9,7 +9,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PaymentMethod } from '../../entities/order.entity';
-import { OrderItemCreateRequestDto } from './order-item-create.request.dto';
+import { CheckoutItemRequestDto } from './checkout-item.request.dto';
 
 export class CheckoutRequestDto {
   @Expose({ name: 'ship_address_id' })
@@ -20,13 +20,13 @@ export class CheckoutRequestDto {
   @Expose({ name: 'order_items' })
   @IsNotEmpty()
   @IsArray()
-  @ArrayUnique((item: OrderItemCreateRequestDto) => item.variantId, {
-    message: 'Product variant cannot be duplicated.',
+  @ArrayUnique((item: CheckoutItemRequestDto) => item.cartItemId, {
+    message: 'Cart item cannot be duplicated.',
   })
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
-  @Type(() => OrderItemCreateRequestDto)
-  orderItems!: OrderItemCreateRequestDto[];
+  @Type(() => CheckoutItemRequestDto)
+  checkoutItems!: CheckoutItemRequestDto[];
 
   @Expose({ name: 'payment_method' })
   @IsNotEmpty()

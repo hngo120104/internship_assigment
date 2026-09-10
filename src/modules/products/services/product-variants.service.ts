@@ -230,7 +230,6 @@ export class ProductVariantsService {
       this.validateVariantHasSufficientStock(item.variant, item.quantity);
       await this.validateVariantQuantity(item.variant.id, item.quantity);
     }
-
     const reservedResult =
       await this.productVariantsRepository.reserveVariantsAmountByVariantIdsAtomically(
         variantItems.map((item) => {
@@ -240,8 +239,9 @@ export class ProductVariantsService {
           };
         }),
       );
+
     if (reservedResult !== variantItems.length)
-      throw new NotFoundException('Product variant not found.');
+      throw new NotFoundException('Reserve failed. Product variant not found.');
     return await this.findActiveVariantsEntitiesByIds(
       variantItems.map((item) => item.variant.id),
     );

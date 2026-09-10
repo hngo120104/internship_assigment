@@ -19,7 +19,7 @@ export class ProductSearchResponseDto {
   productName!: string;
 
   @Expose()
-  thumbnail!: string;
+  thumbnail?: string;
 
   @Expose({ name: 'min_price' })
   @Transform(
