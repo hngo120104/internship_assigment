@@ -3,6 +3,7 @@ import { ProductCategory } from '../entities/product-category.entity';
 import { In, QueryDeepPartialEntity, Repository } from 'typeorm';
 import { Product } from '../entities/product.entity';
 import { Category } from '../../categories/entities/category.entity';
+import { Transactional } from 'typeorm-transactional';
 
 export class ProductCategoriesRepository {
   constructor(
@@ -27,7 +28,8 @@ export class ProductCategoriesRepository {
     );
   }
 
-  async upsertProductCategories(productId: string, categoryIds: string[]) {
+  @Transactional()
+  async replaceProductCategories(productId: string, categoryIds: string[]) {
     await this.productCategoriesRepository.update(
       {
         productId: productId,
@@ -41,6 +43,7 @@ export class ProductCategoriesRepository {
         isDeleted: false,
       }),
     );
+    console.log(values);
     const upsertResult = this.productCategoriesRepository
       .createQueryBuilder()
       .insert()

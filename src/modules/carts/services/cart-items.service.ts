@@ -13,7 +13,6 @@ import { UserCartResponseDto } from '../dto/response/cart.response.dto';
 import { Transactional } from 'typeorm-transactional';
 import { toResponseDto } from '../../../utils/response-dto.mapper';
 import { DeleteCountResponseDto } from '../../../common/dto/delete-count.response.dto';
-import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
 
 @Injectable()
@@ -23,37 +22,65 @@ export class CartItemsService {
     private readonly productVariantsService: ProductVariantsService,
   ) {}
 
-  async getUserActiveCart(userId: string): Promise<UserCartResponseDto> {
-    const foundUserActiveCartItems =
-      await this.findAllUserActiveCartItemEntitiesByUserId(userId);
+  async findAllCartItemsByUserId(
+    userId: string,
+    page: number,
+    size: number,
+  ): Promise<ListResponseDto<UserCartResponseDto>> {
+    const [foundUserCartItems, count] =
+      await this.cartItemsRepository.findAllUserActiveCartItemsByUserId(
+        userId,
+        page,
+        size,
+      );
+    const userCartObj = {
+      userId: userId,
+      cartItems: foundUserCartItems,
+    };
+    const response = toResponseDto(UserCartResponseDto, userCartObj);
+    return new ListResponseDto([response], count, size, page);
+  }
+
+  async getUserActiveCart(
+    userId: string,
+    page: number,
+    size: number,
+  ): Promise<ListResponseDto<UserCartResponseDto>> {
+    const [foundUserActiveCartItems, count] =
+      await this.findAllUserActiveCartItemEntitiesByUserId(userId, page, size);
     const userCartObj = {
       userId: userId,
       cartItems: foundUserActiveCartItems,
     };
-    return toResponseDto(UserCartResponseDto, userCartObj);
+    const response = toResponseDto(UserCartResponseDto, userCartObj);
+    return new ListResponseDto([response], count, size, page);
   }
 
-  async findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow(
+  async findActiveCartItemsEntitiesByUserIdAndIdsOrThrow(
     userId: string,
     cartItemIds: string[],
     expectedCount: number,
   ): Promise<CartItem[]> {
-    const foundLockedCartItems =
-      await this.cartItemsRepository.findActiveCartItemsByUserIdAndIdsAndLock(
+    const cartItems =
+      await this.cartItemsRepository.findActiveCartItemsByUserIdAndIds(
         userId,
         cartItemIds,
       );
-    if (foundLockedCartItems.length !== expectedCount) {
+    if (cartItems.length !== expectedCount) {
       throw new BadRequestException('One or more cart items not found.');
     }
-    return foundLockedCartItems;
+    return cartItems;
   }
 
   private async findAllUserActiveCartItemEntitiesByUserId(
     userId: string,
-  ): Promise<CartItem[]> {
+    page: number,
+    size: number,
+  ): Promise<[CartItem[], number]> {
     return await this.cartItemsRepository.findAllUserActiveCartItemsByUserId(
       userId,
+      page,
+      size,
     );
   }
 
@@ -61,54 +88,27 @@ export class CartItemsService {
     userId: string,
     cartItemId: string,
   ): Promise<CartItem> {
-    const foundCartItem =
+    const activeCartItem =
       await this.cartItemsRepository.findActiveCartItemByUserIdAndCartItemId(
         userId,
         cartItemId,
       );
-    if (!foundCartItem)
+    if (!activeCartItem)
       throw new NotFoundException(`User's cart item not found.`);
-    return foundCartItem;
+    return activeCartItem;
   }
 
   private async findActiveCartItemEntityByUserIdAndVariantIdOrThrow(
     userId: string,
     variantId: string,
   ): Promise<CartItem> {
-    const foundCartItem =
+    const activeCartItem =
       await this.cartItemsRepository.findActiveCartItemByUserIdAndVariantId(
         userId,
         variantId,
       );
-    if (!foundCartItem) throw new NotFoundException('Cart item not found.');
-    return foundCartItem;
-  }
-
-  //TODO: revise this
-  async findAllActiveUserCarts(
-    paginationRequest: PaginationQueryDto,
-  ): Promise<ListResponseDto<UserCartResponseDto>> {
-    const [activeCartItems, count] =
-      await this.cartItemsRepository.findAllActiveCartItemsPaginated(
-        paginationRequest.page,
-        paginationRequest.size,
-      );
-    const itemsByUserId = new Map<string, CartItem[]>();
-    for (const cartItem of activeCartItems) {
-      const userCartItems = itemsByUserId.get(cartItem.userId) ?? [];
-      userCartItems.push(cartItem);
-      itemsByUserId.set(cartItem.userId, userCartItems);
-    }
-
-    const response = [...itemsByUserId].map(([userId, cartItems]) =>
-      toResponseDto(UserCartResponseDto, { userId, cartItems }),
-    );
-    return new ListResponseDto(
-      response,
-      count,
-      paginationRequest.page,
-      paginationRequest.size,
-    );
+    if (!activeCartItem) throw new NotFoundException('Cart item not found.');
+    return activeCartItem;
   }
 
   @Transactional()
@@ -116,8 +116,8 @@ export class CartItemsService {
     userId: string,
     cartItemsAddDto: CartItemsAddRequestDto,
   ): Promise<CartItemResponseDto> {
-    const foundLockedCartItem =
-      await this.cartItemsRepository.findActiveCartItemByUserIdAndVariantIdAndLockForUpdate(
+    const activeCartItem =
+      await this.cartItemsRepository.findActiveCartItemByUserIdAndVariantId(
         userId,
         cartItemsAddDto.variantId,
       );
@@ -125,10 +125,10 @@ export class CartItemsService {
       cartItemsAddDto.variantId,
       cartItemsAddDto.quantity,
     );
-    if (foundLockedCartItem) {
+    if (activeCartItem) {
       return await this.increaseCartItemQuantity(
         cartItemsAddDto,
-        foundLockedCartItem,
+        activeCartItem,
       );
     }
 
@@ -168,7 +168,7 @@ export class CartItemsService {
     userId: string,
     cartItemsUpdateDto: CartItemsUpdateRequestDto,
   ): Promise<CartItemResponseDto> {
-    const foundCartItemBelongsToUser =
+    const activeCartItemBelongsToUser =
       await this.findActiveCartItemEntityByUserIdAndCartItemIdOrThrow(
         userId,
         cartItemId,
@@ -176,7 +176,7 @@ export class CartItemsService {
     const updatedQuantity = cartItemsUpdateDto.quantity;
 
     await this.productVariantsService.validateVariantQuantity(
-      foundCartItemBelongsToUser.variantId,
+      activeCartItemBelongsToUser.variantId,
       updatedQuantity,
     );
     const updateResult =

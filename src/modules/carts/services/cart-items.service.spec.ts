@@ -15,7 +15,7 @@ describe('CartItemsService', () => {
   let service: CartItemsService;
   let cartItemsRepository: {
     findActiveCartItemByUserIdAndVariantId: jest.Mock;
-    findActiveCartItemByUserIdAndVariantIdAndLockForUpdate: jest.Mock;
+    findActiveCartItemByUserIdAndVariantId: jest.Mock;
     createCartItem: jest.Mock;
     saveCartItem: jest.Mock;
     userSoftDeleteCartItem: jest.Mock;
@@ -26,7 +26,7 @@ describe('CartItemsService', () => {
   beforeEach(async () => {
     cartItemsRepository = {
       findActiveCartItemByUserIdAndVariantId: jest.fn(),
-      findActiveCartItemByUserIdAndVariantIdAndLockForUpdate: jest.fn(),
+      findActiveCartItemByUserIdAndVariantId: jest.fn(),
       createCartItem: jest.fn(),
       saveCartItem: jest.fn(),
       userSoftDeleteCartItem: jest.fn(),
@@ -53,7 +53,7 @@ describe('CartItemsService', () => {
       quantity: 2,
       variant: { price: 100, product: { id: 'product-id' } },
     };
-    cartItemsRepository.findActiveCartItemByUserIdAndVariantIdAndLockForUpdate.mockResolvedValue(
+    cartItemsRepository.findActiveCartItemByUserIdAndVariantId.mockResolvedValue(
       null,
     );
     cartItemsRepository.findActiveCartItemByUserIdAndVariantId.mockResolvedValue(
@@ -88,7 +88,7 @@ describe('CartItemsService', () => {
       quantity: 2,
       variant: { price: 100, product: { id: 'product-id' } },
     };
-    cartItemsRepository.findActiveCartItemByUserIdAndVariantIdAndLockForUpdate.mockResolvedValue(
+    cartItemsRepository.findActiveCartItemByUserIdAndVariantId.mockResolvedValue(
       existingItem,
     );
     cartItemsRepository.saveCartItem.mockImplementation((cartItem: object) =>

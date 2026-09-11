@@ -62,7 +62,7 @@ describe('ProductsService', () => {
       },
     ];
 
-    const result = await service.createProductOrThrow('user-id', {
+    const result = await service.createProductOrThrow('shop-id', {
       name: 'Product name',
       categoryIds: [],
       photos: [],
@@ -71,9 +71,9 @@ describe('ProductsService', () => {
     });
 
     expect(variantsService.createProductVariants).toHaveBeenCalledWith(
-      'user-id',
       'product-id',
       variants,
+      'shop-id',
     );
     expect(result.variants).toEqual([
       expect.objectContaining({ id: 'variant-id', price: 100, amount: 5 }),

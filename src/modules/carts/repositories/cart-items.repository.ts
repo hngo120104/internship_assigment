@@ -22,53 +22,34 @@ export class CartItemsRepository {
         isDeleted: false,
       },
       relations: {
-        variant: { photo: true },
+        variant: { product: { photos: true } },
         user: true,
       },
     });
   }
 
-  async findActiveCartItemByUserIdAndVariantIdAndLockForUpdate(
-    userId: string,
-    variantId: string,
-  ): Promise<CartItem | null> {
-    return await this.cartItemsRepository
-      .createQueryBuilder('cartItems')
-      .setLock('pessimistic_write')
-      .where('cartItems.userId = :userId', { userId })
-      .andWhere('cartItems.variantId = :variantId', {
-        variantId: variantId,
-      })
-      .andWhere('cartItems.cartItemStatus = :status', {
-        status: CartItemStatus.ACTIVE,
-      })
-      .andWhere('cartItems.isDeleted = false')
-      .getOne();
-  }
-
-  async findActiveCartItemsByUserIdAndIdsAndLock(
+  async findActiveCartItemsByUserIdAndIds(
     userId: string,
     cartItemIds: string[],
   ): Promise<CartItem[]> {
-    return await this.cartItemsRepository
-      .createQueryBuilder('cart_items')
-      .setLock('pessimistic_write')
-      .where('cart_items.userId = :userId', { userId })
-      .andWhere('cart_items.id IN (:...cartItemIds)', {
-        cartItemIds: cartItemIds,
-      })
-      .andWhere('cart_items.cartItemStatus = :status', {
-        status: CartItemStatus.ACTIVE,
-      })
-      .andWhere('cart_items.isDeleted = false')
-      .orderBy('cart_items.id', 'ASC')
-      .getMany();
+    return await this.cartItemsRepository.find({
+      select: { id: true, variantId: true, quantity: true },
+      where: {
+        id: In(cartItemIds),
+        userId: userId,
+        isDeleted: false,
+        cartItemStatus: CartItemStatus.ACTIVE,
+      },
+      order: { updatedAt: 'DESC' },
+    });
   }
 
   async findAllUserActiveCartItemsByUserId(
     userId: string,
-  ): Promise<CartItem[]> {
-    return await this.cartItemsRepository.find({
+    page: number,
+    size: number,
+  ): Promise<[CartItem[], number]> {
+    return await this.cartItemsRepository.findAndCount({
       where: {
         userId: userId,
         isDeleted: false,
@@ -80,6 +61,8 @@ export class CartItemsRepository {
       order: {
         updatedAt: 'DESC',
       },
+      take: size,
+      skip: (page - 1) * size,
     });
   }
 

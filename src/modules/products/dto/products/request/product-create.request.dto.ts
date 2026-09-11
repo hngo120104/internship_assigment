@@ -43,12 +43,12 @@ export class ProductCreateRequestDto {
   @ArrayMinSize(1)
   @ArrayUnique(
     (variant: ProductVariantCreateRequestDto) =>
-      `${variant.variantName ?? ''.trim().toLowerCase()}`,
+      (variant.variantName ?? '').trim().toLowerCase(),
     { message: 'Product variants cannot be duplicated.' },
   )
   @ValidateNested({ each: true })
   @Type(() => ProductVariantCreateRequestDto)
-  variants!: ProductVariantCreateRequestDto[];
+  variants?: ProductVariantCreateRequestDto[];
 
   @IsNotEmpty()
   @IsBoolean()

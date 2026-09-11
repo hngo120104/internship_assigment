@@ -87,7 +87,9 @@ export class ProductsController {
   async getProductDetails(
     @Param('productId') productId: string,
   ): Promise<ProductResponseDto> {
-    return await this.productsService.findActiveProductByIdOrThrow(productId);
+    return await this.productsService.findActiveProductWithActiveCategoriesOrThrow(
+      productId,
+    );
   }
 
   @Patch(':productId')
@@ -106,12 +108,12 @@ export class ProductsController {
 
   @Put(':productId/categories')
   @Roles(RoleType.SELLER)
-  async updateShopProductCategoriesOrThrow(
+  async sellerUpdateProductCategories(
     @CurrentUser() user: CurrentUserPayload,
     @Param('productId') updateProductId: string,
     @Body() requestDto: ProductCategoriesUpdateRequestDto,
   ): Promise<ProductResponseDto> {
-    return await this.productsService.updateShopProductCategoriesOrThrow(
+    return await this.productsService.sellerUpdateProductCategoriesOrThrow(
       updateProductId,
       requestDto.categoryIds,
       user.shopId,

@@ -11,9 +11,10 @@ export class CartItemCronJob {
   @Cron('0 0 */1 * * *')
   async clearUserAbandonedCartItems() {
     this.logger.debug('Cleaning up user abandoned cart items');
-
     try {
-      await this.cartItemsService.cleanupAbandonedCartItems();
+      if (process.env.THIS_CRON_LOCK) {
+        await this.cartItemsService.cleanupAbandonedCartItems();
+      }
     } catch (error) {
       this.logger.error('Failed to clean up abandoned cart item', error);
     }

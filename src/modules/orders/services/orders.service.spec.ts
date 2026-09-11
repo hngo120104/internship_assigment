@@ -32,7 +32,7 @@ describe('OrdersService order creation flows', () => {
     findActiveUserAddressEntityByIdOrThrow: jest.Mock;
   };
   let cartItemsService: {
-    findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow: jest.Mock;
+    findActiveCartItemsEntitiesByUserIdAndIdsOrThrow: jest.Mock;
     markUserCartItemsAsOrderedOrThrow: jest.Mock;
   };
   let shopsService: { findShopIdByUserIdOrThrow: jest.Mock };
@@ -52,7 +52,7 @@ describe('OrdersService order creation flows', () => {
       findActiveUserAddressEntityByIdOrThrow: jest.fn(),
     };
     cartItemsService = {
-      findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow: jest.fn(),
+      findActiveCartItemsEntitiesByUserIdAndIdsOrThrow: jest.fn(),
       markUserCartItemsAsOrderedOrThrow: jest.fn(),
     };
     shopsService = { findShopIdByUserIdOrThrow: jest.fn() };
@@ -226,7 +226,7 @@ describe('OrdersService order creation flows', () => {
     userAddressesService.findActiveUserAddressEntityByIdOrThrow.mockResolvedValue(
       address,
     );
-    cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow.mockResolvedValue(
+    cartItemsService.findActiveCartItemsEntitiesByUserIdAndIdsOrThrow.mockResolvedValue(
       cartItems,
     );
     productsService.findPurchasableVariantsEntitiesByIdsOrThrow.mockResolvedValue(
@@ -262,14 +262,14 @@ describe('OrdersService order creation flows', () => {
     const result = await service.checkoutCart('user-id', {
       shipAddressId: address.id,
       paymentMethod: PaymentMethod.COD,
-      orderItems: [
+      checkoutItems: [
         { cartItemId: 'cart-b' },
         { cartItemId: 'cart-a', note: 'Fragile' },
       ],
     });
 
     expect(
-      cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow,
+      cartItemsService.findActiveCartItemsEntitiesByUserIdAndIdsOrThrow,
     ).toHaveBeenCalledWith('user-id', ['cart-b', 'cart-a'], 2);
     expect(
       productsService.findPurchasableVariantsEntitiesByIdsOrThrow,
@@ -303,7 +303,7 @@ describe('OrdersService order creation flows', () => {
         id: 'address-id',
       },
     );
-    cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow.mockRejectedValue(
+    cartItemsService.findActiveCartItemsEntitiesByUserIdAndIdsOrThrow.mockRejectedValue(
       new BadRequestException('Cart item quantity has changed.'),
     );
 
@@ -311,7 +311,10 @@ describe('OrdersService order creation flows', () => {
       service.checkoutCart('user-id', {
         shipAddressId: 'address-id',
         paymentMethod: PaymentMethod.COD,
-        orderItems: [{ cartItemId: 'cart-a' }],
+        checkoutItems: [
+          { cartItemId: 'cart-b' },
+          { cartItemId: 'cart-a', note: 'Fragile' },
+        ],
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(

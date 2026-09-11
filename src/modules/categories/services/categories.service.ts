@@ -47,11 +47,11 @@ export class CategoriesService {
   async checkCategoriesExistingByIdsOrThrow(
     categoryIds: string[],
   ): Promise<boolean> {
-    const matched =
-      await this.categoriesRepository.checkCategoryNameExistingMatched(
+    const existing =
+      await this.categoriesRepository.checkCategoriesExistingMatched(
         categoryIds,
       );
-    if (!matched) {
+    if (!existing) {
       throw new BadRequestException('One or more categories might not exist.');
     }
     return true;

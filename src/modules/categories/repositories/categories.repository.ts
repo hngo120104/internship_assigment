@@ -12,13 +12,13 @@ export class CategoriesRepository {
     private readonly categoriesRepository: Repository<Category>,
   ) {}
 
-  async checkCategoryNameExistingMatched(
+  async checkCategoriesExistingMatched(
     categoryIds: string[],
   ): Promise<boolean> {
-    const foundCategories = await this.categoriesRepository.count({
-      where: { id: In(categoryIds) },
+    const foundCategoriesCount = await this.categoriesRepository.count({
+      where: { id: In(categoryIds), isActive: true },
     });
-    return foundCategories !== categoryIds.length;
+    return foundCategoriesCount === categoryIds.length;
   }
 
   async checkCategoryNameExisting(name: string): Promise<boolean> {

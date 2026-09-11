@@ -19,26 +19,33 @@ import { CartItemsUpdateRequestDto } from '../dto/request/cart-items-update.requ
 import { DeleteCountResponseDto } from '../../../common/dto/delete-count.response.dto';
 import { PaginationQueryDto } from '../../../common/dto/pagination.request.dto';
 import { ListResponseDto } from '../../../common/dto/list.response.dto';
-import { Roles } from '../../auth/guards/role/role.decorator';
-import { RoleType } from '../../users/entities/role.entity';
 
 @Controller('carts')
 export class CartsController {
   constructor(private readonly cartItemsService: CartItemsService) {}
 
+  @Get(':userId')
+  async findUserCartItemsByUserId(
+    @Query('userId') userId: string,
+    @Query() paginationQueryDto: PaginationQueryDto,
+  ): Promise<ListResponseDto<UserCartResponseDto>> {
+    return this.cartItemsService.findAllCartItemsByUserId(
+      userId,
+      paginationQueryDto.page,
+      paginationQueryDto.size,
+    );
+  }
+
   @Get()
   async getUserActiveCart(
     @CurrentUser() user: CurrentUserPayload,
-  ): Promise<UserCartResponseDto> {
-    return this.cartItemsService.getUserActiveCart(user.userId);
-  }
-
-  @Get('users')
-  @Roles(RoleType.ADMIN)
-  async findActiveUsersCarts(
-    @Query() paginationRequest: PaginationQueryDto,
+    @Query() paginationQueryDto: PaginationQueryDto,
   ): Promise<ListResponseDto<UserCartResponseDto>> {
-    return this.cartItemsService.findAllActiveUserCarts(paginationRequest);
+    return this.cartItemsService.getUserActiveCart(
+      user.userId,
+      paginationQueryDto.page,
+      paginationQueryDto.size,
+    );
   }
 
   @Post()

@@ -319,6 +319,48 @@ export class ProductsRepository {
     return this.productsRepository.save(product);
   }
 
+  private createProductDetailsQuery(
+    productId: string,
+  ): SelectQueryBuilder<Product> {
+    return this.productsRepository
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.variants', 'v')
+      .leftJoinAndSelect('p.photos', 'pp')
+      .leftJoinAndSelect(
+        'p.productCategories',
+        'pc',
+        'pc.isDeleted = :pcIsDeleted',
+        {
+          pcIsDeleted: false,
+        },
+      )
+      .leftJoinAndSelect('pc.category', 'c', 'c.isActive = :cIsActive', {
+        cIsActive: true,
+      })
+      .where('p.id = :productId', { productId: productId });
+  }
+
+  //TODO: replace this function where appliable
+  async findProductWithActiveCategoriesById(
+    productId: string,
+  ): Promise<Product | null> {
+    const query = this.createProductDetailsQuery(productId);
+    return await query.getOne();
+  }
+
+  async findActiveProductWithActiveCategoriesById(
+    productId: string,
+  ): Promise<Product | null> {
+    const query = this.createProductDetailsQuery(productId).andWhere(
+      'p.isActive = :pIsActive AND p.isDeleted = :pIsDeleted',
+      {
+        pIsActive: true,
+        pIsDeleted: false,
+      },
+    );
+    return await query.getOne();
+  }
+
   async findAllNewestActiveProducts(
     page: number,
     size: number,
@@ -369,28 +411,14 @@ export class ProductsRepository {
     return [items, count ?? 0];
   }
 
-  async findActiveProductById(productId: string): Promise<Product | null> {
-    const foundProduct = await this.productsRepository.findOne({
-      where: {
-        id: productId,
-        isActive: true,
-        isDeleted: false,
-        productCategories: {
-          isDeleted: false,
-        },
-      },
-      relations: {
-        shop: true,
-        photos: true,
-        variants: {
-          photo: true,
-        },
-        productCategories: {
-          category: true,
-        },
-      },
+  async checkProductOfShop(
+    productId: string,
+    shopId: string,
+  ): Promise<boolean> {
+    return await this.productsRepository.existsBy({
+      id: productId,
+      shopId: shopId,
     });
-    return foundProduct;
   }
 
   async updateShopProductById(

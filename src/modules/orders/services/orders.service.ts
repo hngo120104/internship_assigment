@@ -197,7 +197,7 @@ export class OrdersService {
         checkoutRequestDto.shipAddressId,
       );
     const cartItems =
-      await this.cartItemsService.findLockedActiveCartItemsEntitiesByUserIdAndIdsOrThrow(
+      await this.cartItemsService.findActiveCartItemsEntitiesByUserIdAndIdsOrThrow(
         userId,
         cartItemIds,
         cartItemIds.length,

@@ -78,12 +78,14 @@ export class ProductsService {
       shopId,
       productCreateDto,
     );
-    // createdProduct.variants =
-    //   await this.productVariantsService.createProductVariants(
-    //     createdProduct.id,
-    //     productCreateDto.variants,
-    //     shopId,
-    //   );
+    if (productCreateDto.variants) {
+      createdProduct.variants =
+        await this.productVariantsService.createProductVariants(
+          createdProduct.id,
+          productCreateDto.variants,
+          shopId,
+        );
+    }
     const productCategories =
       await this.categoriesService.findActiveCategoriesEntitiesByIdsOrThrow(
         productCreateDto.categoryIds,
@@ -119,6 +121,35 @@ export class ProductsService {
       productCreateDto,
     );
     return toResponseDto(ProductResponseDto, createdProduct);
+  }
+
+  async findProductEntityWithActiveCategoriesOrThrow(
+    productId: string,
+  ): Promise<Product> {
+    const product =
+      await this.productsRepository.findProductWithActiveCategoriesById(
+        productId,
+      );
+    if (!product) {
+      throw new NotFoundException('Product not found.');
+    }
+    return product;
+  }
+
+  async findProductWithActiveCategoriesOrThrow(
+    productId: string,
+  ): Promise<ProductResponseDto> {
+    const product =
+      await this.findProductWithActiveCategoriesOrThrow(productId);
+    return toResponseDto(ProductResponseDto, product);
+  }
+
+  async findActiveProductWithActiveCategoriesOrThrow(
+    productId: string,
+  ): Promise<ProductResponseDto> {
+    const product =
+      await this.findActiveProductWithActiveCategoriesOrThrow(productId);
+    return toResponseDto(ProductResponseDto, product);
   }
 
   async findNewestActiveProducts(
@@ -163,27 +194,16 @@ export class ProductsService {
     );
   }
 
-  async findActiveProductByIdOrThrow(
+  async checkProductOfShop(
     productId: string,
-  ): Promise<ProductResponseDto> {
-    const foundProduct =
-      await this.productsRepository.findActiveProductById(productId);
-    if (!foundProduct) throw new NotFoundException('Product not found.');
-    return toResponseDto(ProductResponseDto, foundProduct);
-  }
-
-  async findActiveProductEntityByIdOrThrow(
-    productId: string,
-  ): Promise<Product> {
-    const foundProduct =
-      await this.productsRepository.findActiveProductById(productId);
-    if (!foundProduct) throw new NotFoundException('Product not found.');
-
-    return foundProduct;
+    shopId: string,
+  ): Promise<boolean> {
+    return await this.productsRepository.checkProductOfShop(productId, shopId);
   }
 
   //TODO: need better validate
-  async updateShopProductCategoriesOrThrow(
+  @Transactional()
+  async sellerUpdateProductCategoriesOrThrow(
     productId: string,
     categoryIds: string[],
     shopId?: string,
@@ -194,17 +214,16 @@ export class ProductsService {
     await this.categoriesService.checkCategoriesExistingByIdsOrThrow(
       categoryIds,
     );
-    const product = await this.findActiveProductEntityByIdOrThrow(productId);
-    if (product.shopId !== shopId) {
-      throw new NotFoundException('Product does not exist in your shop.');
+    if (!(await this.checkProductOfShop(productId, shopId))) {
+      throw new NotFoundException(`Shop doesn't have this product.`);
     }
-    const upsertResult =
-      await this.productCategoriesRepository.upsertProductCategories(
-        productId,
-        categoryIds,
-      );
-    console.log(upsertResult);
-    return this.findActiveProductByIdOrThrow(productId);
+    await this.productCategoriesRepository.replaceProductCategories(
+      productId,
+      categoryIds,
+    );
+    const product =
+      await this.findProductEntityWithActiveCategoriesOrThrow(productId);
+    return toResponseDto(ProductResponseDto, product);
   }
 
   async updateShopProductByIdOrThrow(
@@ -224,7 +243,9 @@ export class ProductsService {
       throw new NotFoundException('Product not found.');
     }
     const updatedProduct =
-      await this.productsRepository.findActiveProductById(productId);
+      await this.productsRepository.findProductWithActiveCategoriesById(
+        productId,
+      );
     if (!updatedProduct) {
       throw new NotFoundException('Updated product not found.');
     }
