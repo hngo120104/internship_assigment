@@ -101,7 +101,7 @@ export class ShopsService {
     const foundShop = await this.shopsRepository.findActiveShopByUserId(userId);
 
     if (!foundShop) {
-      throw new NotFoundException('User does not have shop');
+      throw new NotFoundException('User account is not a seller');
     }
 
     return toResponseDto(ShopResponseDto, foundShop);
@@ -111,7 +111,7 @@ export class ShopsService {
     const foundShop = await this.shopsRepository.findActiveShopByUserId(userId);
 
     if (!foundShop) {
-      throw new NotFoundException('User does not have shop');
+      throw new NotFoundException('User account is not a seller');
     }
 
     return foundShop;

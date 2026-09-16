@@ -17,6 +17,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SearchModule } from './modules/search/search.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import { SearchModule } from './modules/search/search.module';
           database: process.env.DB_NAME || 'internship_assignment',
           autoLoadEntities: true,
           synchronize: false,
-          migrations: ['dist/migrations/*.js'],
+          migrations: ['migrations/*.js'],
           migrationsRun: false,
           logging: false,
         };
@@ -54,6 +55,7 @@ import { SearchModule } from './modules/search/search.module';
     CategoriesModule,
     AdminModule,
     SearchModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [

@@ -29,7 +29,7 @@ describe('ProductVariantsService stock reservation', () => {
       {} as ProductsRepository,
       {} as ShopsRepository,
     );
-    jest.spyOn(service, 'validateVariantQuantity').mockResolvedValue();
+    jest.spyOn(service, 'validateVariantsQuantity').mockResolvedValue();
   });
 
   it('returns refreshed variants when every requested stock row is updated', async () => {

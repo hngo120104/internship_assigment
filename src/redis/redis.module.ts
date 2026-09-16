@@ -1,0 +1,26 @@
+import { Module, OnApplicationShutdown } from '@nestjs/common';
+import { RedisLockService } from './services/redis-lock.service';
+import Redis from 'ioredis';
+import { REDIS_CLIENT } from './redis.constants';
+
+@Module({
+  providers: [
+    {
+      provide: REDIS_CLIENT,
+      useFactory: () => {
+        return new Redis({
+          host: process.env.REDIS_HOST || 'localhost',
+          port: Number(process.env.REDIS_PORT) || 6379,
+          // password: 'your_secure_password',
+        });
+      },
+    },
+    RedisLockService,
+  ],
+  exports: [REDIS_CLIENT, RedisLockService],
+})
+export class RedisModule implements OnApplicationShutdown {
+  constructor() {}
+
+  onApplicationShutdown() {}
+}

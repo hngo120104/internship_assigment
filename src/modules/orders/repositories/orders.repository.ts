@@ -120,17 +120,16 @@ export class OrdersRepository {
     });
   }
 
-  async createOrder(
+  createOrder(
     userId: string,
     shopId: string,
-    shipAddressId: string,
     shippingAddress: UserAddress,
     paymentMethod: PaymentMethod,
-  ): Promise<Order> {
-    const createdOrder = this.ordersRepository.create({
+  ): Order {
+    return this.ordersRepository.create({
       userId,
       shopId,
-      shipAddressId: shipAddressId,
+      shippingAddressId: shippingAddress.id,
       shipAddress: shippingAddress,
       discount: 0,
       shippingFee: 0,
@@ -138,7 +137,6 @@ export class OrdersRepository {
       paymentStatus: PaymentStatus.PENDING,
       paymentMethod: paymentMethod,
     });
-    return await this.ordersRepository.save(createdOrder);
   }
 
   async shopConfirmOrderByOrderId(
@@ -174,7 +172,7 @@ export class OrdersRepository {
     return result.affected === 1;
   }
 
-  async saveOrder(order: Order): Promise<Order> {
-    return await this.ordersRepository.save(order);
+  async saveOrders(orders: Order[]): Promise<Order[]> {
+    return await this.ordersRepository.save(orders);
   }
 }

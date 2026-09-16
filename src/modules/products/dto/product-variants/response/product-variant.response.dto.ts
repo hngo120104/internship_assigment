@@ -27,8 +27,8 @@ export class ProductVariantResponseDto {
   @Expose()
   @Transform(({ obj }: TransformFnParams) => {
     const variant = obj as ProductVariant;
-    const photo = variant?.photo;
-    return [photo.id ?? null, photo.url ?? null];
+    const photo = variant.photo;
+    return [photo?.id, photo?.url];
   })
   photo!: { id: string; thumbnail: string };
 

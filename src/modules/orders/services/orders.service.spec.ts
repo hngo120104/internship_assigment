@@ -97,7 +97,7 @@ describe('OrdersService order creation flows', () => {
     await service.buyNow('user-id', {
       variantId: 'variant-id',
       quantity: 2,
-      shipAddressId: address.id,
+      shippingAddressId: address.id,
       paymentMethod: PaymentMethod.COD,
       note: 'Handle with care',
     });
@@ -131,7 +131,7 @@ describe('OrdersService order creation flows', () => {
       service.buyNow('user-id', {
         variantId: 'variant-id',
         quantity: 10,
-        shipAddressId: 'address-id',
+        shippingAddressId: 'address-id',
         paymentMethod: PaymentMethod.COD,
       }),
     ).rejects.toThrow('Insufficient stock');
@@ -153,7 +153,7 @@ describe('OrdersService order creation flows', () => {
       id: 'order-id',
       userId: 'user-id',
       shopId: variant.product.shopId,
-      shipAddressId: address.id,
+      shippingAddressId: address.id,
       paymentMethod: PaymentMethod.BANKING,
     };
     const orderItem = {
@@ -182,7 +182,7 @@ describe('OrdersService order creation flows', () => {
     const result = await service.buyNow('user-id', {
       variantId: variant.id,
       quantity: 2,
-      shipAddressId: address.id,
+      shippingAddressId: address.id,
       paymentMethod: PaymentMethod.BANKING,
       note: 'Gift wrap',
     });
@@ -240,7 +240,7 @@ describe('OrdersService order creation flows', () => {
       (
         userId: string,
         shopId: string,
-        shipAddressId: string,
+        shippingAddressId: string,
         shippingAddress: object,
         paymentMethod: PaymentMethod,
       ) =>
@@ -248,7 +248,7 @@ describe('OrdersService order creation flows', () => {
           id: `order-${shopId}`,
           userId,
           shopId,
-          shipAddressId,
+          shippingAddressId,
           shipAddress: shippingAddress,
           paymentMethod,
         }),
@@ -260,7 +260,7 @@ describe('OrdersService order creation flows', () => {
     cartItemsService.markUserCartItemsAsOrderedOrThrow.mockResolvedValue(2);
 
     const result = await service.checkoutCart('user-id', {
-      shipAddressId: address.id,
+      shippingAddressId: address.id,
       paymentMethod: PaymentMethod.COD,
       checkoutItems: [
         { cartItemId: 'cart-b' },
@@ -309,7 +309,7 @@ describe('OrdersService order creation flows', () => {
 
     await expect(
       service.checkoutCart('user-id', {
-        shipAddressId: 'address-id',
+        shippingAddressId: 'address-id',
         paymentMethod: PaymentMethod.COD,
         checkoutItems: [
           { cartItemId: 'cart-b' },

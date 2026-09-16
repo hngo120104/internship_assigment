@@ -7,7 +7,7 @@ export class BuyNowRequestDto extends OrderItemCreateRequestDto {
   @Expose({ name: 'ship_address_id' })
   @IsUUID()
   @IsNotEmpty()
-  shipAddressId!: string;
+  shippingAddressId!: string;
 
   @IsNotEmpty()
   @Expose({ name: 'payment_method' })

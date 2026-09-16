@@ -37,7 +37,7 @@ export class ProductsService {
     shopId?: string,
   ): Promise<ListResponseDto<ProductSearchResponseDto>> {
     if (!shopId) {
-      throw new UnauthorizedException('User does not have shop.');
+      throw new UnauthorizedException('User account is not a seller.');
     }
     const [userShopProducts, count] =
       await this.productsRepository.findAllUserShopProductsByShopId(
@@ -68,6 +68,20 @@ export class ProductsService {
         productPhotosInsertDto,
       );
     createdProduct.photos = insertedPhotos;
+  }
+
+  private async validateShopExistsAndHasProduct(
+    shopId: string,
+    productId: string,
+  ): Promise<Product> {
+    const product = await this.productsRepository.findProductByIdAndShopId(
+      productId,
+      shopId,
+    );
+    if (!product) {
+      throw new NotFoundException('Product not found.');
+    }
+    return product;
   }
 
   private async processCreateProduct(
@@ -114,7 +128,7 @@ export class ProductsService {
     productCreateDto: ProductCreateRequestDto,
   ): Promise<ProductResponseDto> {
     if (!shopId) {
-      throw new UnauthorizedException('User does not have shop.');
+      throw new UnauthorizedException('User account is not a seller.');
     }
     const createdProduct = await this.processCreateProduct(
       shopId,
@@ -148,7 +162,12 @@ export class ProductsService {
     productId: string,
   ): Promise<ProductResponseDto> {
     const product =
-      await this.findActiveProductWithActiveCategoriesOrThrow(productId);
+      await this.productsRepository.findActiveProductWithActiveCategoriesById(
+        productId,
+      );
+    if (!product) {
+      throw new NotFoundException('No valid products found');
+    }
     return toResponseDto(ProductResponseDto, product);
   }
 
@@ -201,7 +220,6 @@ export class ProductsService {
     return await this.productsRepository.checkProductOfShop(productId, shopId);
   }
 
-  //TODO: need better validate
   @Transactional()
   async sellerUpdateProductCategoriesOrThrow(
     productId: string,
@@ -209,7 +227,7 @@ export class ProductsService {
     shopId?: string,
   ): Promise<ProductResponseDto> {
     if (!shopId) {
-      throw new UnauthorizedException('User does not have shop.');
+      throw new UnauthorizedException('User account is not a seller.');
     }
     await this.categoriesService.checkCategoriesExistingByIdsOrThrow(
       categoryIds,
@@ -232,7 +250,7 @@ export class ProductsService {
     shopId?: string,
   ): Promise<ProductResponseDto> {
     if (!shopId) {
-      throw new UnauthorizedException('User does not have shop.');
+      throw new UnauthorizedException('User account is not a seller.');
     }
     const updateResult = await this.productsRepository.updateShopProductById(
       productId,
@@ -257,7 +275,7 @@ export class ProductsService {
     shopId?: string,
   ): Promise<number> {
     if (!shopId) {
-      throw new UnauthorizedException('User does not have shop.');
+      throw new UnauthorizedException('User account is not a seller.');
     }
     const deletedCount =
       await this.productsRepository.softDeleteShopProductById(

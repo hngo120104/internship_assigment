@@ -21,7 +21,7 @@ describe('CartItemsService', () => {
     userSoftDeleteCartItem: jest.Mock;
     softDeleteAllCartItemsOfUser: jest.Mock;
   };
-  let productsService: { validateVariantQuantity: jest.Mock };
+  let productsService: { validateVariantsQuantity: jest.Mock };
 
   beforeEach(async () => {
     cartItemsRepository = {
@@ -32,7 +32,7 @@ describe('CartItemsService', () => {
       userSoftDeleteCartItem: jest.fn(),
       softDeleteAllCartItemsOfUser: jest.fn(),
     };
-    productsService = { validateVariantQuantity: jest.fn() };
+    productsService = { validateVariantsQuantity: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,14 +60,14 @@ describe('CartItemsService', () => {
       createdItem,
     );
     cartItemsRepository.createCartItem.mockResolvedValue(createdItem);
-    productsService.validateVariantQuantity.mockResolvedValue(undefined);
+    productsService.validateVariantsQuantity.mockResolvedValue(undefined);
 
     const result = await service.addCartItem('user-id', {
       variantId: 'variant-id',
       quantity: 2,
     });
 
-    expect(productsService.validateVariantQuantity).toHaveBeenCalledWith(
+    expect(productsService.validateVariantsQuantity).toHaveBeenCalledWith(
       'variant-id',
       2,
     );
@@ -94,14 +94,14 @@ describe('CartItemsService', () => {
     cartItemsRepository.saveCartItem.mockImplementation((cartItem: object) =>
       Promise.resolve(cartItem),
     );
-    productsService.validateVariantQuantity.mockResolvedValue(undefined);
+    productsService.validateVariantsQuantity.mockResolvedValue(undefined);
 
     const result = await service.addCartItem('user-id', {
       variantId: 'variant-id',
       quantity: 3,
     });
 
-    expect(productsService.validateVariantQuantity).toHaveBeenCalledWith(
+    expect(productsService.validateVariantsQuantity).toHaveBeenCalledWith(
       'variant-id',
       5,
     );

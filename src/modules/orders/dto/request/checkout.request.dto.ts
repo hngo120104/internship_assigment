@@ -15,7 +15,7 @@ export class CheckoutRequestDto {
   @Expose({ name: 'ship_address_id' })
   @IsUUID()
   @IsNotEmpty()
-  shipAddressId!: string;
+  shippingAddressId!: string;
 
   @Expose({ name: 'order_items' })
   @IsNotEmpty()

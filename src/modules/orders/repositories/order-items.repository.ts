@@ -2,6 +2,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { OrderItem } from '../entities/order-item.entity';
 import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
+import { Order } from '../entities/order.entity';
 
 export type CreateOrderItemData = Pick<
   OrderItem,
@@ -21,14 +22,14 @@ export class OrderItemsRepository {
     private readonly orderItemsRepository: Repository<OrderItem>,
   ) {}
 
-  async createOrderItem(
-    orderId: string,
-    data: CreateOrderItemData,
-  ): Promise<OrderItem> {
-    const newOrderItem = this.orderItemsRepository.create({
-      orderId,
+  createOrderItem(order: Order, data: CreateOrderItemData): OrderItem {
+    return this.orderItemsRepository.create({
+      order: order,
       ...data,
     });
-    return await this.orderItemsRepository.save(newOrderItem);
+  }
+
+  async saveOrderItem(orderItems: OrderItem[]): Promise<OrderItem[]> {
+    return await this.orderItemsRepository.save(orderItems);
   }
 }

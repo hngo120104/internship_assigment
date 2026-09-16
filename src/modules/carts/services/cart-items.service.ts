@@ -121,10 +121,6 @@ export class CartItemsService {
         userId,
         cartItemsAddDto.variantId,
       );
-    await this.productVariantsService.validateVariantQuantity(
-      cartItemsAddDto.variantId,
-      cartItemsAddDto.quantity,
-    );
     if (activeCartItem) {
       return await this.increaseCartItemQuantity(
         cartItemsAddDto,
@@ -146,23 +142,37 @@ export class CartItemsService {
     return toResponseDto(CartItemResponseDto, newCartItem);
   }
 
+  private validateVariantAmount(amountUpdate: number, availableAmount: number) {
+    const allowedAmount = Math.min(
+      availableAmount,
+      Number(process.env.MAX_CART_ITEMS),
+    );
+    if (amountUpdate > allowedAmount) {
+      if (allowedAmount > availableAmount) {
+        throw new BadRequestException(`Available amount is ${availableAmount}`);
+      }
+      throw new BadRequestException(`Max allowed amount is ${allowedAmount}`);
+    }
+  }
+
   private async increaseCartItemQuantity(
     cartItemsAddDto: CartItemsAddRequestDto,
     cartItem: CartItem,
   ): Promise<CartItemResponseDto> {
     const totalQuantity = cartItem.quantity + cartItemsAddDto.quantity;
 
-    await this.productVariantsService.validateVariantQuantity(
-      cartItemsAddDto.variantId,
-      totalQuantity,
-    );
+    const availableAmount =
+      await this.productVariantsService.getVariantAvailableAmount(
+        cartItem.variantId,
+      );
+
+    this.validateVariantAmount(totalQuantity, availableAmount);
 
     cartItem.quantity = totalQuantity;
     await this.cartItemsRepository.saveCartItem(cartItem);
     return toResponseDto(CartItemResponseDto, cartItem);
   }
 
-  @Transactional()
   async updateCartItemQuantity(
     cartItemId: string,
     userId: string,
@@ -173,17 +183,17 @@ export class CartItemsService {
         userId,
         cartItemId,
       );
-    const updatedQuantity = cartItemsUpdateDto.quantity;
-
-    await this.productVariantsService.validateVariantQuantity(
-      activeCartItemBelongsToUser.variantId,
-      updatedQuantity,
-    );
+    const amountUpdate = cartItemsUpdateDto.quantity;
+    const availableAmount =
+      await this.productVariantsService.getVariantAvailableAmount(
+        activeCartItemBelongsToUser.variantId,
+      );
+    this.validateVariantAmount(amountUpdate, availableAmount);
     const updateResult =
       await this.cartItemsRepository.updateUserCartItemQuantity(
         userId,
         cartItemId,
-        updatedQuantity,
+        amountUpdate,
       );
     if (!updateResult) {
       throw new NotFoundException('Cart item not found or already updated.');

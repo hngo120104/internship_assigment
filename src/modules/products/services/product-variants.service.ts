@@ -11,20 +11,31 @@ import { ProductVariant } from '../entities/product-variant.entity';
 import { ProductVariantsRepository } from '../repositories/product-variants.repository';
 import { ProductsRepository } from '../repositories/products.repository';
 import { Transactional } from 'typeorm-transactional';
-import { ShopsService } from '../../users/services/shops.service';
 import { toResponseDto } from '../../../utils/response-dto.mapper';
 import { ProductVariantResponseDto } from '../dto/product-variants/response/product-variant.response.dto';
-import { ShopsRepository } from '../../users/repositories/shops.repository';
+import { RedisLockService } from '../../../redis/services/redis-lock.service';
 import { Product } from '../entities/product.entity';
+import { InvalidVariantAmountResult } from '../interfaces/invalid-variant-amount-result.interface';
+import { InsufficientVariantAmountException } from '../exceptions/variant-insufficient-stock.exception';
 
 @Injectable()
 export class ProductVariantsService {
   constructor(
-    private readonly shopsService: ShopsService,
     private readonly productVariantsRepository: ProductVariantsRepository,
     private readonly productsRepository: ProductsRepository,
-    private readonly shopsRepository: ShopsRepository,
+    private readonly redisLockService: RedisLockService,
   ) {}
+
+  async getVariantAvailableAmount(variantId: string): Promise<number> {
+    const variant =
+      await this.productVariantsRepository.findPurchasableProductVariantById(
+        variantId,
+      );
+    if (!variant) {
+      throw new NotFoundException('Variant not exists.');
+    }
+    return variant.amount;
+  }
 
   async findActiveVariantsEntitiesByIds(
     variantIds: string[],
@@ -82,28 +93,7 @@ export class ProductVariantsService {
     }
   }
 
-  @Transactional()
-  async createProductVariants(
-    productId: string,
-    variantCreateDtos: ProductVariantCreateRequestDto[],
-    shopId?: string,
-  ): Promise<ProductVariant[]> {
-    if (!shopId) {
-      throw new UnauthorizedException('User does not have shop.');
-    }
-    this.validateProductVariantCreateRequestNotEmpty(variantCreateDtos);
-    const product = await this.validateShopExistsAndHasProduct(
-      shopId,
-      productId,
-    );
-    await this.validateVariantsDoNotAlreadyExist(productId, variantCreateDtos);
-    return this.productVariantsRepository.createVariants(
-      product.id,
-      variantCreateDtos,
-    );
-  }
-
-  private async validateShopExistsAndHasProduct(
+  private async validateProductOfShop(
     shopId: string,
     productId: string,
   ): Promise<Product> {
@@ -118,6 +108,26 @@ export class ProductVariantsService {
   }
 
   @Transactional()
+  async createProductVariants(
+    productId: string,
+    variantCreateDtos: ProductVariantCreateRequestDto[],
+    shopId?: string,
+  ): Promise<ProductVariant[]> {
+    if (!shopId) {
+      throw new UnauthorizedException('User account is not a seller.');
+    }
+    this.validateProductVariantCreateRequestNotEmpty(variantCreateDtos);
+
+    const product = await this.validateProductOfShop(productId, shopId);
+
+    await this.validateVariantsDoNotAlreadyExist(product.id, variantCreateDtos);
+    return this.productVariantsRepository.createVariants(
+      product.id,
+      variantCreateDtos,
+    );
+  }
+
+  @Transactional()
   async updateProductVariant(
     variantId: string,
     productId: string,
@@ -125,7 +135,7 @@ export class ProductVariantsService {
     shopId?: string,
   ): Promise<ProductVariantResponseDto> {
     if (!shopId) {
-      throw new UnauthorizedException('User does not have shop.');
+      throw new UnauthorizedException('User account is not a seller.');
     }
     const variant =
       await this.findActiveVariantEntityByIdAndProductIdAndLockForUpdateOrThrow(
@@ -172,7 +182,7 @@ export class ProductVariantsService {
     shopId?: string,
   ): Promise<number> {
     if (!shopId) {
-      throw new UnauthorizedException('User does not have shop.');
+      throw new UnauthorizedException('User account is not a seller.');
     }
     const foundVariant =
       await this.productVariantsRepository.findVariantByIdAndProductIdAndShopId(
@@ -193,16 +203,6 @@ export class ProductVariantsService {
     return deletedCount;
   }
 
-  async validateVariantQuantity(
-    variantId: string,
-    quantity: number,
-  ): Promise<void> {
-    this.validateRequestedQuantityIsPositiveInteger(quantity);
-    const variantToValidate =
-      await this.findPurchasableVariantEntityByIdOrThrow(variantId);
-    this.validateVariantHasSufficientStock(variantToValidate, quantity);
-  }
-
   @Transactional()
   async validateAndRestockVariantQuantity(
     variantId: string,
@@ -220,19 +220,46 @@ export class ProductVariantsService {
     return this.findPurchasableVariantEntityByIdOrThrow(variantId);
   }
 
-  async validateAndReserveVariantsAmountOrThrow(
-    variantItems: {
+  findVariantsHasInsufficientAmount(
+    requestedItem: {
       variant: ProductVariant;
       quantity: number;
     }[],
-  ): Promise<ProductVariant[]> {
-    for (const item of variantItems) {
-      this.validateVariantHasSufficientStock(item.variant, item.quantity);
-      await this.validateVariantQuantity(item.variant.id, item.quantity);
+  ): InvalidVariantAmountResult[] {
+    const insufficientVariants: InvalidVariantAmountResult[] = [];
+    for (const item of requestedItem) {
+      const availableAmount = item.variant.amount;
+      if (availableAmount === undefined || availableAmount < item.quantity) {
+        insufficientVariants.push({
+          variantId: item.variant.id,
+          requestedAmount: item.quantity,
+          availableAmount: availableAmount ?? 0,
+        });
+      }
     }
-    const reservedResult =
+    return insufficientVariants;
+  }
+
+  @Transactional()
+  async validateAndReserveVariantsAmountOrThrow(
+    requestedItem: {
+      variant: ProductVariant;
+      quantity: number;
+    }[],
+  ): Promise<number> {
+    const sortedRequestItems = [...requestedItem].sort((l, r) =>
+      l.variant.id.localeCompare(r.variant.id),
+    );
+    const insufficientVariants =
+      this.findVariantsHasInsufficientAmount(requestedItem);
+
+    if (insufficientVariants.length > 0) {
+      throw new InsufficientVariantAmountException(insufficientVariants);
+    }
+
+    const reservationResult =
       await this.productVariantsRepository.reserveVariantsAmountByVariantIdsAtomically(
-        variantItems.map((item) => {
+        sortedRequestItems.map((item) => {
           return {
             variantId: item.variant.id,
             quantity: item.quantity,
@@ -240,11 +267,9 @@ export class ProductVariantsService {
         }),
       );
 
-    if (reservedResult !== variantItems.length)
-      throw new NotFoundException('Reserve failed. Product variant not found.');
-    return await this.findActiveVariantsEntitiesByIds(
-      variantItems.map((item) => item.variant.id),
-    );
+    if (reservationResult !== requestedItem.length)
+      throw new Error('Reservation failed. Something is wrong.');
+    return reservationResult;
   }
 
   private async validateVariantsDoNotAlreadyExist(
@@ -273,24 +298,5 @@ export class ProductVariantsService {
     variant: Pick<ProductVariantCreateRequestDto, 'size' | 'color'>,
   ): string {
     return `${variant.size ?? ''}:${variant.color?.trim().toLowerCase() ?? ''}`;
-  }
-
-  private validateRequestedQuantityIsPositiveInteger(quantity: number): void {
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      throw new BadRequestException(
-        'Product quantity must be a positive integer.',
-      );
-    }
-  }
-
-  private validateVariantHasSufficientStock(
-    variant: ProductVariant,
-    requestedQuantity: number,
-  ) {
-    if (variant.amount < requestedQuantity) {
-      throw new BadRequestException(
-        `Your amount: ${requestedQuantity}. Product variant amount is not enough: ${variant.amount}`,
-      );
-    }
   }
 }

@@ -54,7 +54,7 @@ export class Order {
   shopId!: string;
 
   @Column({ name: 'recipient_address_id', type: 'varchar', length: 36 })
-  shipAddressId!: string;
+  shippingAddressId!: string;
 
   @Column({
     name: 'order_code',

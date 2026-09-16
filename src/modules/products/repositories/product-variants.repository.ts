@@ -5,6 +5,7 @@ import { ProductVariant } from '../entities/product-variant.entity';
 import { ProductVariantCreateRequestDto } from '../dto/product-variants/request/product-variant-create.request.dto';
 import { ShopStatus } from '../../users/entities/shop.entity';
 import type { ResultSetHeader } from 'mysql2';
+import { InvalidVariantAmountResult } from '../interfaces/invalid-variant-amount-result.interface';
 
 @Injectable()
 export class ProductVariantsRepository {
@@ -12,6 +13,32 @@ export class ProductVariantsRepository {
     @InjectRepository(ProductVariant)
     private readonly variantsRepository: Repository<ProductVariant>,
   ) {}
+
+  async validateProductVariantsReadyForPurchasing(
+    reserveRequests: { variantId: string; quantity: number }[],
+  ): Promise<InvalidVariantAmountResult[] | null> {
+    const variantIds = reserveRequests.map((item) => item.variantId);
+    const variants = await this.variantsRepository.find({
+      select: { id: true, amount: true },
+      where: { id: In(variantIds), isActive: true, isDeleted: false },
+    });
+    const insufficientVariantMap: InvalidVariantAmountResult[] = [];
+    if (reserveRequests.length !== variants.length) return null;
+    const variantsMap = new Map(
+      variants.map((variant) => [variant.id, variant.amount]),
+    );
+    for (const item of reserveRequests) {
+      const availableAmount = variantsMap.get(item.variantId);
+      if (availableAmount === undefined || availableAmount < item.quantity) {
+        insufficientVariantMap.push({
+          variantId: item.variantId,
+          requestedAmount: item.quantity,
+          availableAmount: availableAmount ?? 0,
+        });
+      }
+    }
+    return insufficientVariantMap;
+  }
 
   async findActiveVariantsByIds(
     variantIds: string[],
@@ -81,7 +108,6 @@ export class ProductVariantsRepository {
   ): Promise<ProductVariant | null> {
     return await this.variantsRepository
       .createQueryBuilder('product_variants')
-      .setLock('pessimistic_write')
       .where(
         'product_variants.id = :id AND product_variants.productId = :productId',
         { id, productId },
@@ -135,7 +161,9 @@ export class ProductVariantsRepository {
     const whenCases = reserveRequests
       .map(() => `WHEN id = ? THEN amount - ?`)
       .join(' ');
-    const conditions = reserveRequests.map(() => `(id = ? AND amount >= ?)`);
+    const conditions = reserveRequests.map(
+      () => `(id = ? AND amount >= ? AND is_active = 1 AND is_deleted = 0)`,
+    );
     const whenParameters = reserveRequests.flatMap((request) => [
       request.variantId,
       request.quantity,
