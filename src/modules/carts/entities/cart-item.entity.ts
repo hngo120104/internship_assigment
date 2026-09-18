@@ -34,7 +34,7 @@ export class CartItem {
     name: 'user_id',
     foreignKeyConstraintName: 'FK_cart_items_user_id',
   })
-  user?: User;
+  user!: User;
 
   @Column({ name: 'variant_id', type: 'varchar', length: 36 })
   variantId!: string;

@@ -8,10 +8,14 @@ import {
   IsUUID,
   ValidateNested,
 } from 'class-validator';
-import { PaymentMethod } from '../../entities/order.entity';
+import { PaymentMethod } from '../../enums/payment-method.enum';
 import { CheckoutItemRequestDto } from './checkout-item.request.dto';
 
 export class CheckoutRequestDto {
+  @Expose({ name: 'idempotency_key' })
+  @IsNotEmpty()
+  idempotencyKey!: string;
+
   @Expose({ name: 'ship_address_id' })
   @IsUUID()
   @IsNotEmpty()

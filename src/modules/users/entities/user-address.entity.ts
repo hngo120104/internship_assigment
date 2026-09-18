@@ -9,7 +9,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from './user.entity';
-import { Order } from '../../orders/entities/order.entity';
+import { Checkout } from '../../checkouts/entities/checkout.entity';
 
 @Entity('user_addresses')
 export class UserAddress {
@@ -53,6 +53,6 @@ export class UserAddress {
   })
   user!: User;
 
-  @OneToMany(() => Order, (order) => order.shipAddress)
-  orders!: Order[];
+  @OneToMany(() => Checkout, (checkout) => checkout.shippingAddress)
+  checkouts!: Checkout[];
 }

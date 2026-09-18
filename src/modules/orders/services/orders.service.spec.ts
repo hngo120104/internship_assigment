@@ -4,6 +4,7 @@ import { CartItemsService } from '../../carts/services/cart-items.service';
 import { ProductVariantsService } from '../../products/services/product-variants.service';
 import { UserAddressesService } from '../../users/services/user-addresses.service';
 import { ShopsService } from '../../users/services/shops.service';
+import { RedisLockService } from '../../../redis/services/redis-lock.service';
 import { PaymentMethod } from '../entities/order.entity';
 import { OrderItemsRepository } from '../repositories/order-items.repository';
 import { OrdersRepository } from '../repositories/orders.repository';
@@ -21,6 +22,7 @@ describe('OrdersService order creation flows', () => {
   let ordersRepository: {
     createOrder: jest.Mock;
     findOrderByShopIdAndOrderId: jest.Mock;
+    saveOrders: jest.Mock;
   };
   let orderItemsRepository: { createOrderItem: jest.Mock };
   let productsService: {
@@ -36,11 +38,13 @@ describe('OrdersService order creation flows', () => {
     markUserCartItemsAsOrderedOrThrow: jest.Mock;
   };
   let shopsService: { findShopIdByUserIdOrThrow: jest.Mock };
+  let redisLockService: { withLock: jest.Mock };
 
   beforeEach(async () => {
     ordersRepository = {
       createOrder: jest.fn(),
       findOrderByShopIdAndOrderId: jest.fn(),
+      saveOrders: jest.fn(async (orders: unknown[]) => orders),
     };
     orderItemsRepository = { createOrderItem: jest.fn() };
     productsService = {
@@ -56,6 +60,11 @@ describe('OrdersService order creation flows', () => {
       markUserCartItemsAsOrderedOrThrow: jest.fn(),
     };
     shopsService = { findShopIdByUserIdOrThrow: jest.fn() };
+    redisLockService = {
+      withLock: jest.fn(
+        async (_keys: string[], callback: () => Promise<unknown>) => callback(),
+      ),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -66,6 +75,7 @@ describe('OrdersService order creation flows', () => {
         { provide: ShopsService, useValue: shopsService },
         { provide: UserAddressesService, useValue: userAddressesService },
         { provide: CartItemsService, useValue: cartItemsService },
+        { provide: RedisLockService, useValue: redisLockService },
       ],
     }).compile();
 
@@ -74,25 +84,31 @@ describe('OrdersService order creation flows', () => {
 
   it('creates an order item using the current variant snapshot', async () => {
     const address = { id: 'address-id' };
-    productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue({
+    const variant = {
       id: 'variant-id',
-    });
-    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue([
-      {
-        id: 'variant-id',
-        size: 'M',
-        color: 'Black',
-        price: '12500.50',
-        product: { id: 'product-id', shopId: 'shop-id', name: 'Product name' },
-      },
-    ]);
+      size: 'M',
+      color: 'Black',
+      price: '12500.50',
+      product: { id: 'product-id', shopId: 'shop-id', name: 'Product name' },
+    };
+    productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue(
+      variant,
+    );
+    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue(
+      1,
+    );
     userAddressesService.findActiveUserAddressEntityByIdOrThrow.mockResolvedValue(
       address,
     );
-    ordersRepository.createOrder.mockResolvedValue({ id: 'order-id' });
-    orderItemsRepository.createOrderItem.mockResolvedValue({
-      id: 'order-item-id',
-    });
+    const order = { id: 'order-id' };
+    ordersRepository.createOrder.mockReturnValue(order);
+    orderItemsRepository.createOrderItem.mockImplementation(
+      (createdOrder: object, data: object) => ({
+        id: 'order-item-id',
+        order: createdOrder,
+        ...data,
+      }),
+    );
 
     await service.buyNow('user-id', {
       variantId: 'variant-id',
@@ -102,17 +118,22 @@ describe('OrdersService order creation flows', () => {
       note: 'Handle with care',
     });
 
-    expect(orderItemsRepository.createOrderItem).toHaveBeenCalledWith(
-      'order-id',
-      {
-        variantId: 'variant-id',
-        productName: 'Product name',
-        variantSize: 'M',
-        variantColor: 'Black',
-        quantity: 2,
-        unitPrice: 12500.5,
-        note: 'Handle with care',
-      },
+    expect(orderItemsRepository.createOrderItem).toHaveBeenCalledWith(order, {
+      variantId: 'variant-id',
+      productName: 'Product name',
+      variantSize: 'M',
+      variantColor: 'Black',
+      quantity: 2,
+      unitPrice: 12500.5,
+      note: 'Handle with care',
+    });
+    expect(redisLockService.withLock).toHaveBeenCalledWith(
+      ['lock:variant:variant-id'],
+      expect.any(Function),
+    );
+    expect(redisLockService.withLock.mock.invocationCallOrder[0]).toBeLessThan(
+      productsService.findPurchasableVariantEntityByIdOrThrow.mock
+        .invocationCallOrder[0],
     );
   });
 
@@ -122,6 +143,7 @@ describe('OrdersService order creation flows', () => {
     );
     productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue({
       id: 'variant-id',
+      product: { shopId: 'shop-id', name: 'Product name' },
     });
     productsService.validateAndReserveVariantsAmountOrThrow.mockRejectedValue(
       new Error('Insufficient stock'),
@@ -173,11 +195,11 @@ describe('OrdersService order creation flows', () => {
     productsService.findPurchasableVariantEntityByIdOrThrow.mockResolvedValue(
       variant,
     );
-    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue([
-      variant,
-    ]);
-    ordersRepository.createOrder.mockResolvedValue(order);
-    orderItemsRepository.createOrderItem.mockResolvedValue(orderItem);
+    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue(
+      1,
+    );
+    ordersRepository.createOrder.mockReturnValue(order);
+    orderItemsRepository.createOrderItem.mockReturnValue(orderItem);
 
     const result = await service.buyNow('user-id', {
       variantId: variant.id,
@@ -190,7 +212,6 @@ describe('OrdersService order creation flows', () => {
     expect(ordersRepository.createOrder).toHaveBeenCalledWith(
       'user-id',
       variant.product.shopId,
-      address.id,
       address,
       PaymentMethod.BANKING,
     );
@@ -232,30 +253,29 @@ describe('OrdersService order creation flows', () => {
     productsService.findPurchasableVariantsEntitiesByIdsOrThrow.mockResolvedValue(
       [products['variant-a'], products['variant-b']],
     );
-    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue([
-      products['variant-a'],
-      products['variant-b'],
-    ]);
+    productsService.validateAndReserveVariantsAmountOrThrow.mockResolvedValue(
+      2,
+    );
     ordersRepository.createOrder.mockImplementation(
       (
         userId: string,
         shopId: string,
-        shippingAddressId: string,
         shippingAddress: object,
         paymentMethod: PaymentMethod,
-      ) =>
-        Promise.resolve({
-          id: `order-${shopId}`,
-          userId,
-          shopId,
-          shippingAddressId,
-          shipAddress: shippingAddress,
-          paymentMethod,
-        }),
+      ) => ({
+        id: `order-${shopId}`,
+        userId,
+        shopId,
+        shipAddress: shippingAddress,
+        paymentMethod,
+      }),
     );
     orderItemsRepository.createOrderItem.mockImplementation(
-      (orderId: string, data: object) =>
-        Promise.resolve({ id: `item-${orderId}`, orderId, ...data }),
+      (order: { id: string }, data: object) => ({
+        id: `item-${order.id}`,
+        order,
+        ...data,
+      }),
     );
     cartItemsService.markUserCartItemsAsOrderedOrThrow.mockResolvedValue(2);
 
@@ -285,9 +305,12 @@ describe('OrdersService order creation flows', () => {
       1,
       'user-id',
       'shop-a',
-      address.id,
       address,
       PaymentMethod.COD,
+    );
+    expect(redisLockService.withLock).toHaveBeenCalledWith(
+      ['lock:variant:variant-a', 'lock:variant:variant-b'],
+      expect.any(Function),
     );
     expect(
       cartItemsService.markUserCartItemsAsOrderedOrThrow,

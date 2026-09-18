@@ -49,7 +49,7 @@ export class RedisLockService {
 
   async acquireWithRetry(
     resource: string,
-    ttlMs: number = 2000,
+    ttlMs: number = 5000,
     maxRetry: number = 5,
     baseDelayMs: number = 50,
     maxDelayMs: number = 500,
@@ -74,7 +74,8 @@ export class RedisLockService {
 
   async acquireAllLocks(resources: string[]): Promise<ResourceLock[] | null> {
     const resourceLocks: ResourceLock[] = [];
-    const sortedResource = resources.sort();
+    const deduplicatedResources = Array.from(new Set(resources));
+    const sortedResource = deduplicatedResources.sort();
     for (const resource of sortedResource) {
       const token = await this.acquireWithRetry(resource);
 

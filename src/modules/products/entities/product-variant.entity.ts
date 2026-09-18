@@ -10,7 +10,6 @@ import {
   Index,
   OneToMany,
   Unique,
-  OneToOne,
 } from 'typeorm';
 import { Product } from './product.entity';
 import { CartItem } from '../../carts/entities/cart-item.entity';
@@ -70,8 +69,15 @@ export class ProductVariant {
   })
   product!: Product;
 
-  @OneToOne(() => ProductPhoto, (photo) => photo.variant)
-  photo!: ProductPhoto;
+  @Column({ name: 'photo_id', type: 'varchar', length: 36, nullable: true })
+  photoId?: string;
+
+  @ManyToOne(() => ProductPhoto, { nullable: true })
+  @JoinColumn({
+    name: 'photo_id',
+    foreignKeyConstraintName: 'FK_product_variants_photo_id',
+  })
+  photo?: ProductPhoto;
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.variant)
   cartItems!: CartItem[];

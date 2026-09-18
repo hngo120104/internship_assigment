@@ -26,8 +26,8 @@ describe('ProductVariantsService stock reservation', () => {
     service = new ProductVariantsService(
       {} as ShopsService,
       repository as unknown as ProductVariantsRepository,
-      {} as ProductsRepository,
-      {} as ShopsRepository,
+      {},
+      {},
     );
     jest.spyOn(service, 'validateVariantsQuantity').mockResolvedValue();
   });

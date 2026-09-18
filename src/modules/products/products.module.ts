@@ -15,7 +15,7 @@ import { ProductCategoriesRepository } from './repositories/product-categories.r
 import { ProductVariant } from './entities/product-variant.entity';
 import { ProductVariantsRepository } from './repositories/product-variants.repository';
 import { ProductVariantsService } from './services/product-variants.service';
-import { RedisModule } from '../../redis/redis.module';
+import { RedisModule } from '../redis/redis.module';
 
 @Module({
   imports: [

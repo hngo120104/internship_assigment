@@ -11,10 +11,9 @@ import {
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
 import { Shop } from '../../users/entities/shop.entity';
 import { OrderItem } from './order-item.entity';
-import { UserAddress } from '../../users/entities/user-address.entity';
+import { Checkout } from '../../checkouts/entities/checkout.entity';
 
 export enum OrderStatus {
   PENDING = 'PENDING',
@@ -25,20 +24,7 @@ export enum OrderStatus {
   CANCELLED = 'CANCELLED',
 }
 
-export enum PaymentStatus {
-  PENDING = 'PENDING',
-  PAID = 'PAID',
-  FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED',
-}
-
-export enum PaymentMethod {
-  COD = 'COD',
-  BANKING = 'BANKING',
-}
-
 @Index('IDX_orders_shop_id', ['shopId'])
-@Index('IDX_orders_user_id', ['userId'])
 @Unique('UQ_order_code', ['orderCode'])
 @Check('CHK_orders_discount_non_negative', '`discount` >= 0')
 @Check('CHK_orders_shipping_fee_non_negative', '`shipping_fee` >= 0')
@@ -47,20 +33,17 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'user_id', type: 'varchar', length: 36 })
-  userId!: string;
-
   @Column({ name: 'shop_id', type: 'varchar', length: 36 })
   shopId!: string;
 
-  @Column({ name: 'recipient_address_id', type: 'varchar', length: 36 })
-  shippingAddressId!: string;
+  //TODO: change to not null after seeding
+  @Column({ name: 'checkout_id', type: 'varchar', length: 36 })
+  checkoutId!: string;
 
   @Column({
     name: 'order_code',
     length: 36,
     type: 'varchar',
-    default: '() => randomUUID()',
   })
   orderCode?: string;
 
@@ -75,13 +58,6 @@ export class Order {
     default: 0,
   })
   shippingFee!: number;
-
-  @ManyToOne(() => User, (user) => user.orders, { onDelete: 'RESTRICT' })
-  @JoinColumn({
-    name: 'user_id',
-    foreignKeyConstraintName: 'FK_orders_user_id',
-  })
-  user!: User;
 
   @ManyToOne(() => Shop, (shop) => shop.orders, { onDelete: 'RESTRICT' })
   @JoinColumn({
@@ -98,33 +74,15 @@ export class Order {
   })
   orderStatus!: OrderStatus;
 
-  @Column({
-    name: 'payment_status',
-    type: 'enum',
-    enum: PaymentStatus,
-    default: PaymentStatus.PENDING,
-  })
-  paymentStatus!: PaymentStatus;
-
-  @Column({
-    name: 'payment_method',
-    type: 'enum',
-    enum: PaymentMethod,
-    default: PaymentMethod.COD,
-  })
-  paymentMethod!: PaymentMethod;
-
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   orderItems!: OrderItem[];
 
-  @ManyToOne(() => UserAddress, (address) => address.orders, {
-    onDelete: 'RESTRICT',
-  })
+  @ManyToOne(() => Checkout, (checkout) => checkout.orders)
   @JoinColumn({
-    name: 'recipient_address_id',
-    foreignKeyConstraintName: 'FK_orders_recipient_address_id',
+    name: 'checkout_id',
+    foreignKeyConstraintName: 'FK_orders_checkout_id',
   })
-  shipAddress!: UserAddress;
+  checkout!: Checkout;
 
   @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
   createdAt!: Date;

@@ -8,10 +8,10 @@ CREATE TABLE
     `roles` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `name` varchar(255) NOT NULL DEFAULT 'CUSTOMER',
-        `role_type` enum ('CUSTOMER', 'SELLER', 'ADMIN') DEFAULT 'CUSTOMER',
+        `role_type` enum ('ADMIN', 'SELLER', 'CUSTOMER') NOT NULL DEFAULT 'CUSTOMER',
         `description` VARCHAR(255) DEFAULT NULL,
         PRIMARY KEY (`id`),
-        UNIQUE KEY `UQ_roles_name` (`name`)
+        UNIQUE KEY `UQ_roletype` (`role_type`)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
@@ -128,9 +128,10 @@ CREATE TABLE
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
+        `photo_id` varchar(36) DEFAULT NULL,
         PRIMARY KEY (`id`),
         KEY `IDX_product_variants_product_id` (`product_id`),
-        UNIQUE KEY `UQ_variant_name` (`variant_name`),
+        UNIQUE KEY `UQ_variant_name` (`product_id`, `variant_name`),
         CONSTRAINT `FK_product_variants_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
         CONSTRAINT `CHK_product_variants_amount_non_negative` CHECK (`amount` >= 0),
         CONSTRAINT `CHK_product_variants_price_non_negative` CHECK (`price` >= 0)
@@ -151,7 +152,6 @@ CREATE TABLE
     `product_photos` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `product_id` varchar(36) NOT NULL,
-        `variant_id` varchar(36) DEFAULT NULL,
         `url` varchar(2048) NOT NULL,
         `description` text DEFAULT NULL,
         `is_primary` tinyint (1) DEFAULT 0,
@@ -160,9 +160,13 @@ CREATE TABLE
         `is_deleted` tinyint (1) NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         KEY `IDX_product_photos_product_id` (`product_id`),
-        CONSTRAINT `FK_product_photos_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
-        CONSTRAINT `FK_product_photos_variant_id` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
+        CONSTRAINT `FK_product_photos_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+ALTER TABLE `product_variants`
+ADD CONSTRAINT `FK_product_variants_photo_id`
+FOREIGN KEY (`photo_id`) REFERENCES `product_photos` (`id`)
+ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 CREATE TABLE
     `cart_items` (
@@ -183,12 +187,28 @@ CREATE TABLE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE
-    `orders` (
+    `checkouts` (
         `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `user_id` varchar(36) NOT NULL,
+        `status` enum ('PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED') NOT NULL DEFAULT 'PROCESSING',
+        `idempotency_key` varchar(36) NOT NULL,
+        `shipping_address_id` varchar(36) NOT NULL,
+        `payment_status` enum ('PENDING', 'PAID', 'FAILED', 'REFUNDED') NOT NULL DEFAULT 'PENDING',
+        `payment_method` enum ('COD', 'BANKING') NOT NULL DEFAULT 'COD',
+        `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        `completed_at` timestamp NULL DEFAULT NULL,
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `UQ_checkouts_idempotency_key_user_id` (`user_id`, `idempotency_key`),
+        CONSTRAINT `FK_checkouts_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
+        CONSTRAINT `FK_checkouts_shipping_address_id` FOREIGN KEY (`shipping_address_id`) REFERENCES `user_addresses` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION
+    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE
+    `orders` (
+        `id` varchar(36) NOT NULL DEFAULT (UUID ()),
         `shop_id` varchar(36) NOT NULL,
-        `recipient_address_id` varchar(36) NOT NULL,
-        `order_code` varchar(36) NOT NULL DEFAULT (UUID ()),
+        `checkout_id` varchar(36) NOT NULL,
+        `order_code` varchar(36) NOT NULL,
         `order_status` enum (
             'PENDING',
             'CONFIRMED',
@@ -197,21 +217,17 @@ CREATE TABLE
             'DELIVERED',
             'CANCELLED'
         ) NOT NULL DEFAULT 'PENDING',
-        `payment_status` enum ('PENDING', 'PAID', 'FAILED', 'REFUNDED') NOT NULL DEFAULT 'PENDING',
-        `payment_method` enum ('COD', 'BANKING') NOT NULL DEFAULT 'COD',
         `discount` DECIMAL(12, 2) NOT NULL DEFAULT 0,
         `shipping_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0,
         `created_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         `updated_at` datetime (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         PRIMARY KEY (`id`),
         UNIQUE KEY `UQ_order_code` (`order_code`),
-        CONSTRAINT `FK_orders_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
         CONSTRAINT `FK_orders_shop_id` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
-        CONSTRAINT `FK_orders_recipient_address_id` FOREIGN KEY (`recipient_address_id`) REFERENCES `user_addresses` (`id`) ON DELETE RESTRICT ON UPDATE NO ACTION,
+        CONSTRAINT `FK_orders_checkout_id` FOREIGN KEY (`checkout_id`) REFERENCES `checkouts` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
         CONSTRAINT `CHK_orders_discount_non_negative` CHECK (`discount` >= 0),
         CONSTRAINT `CHK_orders_shipping_fee_non_negative` CHECK (`shipping_fee` >= 0),
-        KEY `IDX_orders_shop_id` (`shop_id`),
-        KEY `IDX_orders_user_id` (`user_id`)
+        KEY `IDX_orders_shop_id` (`shop_id`)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE TABLE

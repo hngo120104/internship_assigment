@@ -4,7 +4,6 @@ import {
   Get,
   Param,
   Patch,
-  Post,
   Query,
   SerializeOptions,
 } from '@nestjs/common';
@@ -12,9 +11,6 @@ import { OrdersService } from '../services/orders.service';
 import { CurrentUser } from '../../../custom-decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../../../custom-decorators/current-user.decorator';
 import { ShopOrderResponseDto } from '../dto/response/shop-order.response.dto';
-import { CheckoutRequestDto } from '../dto/request/checkout.request.dto';
-import { BuyNowRequestDto } from '../dto/request/buy-now.request.dto';
-import { CheckoutResponseDto } from '../dto/response/checkout.response.dto';
 import { Roles } from '../../auth/guards/role/role.decorator';
 import { RoleType } from '../../users/entities/role.entity';
 import { FindOrderRequestDto } from '../dto/request/find-order.request.dto';
@@ -105,26 +101,5 @@ export class OrdersController {
       user.userId,
       user.shopId,
     );
-  }
-
-  @Post('checkout')
-  @SerializeOptions({ groups: ['customer-order'] })
-  async checkoutCart(
-    @CurrentUser() user: CurrentUserPayload,
-    @Body() checkoutRequestDto: CheckoutRequestDto,
-  ): Promise<CheckoutResponseDto> {
-    return await this.ordersService.checkoutCart(
-      user.userId,
-      checkoutRequestDto,
-    );
-  }
-
-  @Post('buy-now')
-  @SerializeOptions({ groups: ['order-details'] })
-  async buyNow(
-    @CurrentUser() user: CurrentUserPayload,
-    @Body() buyNowRequestDto: BuyNowRequestDto,
-  ): Promise<ShopOrderResponseDto> {
-    return await this.ordersService.buyNow(user.userId, buyNowRequestDto);
   }
 }

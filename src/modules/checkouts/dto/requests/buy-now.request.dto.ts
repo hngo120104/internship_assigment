@@ -1,9 +1,13 @@
 import { Expose } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsUUID, Max, Min } from 'class-validator';
-import { OrderItemCreateRequestDto } from './order-item-create.request.dto';
-import { PaymentMethod } from '../../entities/order.entity';
+import { OrderItemCreateRequestDto } from '../../../orders/dto/request/order-item-create.request.dto';
+import { PaymentMethod } from '../../enums/payment-method.enum';
 
 export class BuyNowRequestDto extends OrderItemCreateRequestDto {
+  @Expose({ name: 'idempotency_key' })
+  @IsNotEmpty()
+  idempotencyKey!: string;
+
   @Expose({ name: 'ship_address_id' })
   @IsUUID()
   @IsNotEmpty()

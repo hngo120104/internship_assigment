@@ -13,7 +13,6 @@ import { ProductsRepository } from '../repositories/products.repository';
 import { Transactional } from 'typeorm-transactional';
 import { toResponseDto } from '../../../utils/response-dto.mapper';
 import { ProductVariantResponseDto } from '../dto/product-variants/response/product-variant.response.dto';
-import { RedisLockService } from '../../../redis/services/redis-lock.service';
 import { Product } from '../entities/product.entity';
 import { InvalidVariantAmountResult } from '../interfaces/invalid-variant-amount-result.interface';
 import { InsufficientVariantAmountException } from '../exceptions/variant-insufficient-stock.exception';
@@ -23,7 +22,6 @@ export class ProductVariantsService {
   constructor(
     private readonly productVariantsRepository: ProductVariantsRepository,
     private readonly productsRepository: ProductsRepository,
-    private readonly redisLockService: RedisLockService,
   ) {}
 
   async getVariantAvailableAmount(variantId: string): Promise<number> {

@@ -17,7 +17,8 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SearchModule } from './modules/search/search.module';
-import { RedisModule } from './redis/redis.module';
+import { RedisModule } from './modules/redis/redis.module';
+import { CheckoutsModule } from './modules/checkouts/checkouts.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { RedisModule } from './redis/redis.module';
     AdminModule,
     SearchModule,
     RedisModule,
+    CheckoutsModule,
   ],
   controllers: [AppController],
   providers: [

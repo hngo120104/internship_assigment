@@ -12,7 +12,7 @@ import { UserPhoto } from './user-photo.entity';
 import { CartItem } from '../../carts/entities/cart-item.entity';
 import { UserAddress } from './user-address.entity';
 import { UserRole } from './user-role.entity';
-import { Order } from '../../orders/entities/order.entity';
+import { Checkout } from '../../checkouts/entities/checkout.entity';
 
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
@@ -65,6 +65,6 @@ export class User {
   @OneToMany(() => CartItem, (cartItem) => cartItem.user)
   cartItems?: CartItem[];
 
-  @OneToMany(() => Order, (order) => order.user)
-  orders!: Order[];
+  @OneToMany(() => Checkout, (checkout) => checkout.user)
+  checkouts!: Checkout[];
 }

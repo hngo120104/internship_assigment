@@ -1,13 +1,9 @@
 import { FindOptionsWhere, Repository } from 'typeorm';
-import {
-  Order,
-  OrderStatus,
-  PaymentMethod,
-  PaymentStatus,
-} from '../entities/order.entity';
+import { Order, OrderStatus } from '../entities/order.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
-import { UserAddress } from '../../users/entities/user-address.entity';
+import { PaymentStatus } from '../../checkouts/enums/payment-status.enum';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class OrdersRepository {
@@ -24,13 +20,16 @@ export class OrdersRepository {
     paymentStatus?: PaymentStatus,
   ): Promise<[Order[], number]> {
     const whereConditions: FindOptionsWhere<Order> = {
-      userId: userId,
+      checkout: { userId: userId },
     };
     if (orderStatus) whereConditions.orderStatus = orderStatus;
-    if (paymentStatus) whereConditions.paymentStatus = paymentStatus;
+    if (paymentStatus)
+      whereConditions.checkout = {
+        paymentStatus: paymentStatus,
+      };
     return await this.ordersRepository.findAndCount({
       where: whereConditions,
-      relations: { shipAddress: true, orderItems: true },
+      relations: { orderItems: true },
       skip: (page - 1) * size,
       take: size,
       order: {
@@ -39,21 +38,21 @@ export class OrdersRepository {
     });
   }
 
+  //TODO: revise where conditions of payment
   async findAllShopOrdersWithOptionStatusesByShopId(
     shopId: string,
     page: number,
     size: number,
     orderStatus?: OrderStatus,
-    paymentStatus?: PaymentStatus,
+    // paymentStatus?: PaymentStatus,
   ): Promise<[Order[], number]> {
     const whereConditions: FindOptionsWhere<Order> = {
       shopId: shopId,
     };
     if (orderStatus) whereConditions.orderStatus = orderStatus;
-    if (paymentStatus) whereConditions.paymentStatus = paymentStatus;
     return await this.ordersRepository.findAndCount({
       where: whereConditions,
-      relations: { shipAddress: true, orderItems: true },
+      relations: { orderItems: true },
       skip: (page - 1) * size,
       take: size,
       order: {
@@ -62,6 +61,7 @@ export class OrdersRepository {
     });
   }
 
+  //TODO: where condition of payment need to be revised
   async findOrderByUserIdAndOrderIdAndLockForCancel(
     userId: string,
     orderId: string,
@@ -75,12 +75,10 @@ export class OrdersRepository {
       .andWhere('orders.orderStatus IN (:...OrderStatus)', {
         OrderStatus: [OrderStatus.PENDING, OrderStatus.CONFIRMED],
       })
-      .andWhere('orders.paymentStatus IN (:...PaymentStatus)', {
-        PaymentStatus: [PaymentStatus.PENDING, PaymentStatus.PAID],
-      })
       .getOne();
   }
 
+  //TODO: where condition of payment need to be revised
   async findOrderByShopIdAndOrderIdAndLock(
     shopId: string,
     orderId: string,
@@ -94,9 +92,6 @@ export class OrdersRepository {
       .andWhere('orders.orderStatus = :OrderStatus', {
         OrderStatus: OrderStatus.PENDING,
       })
-      .andWhere('orders.paymentStatus IN (:...PaymentStatus)', {
-        PaymentStatus: [PaymentStatus.PENDING, PaymentStatus.PAID],
-      })
       .getOne();
   }
 
@@ -105,8 +100,8 @@ export class OrdersRepository {
     orderId: string,
   ): Promise<Order | null> {
     return await this.ordersRepository.findOne({
-      where: { userId: userId, id: orderId },
-      relations: { shipAddress: true, orderItems: true },
+      where: { checkout: { userId: userId }, id: orderId },
+      relations: { orderItems: true },
     });
   }
 
@@ -116,26 +111,17 @@ export class OrdersRepository {
   ): Promise<Order | null> {
     return await this.ordersRepository.findOne({
       where: { shopId: shopId, id: orderId },
-      relations: { shipAddress: true, orderItems: true },
+      relations: { orderItems: true },
     });
   }
 
-  createOrder(
-    userId: string,
-    shopId: string,
-    shippingAddress: UserAddress,
-    paymentMethod: PaymentMethod,
-  ): Order {
+  createOrder(shopId: string): Order {
     return this.ordersRepository.create({
-      userId,
+      orderCode: randomUUID(),
       shopId,
-      shippingAddressId: shippingAddress.id,
-      shipAddress: shippingAddress,
       discount: 0,
       shippingFee: 0,
       orderStatus: OrderStatus.PENDING,
-      paymentStatus: PaymentStatus.PENDING,
-      paymentMethod: paymentMethod,
     });
   }
 

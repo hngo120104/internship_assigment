@@ -1,25 +1,11 @@
 import { Expose, Transform, TransformFnParams, Type } from 'class-transformer';
-import {
-  Order,
-  OrderStatus,
-  PaymentMethod,
-  PaymentStatus,
-} from '../../entities/order.entity';
+import { Order, OrderStatus } from '../../entities/order.entity';
 import { UserAddressResponseDto } from '../../../users/dto/user-addresses/response/user-address.response.dto';
 import { OrderItemResponseDto } from './order-item.response.dto';
 
 export class ShopOrderResponseDto {
   @Expose({ groups: ['order-details', 'customer-order'] })
   id!: string;
-
-  @Expose({ name: 'user_id', groups: ['order-details'] })
-  @Transform(
-    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
-    {
-      toClassOnly: true,
-    },
-  )
-  userId!: string;
 
   @Expose({ name: 'shop_id', groups: ['order-details', 'customer-order'] })
   @Transform(
@@ -57,30 +43,6 @@ export class ShopOrderResponseDto {
     },
   )
   orderStatus!: OrderStatus;
-
-  @Expose({
-    name: 'payment_status',
-    groups: ['customer-order', 'order-details'],
-  })
-  @Transform(
-    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
-    {
-      toClassOnly: true,
-    },
-  )
-  paymentStatus!: PaymentStatus;
-
-  @Expose({
-    name: 'payment_method',
-    groups: ['customer-order', 'order-details'],
-  })
-  @Transform(
-    ({ obj, key }: TransformFnParams) => (obj as Record<string, string>)[key],
-    {
-      toClassOnly: true,
-    },
-  )
-  paymentMethod!: PaymentMethod;
 
   @Expose({ groups: ['customer-order', 'order-details'] })
   @Transform(({ value }) => Number(value), { toClassOnly: true })

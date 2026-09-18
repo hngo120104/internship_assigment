@@ -9,6 +9,7 @@ import { OrdersRepository } from './repositories/orders.repository';
 import { OrderItemsRepository } from './repositories/order-items.repository';
 import { UsersModule } from '../users/users.module';
 import { CartsModule } from '../carts/carts.module';
+import { RedisModule } from '../redis/redis.module';
 
 @Module({
   imports: [
@@ -16,9 +17,10 @@ import { CartsModule } from '../carts/carts.module';
     ProductsModule,
     UsersModule,
     CartsModule,
+    RedisModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersRepository, OrderItemsRepository],
-  exports: [],
+  exports: [OrdersService],
 })
 export class OrdersModule {}
