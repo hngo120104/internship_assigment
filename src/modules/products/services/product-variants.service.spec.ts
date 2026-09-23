@@ -3,8 +3,6 @@ import { ProductVariant } from '../entities/product-variant.entity';
 import { ProductVariantsRepository } from '../repositories/product-variants.repository';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ProductVariantsService } from './product-variants.service';
-import { ShopsService } from '../../users/services/shops.service';
-import { ShopsRepository } from '../../users/repositories/shops.repository';
 
 describe('ProductVariantsService stock reservation', () => {
   let repository: {
@@ -24,12 +22,9 @@ describe('ProductVariantsService stock reservation', () => {
       findActiveVariantsByIds: jest.fn(),
     };
     service = new ProductVariantsService(
-      {} as ShopsService,
       repository as unknown as ProductVariantsRepository,
-      {},
-      {},
+      {} as ProductsRepository,
     );
-    jest.spyOn(service, 'validateVariantsQuantity').mockResolvedValue();
   });
 
   it('returns refreshed variants when every requested stock row is updated', async () => {

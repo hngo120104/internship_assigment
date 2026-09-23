@@ -21,7 +21,7 @@ export class CheckoutRequestDto {
   @IsNotEmpty()
   shippingAddressId!: string;
 
-  @Expose({ name: 'order_items' })
+  @Expose({ name: 'checkout_items' })
   @IsNotEmpty()
   @IsArray()
   @ArrayUnique((item: CheckoutItemRequestDto) => item.cartItemId, {

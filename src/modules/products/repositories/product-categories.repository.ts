@@ -43,7 +43,7 @@ export class ProductCategoriesRepository {
         isDeleted: false,
       }),
     );
-    console.log(values);
+
     const upsertResult = this.productCategoriesRepository
       .createQueryBuilder()
       .insert()

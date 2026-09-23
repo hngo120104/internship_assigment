@@ -5,12 +5,11 @@ import { CheckoutsService } from '../services/checkout.service';
 import { CheckoutRequestDto } from '../dto/requests/checkout.request.dto';
 import { CheckoutResponseDto } from '../dto/responses/checkout.response.dto';
 import { BuyNowRequestDto } from '../dto/requests/buy-now.request.dto';
-import { ShopOrderResponseDto } from '../../orders/dto/response/shop-order.response.dto';
 
 @Controller('checkout')
 export class CheckoutController {
   constructor(private readonly checkoutsService: CheckoutsService) {}
-  @Post('checkout')
+  @Post('carts')
   @SerializeOptions({ groups: ['customer-order'] })
   async checkoutCart(
     @CurrentUser() user: CurrentUserPayload,
@@ -27,7 +26,7 @@ export class CheckoutController {
   async buyNow(
     @CurrentUser() user: CurrentUserPayload,
     @Body() buyNowRequestDto: BuyNowRequestDto,
-  ): Promise<ShopOrderResponseDto> {
+  ): Promise<CheckoutResponseDto> {
     return await this.checkoutsService.buyNow(user.userId, buyNowRequestDto);
   }
 }

@@ -1,4 +1,4 @@
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsWhere, Repository, In } from 'typeorm';
 import { Order, OrderStatus } from '../entities/order.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
@@ -44,12 +44,14 @@ export class OrdersRepository {
     page: number,
     size: number,
     orderStatus?: OrderStatus,
-    // paymentStatus?: PaymentStatus,
+    paymentStatus?: PaymentStatus,
   ): Promise<[Order[], number]> {
     const whereConditions: FindOptionsWhere<Order> = {
       shopId: shopId,
     };
     if (orderStatus) whereConditions.orderStatus = orderStatus;
+    if (paymentStatus)
+      whereConditions.checkout = { paymentStatus: paymentStatus };
     return await this.ordersRepository.findAndCount({
       where: whereConditions,
       relations: { orderItems: true },
@@ -66,16 +68,18 @@ export class OrdersRepository {
     userId: string,
     orderId: string,
   ): Promise<Order | null> {
-    return await this.ordersRepository
-      .createQueryBuilder('orders')
-      .setLock('pessimistic_write')
-      .leftJoinAndSelect('orders.orderItems', 'orderItems')
-      .where('orders.id = :orderId', { orderId: orderId })
-      .andWhere('userId = :userId', { userId: userId })
-      .andWhere('orders.orderStatus IN (:...OrderStatus)', {
-        OrderStatus: [OrderStatus.PENDING, OrderStatus.CONFIRMED],
-      })
-      .getOne();
+    return await this.ordersRepository.findOne({
+      where: {
+        checkout: { userId: userId },
+        id: orderId,
+        orderStatus: In([
+          OrderStatus.PENDING,
+          OrderStatus.CONFIRMED,
+          OrderStatus.PROCESSING,
+        ]),
+        shop: { isDeleted: false },
+      },
+    });
   }
 
   //TODO: where condition of payment need to be revised

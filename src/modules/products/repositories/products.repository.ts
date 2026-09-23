@@ -340,7 +340,6 @@ export class ProductsRepository {
       .where('p.id = :productId', { productId: productId });
   }
 
-  //TODO: replace this function where appliable
   async findProductWithActiveCategoriesById(
     productId: string,
   ): Promise<Product | null> {

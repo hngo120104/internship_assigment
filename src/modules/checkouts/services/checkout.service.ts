@@ -1,10 +1,6 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { OrdersService } from '../../orders/services/orders.service';
-import { RedisLockService } from '../../redis/services/redis-lock.service';
+import { RedlockService } from '../../redis/services/redlock.service';
 import { CheckoutRequestDto } from '../dto/requests/checkout.request.dto';
 import { CheckoutResponseDto } from '../dto/responses/checkout.response.dto';
 import type { PlaceOrdersCommand } from '../interfaces/place-orders.interface';
@@ -20,7 +16,6 @@ import { CartItemsService } from '../../carts/services/cart-items.service';
 import { CheckoutItemRequestDto } from '../dto/requests/checkout-item.request.dto';
 import { CartItem } from '../../carts/entities/cart-item.entity';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
-import { ShopOrderResponseDto } from '../../orders/dto/response/shop-order.response.dto';
 import { toResponseDto } from '../../../utils/response-dto.mapper';
 import {
   CheckoutRepository,
@@ -29,6 +24,12 @@ import {
 import { Checkout } from '../entities/checkout.entity';
 import { PaymentStatus } from '../enums/payment-status.enum';
 import { CheckoutStatus } from '../enums/checkout-status.enum';
+import {
+  InventoryCachingService,
+  RedisReservationResult,
+} from '../../products/services/inventory-caching.service';
+
+const CHECKOUT_LOCK_TTL_MS = 5_000;
 
 @Injectable()
 export class CheckoutsService {
@@ -38,7 +39,8 @@ export class CheckoutsService {
     private readonly productVariantsService: ProductVariantsService,
     private readonly userAddressesService: UserAddressesService,
     private readonly cartItemsService: CartItemsService,
-    private readonly redisLockService: RedisLockService,
+    private readonly redlockService: RedlockService,
+    private readonly inventoryCachingService: InventoryCachingService,
   ) {}
 
   private async placeOrdersWithLock(
@@ -49,10 +51,75 @@ export class CheckoutsService {
       .sort()
       .map((id) => `lock:variant:${id}`);
 
-    return this.redisLockService.withLock(keys, async () => {
-      const command = await buildCommand();
-      return this.placeOrders(command);
-    });
+    return this.redlockService.withLock(
+      keys,
+      CHECKOUT_LOCK_TTL_MS,
+      async () => {
+        const command = await buildCommand();
+        return this.placeOrders(command);
+      },
+    );
+  }
+
+  @Transactional()
+  private async placeOrdersWithRedisCaching(
+    command: PlaceOrdersCommand,
+  ): Promise<Checkout | RedisReservationResult> {
+    const { userId, idempotencyKey, itemsByShop, cartItemIds } = command;
+    const requestedOrderItems = Array.from(itemsByShop.values()).flat();
+    const reservationRequests = requestedOrderItems.map(
+      ({ variant, amount }) => ({
+        variantId: variant.id,
+        amount,
+      }),
+    );
+    const { success, succeededItems, failedItems } =
+      await this.inventoryCachingService.reserveInventory(
+        idempotencyKey,
+        reservationRequests,
+      );
+    if (success && succeededItems) {
+      const createdCheckout = this.createCheckout({
+        userId: command.userId,
+        idempotencyKey: command.idempotencyKey,
+        shippingAddressId: command.shippingAddress.id,
+        shippingAddress: command.shippingAddress,
+        paymentMethod: command.paymentMethod,
+        paymentStatus: PaymentStatus.PENDING,
+        orders: [],
+        status: CheckoutStatus.PROCESSING,
+      });
+
+      const createdOrders =
+        this.ordersService.createOrdersForEachShop(itemsByShop);
+      createdCheckout.orders = createdOrders;
+      if (cartItemIds) {
+        await this.cartItemsService.markUserCartItemsAsOrderedOrThrow(
+          userId,
+          cartItemIds,
+        );
+      }
+      for (const order of createdOrders) {
+        order.checkout = createdCheckout;
+      }
+      createdCheckout.status = CheckoutStatus.COMPLETED;
+      createdCheckout.completedAt = new Date();
+      const savedCheckout =
+        await this.checkoutRepository.saveCheckout(createdCheckout);
+      await this.inventoryCachingService.releaseReservations(
+        idempotencyKey,
+        succeededItems?.map(({ variantId, reservedAmount }) => ({
+          variantId: variantId,
+          amount: reservedAmount,
+        })),
+      );
+      return savedCheckout;
+    } else {
+      return {
+        success: false,
+        failedItems: failedItems,
+      };
+    }
   }
 
   @Transactional()
@@ -60,12 +127,12 @@ export class CheckoutsService {
     const { userId, itemsByShop, cartItemIds } = command;
     const requestedOrderItems = Array.from(itemsByShop.values()).flat();
     await this.productVariantsService.validateAndReserveVariantsAmountOrThrow(
-      requestedOrderItems.map(({ variant, quantity }) => ({
+      requestedOrderItems.map(({ variant, amount }) => ({
         variant,
-        quantity,
+        amount: amount,
       })),
     );
-    const createdCheckout = await this.createCheckout({
+    const createdCheckout = this.createCheckout({
       userId: command.userId,
       idempotencyKey: command.idempotencyKey,
       shippingAddressId: command.shippingAddress.id,
@@ -75,7 +142,7 @@ export class CheckoutsService {
       orders: [],
       status: CheckoutStatus.PROCESSING,
     });
-    //TODO: may need to assign orders to checkout
+
     const createdOrders =
       this.ordersService.createOrdersForEachShop(itemsByShop);
     createdCheckout.orders = createdOrders;
@@ -88,10 +155,10 @@ export class CheckoutsService {
     for (const order of createdOrders) {
       order.checkout = createdCheckout;
     }
+    createdCheckout.status = CheckoutStatus.COMPLETED;
+    createdCheckout.completedAt = new Date();
     const savedCheckout =
       await this.checkoutRepository.saveCheckout(createdCheckout);
-    savedCheckout.completedAt = new Date();
-    savedCheckout.status = CheckoutStatus.COMPLETED;
     return savedCheckout;
   }
 
@@ -158,7 +225,7 @@ export class CheckoutsService {
           );
         const requestedOrderItem: RequestedOrderItem = {
           variant: foundVariant,
-          quantity: buyNowRequestDto.quantity,
+          amount: buyNowRequestDto.quantity,
           note: buyNowRequestDto.note,
         };
         const requestedOrderByShop: RequestedItemsByShop = new Map<
@@ -183,7 +250,9 @@ export class CheckoutsService {
     buyNowRequestDto: BuyNowRequestDto,
   ): Promise<CheckoutResponseDto> {
     const savedCheckout = await this.processBuynow(userId, buyNowRequestDto);
-    return toResponseDto(CheckoutResponseDto, savedCheckout);
+    const response = toResponseDto(CheckoutResponseDto, savedCheckout);
+    response.grandTotal = this.calculateGrandTotal(savedCheckout);
+    return response;
   }
 
   async checkoutCart(
@@ -224,7 +293,7 @@ export class CheckoutsService {
       }
       const orderItem: RequestedOrderItem = {
         variant: variant,
-        quantity: cartItem.quantity,
+        amount: cartItem.quantity,
         note: request.note,
       };
 
@@ -266,15 +335,7 @@ export class CheckoutsService {
     return checkoutRequestDto.checkoutItems.map((item) => item.cartItemId);
   }
 
-  private async createCheckout(data: CreateCheckoutData) {
-    const exists = await this.checkoutRepository.checkIdempotency(
-      data.idempotencyKey,
-    );
-    if (exists) {
-      throw new ConflictException(
-        'Idempotency key duplicated. Request might be sent.',
-      );
-    }
+  private createCheckout(data: CreateCheckoutData) {
     return this.checkoutRepository.createCheckout(data);
   }
 

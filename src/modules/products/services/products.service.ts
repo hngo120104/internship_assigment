@@ -70,20 +70,6 @@ export class ProductsService {
     createdProduct.photos = insertedPhotos;
   }
 
-  private async validateShopExistsAndHasProduct(
-    shopId: string,
-    productId: string,
-  ): Promise<Product> {
-    const product = await this.productsRepository.findProductByIdAndShopId(
-      productId,
-      shopId,
-    );
-    if (!product) {
-      throw new NotFoundException('Product not found.');
-    }
-    return product;
-  }
-
   private async processCreateProduct(
     shopId: string,
     productCreateDto: ProductCreateRequestDto,

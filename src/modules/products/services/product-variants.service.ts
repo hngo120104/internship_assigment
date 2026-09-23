@@ -221,16 +221,16 @@ export class ProductVariantsService {
   findVariantsHasInsufficientAmount(
     requestedItem: {
       variant: ProductVariant;
-      quantity: number;
+      amount: number;
     }[],
   ): InvalidVariantAmountResult[] {
     const insufficientVariants: InvalidVariantAmountResult[] = [];
     for (const item of requestedItem) {
       const availableAmount = item.variant.amount;
-      if (availableAmount === undefined || availableAmount < item.quantity) {
+      if (availableAmount === undefined || availableAmount < item.amount) {
         insufficientVariants.push({
           variantId: item.variant.id,
-          requestedAmount: item.quantity,
+          requestedAmount: item.amount,
           availableAmount: availableAmount ?? 0,
         });
       }
@@ -242,7 +242,7 @@ export class ProductVariantsService {
   async validateAndReserveVariantsAmountOrThrow(
     requestedItem: {
       variant: ProductVariant;
-      quantity: number;
+      amount: number;
     }[],
   ): Promise<number> {
     const sortedRequestItems = [...requestedItem].sort((l, r) =>
@@ -260,7 +260,7 @@ export class ProductVariantsService {
         sortedRequestItems.map((item) => {
           return {
             variantId: item.variant.id,
-            quantity: item.quantity,
+            amount: item.amount,
           };
         }),
       );

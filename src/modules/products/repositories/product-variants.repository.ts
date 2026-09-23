@@ -15,7 +15,7 @@ export class ProductVariantsRepository {
   ) {}
 
   async validateProductVariantsReadyForPurchasing(
-    reserveRequests: { variantId: string; quantity: number }[],
+    reserveRequests: { variantId: string; amount: number }[],
   ): Promise<InvalidVariantAmountResult[] | null> {
     const variantIds = reserveRequests.map((item) => item.variantId);
     const variants = await this.variantsRepository.find({
@@ -29,15 +29,29 @@ export class ProductVariantsRepository {
     );
     for (const item of reserveRequests) {
       const availableAmount = variantsMap.get(item.variantId);
-      if (availableAmount === undefined || availableAmount < item.quantity) {
+      if (availableAmount === undefined || availableAmount < item.amount) {
         insufficientVariantMap.push({
           variantId: item.variantId,
-          requestedAmount: item.quantity,
+          requestedAmount: item.amount,
           availableAmount: availableAmount ?? 0,
         });
       }
     }
     return insufficientVariantMap;
+  }
+
+  async findPurchasbleVariantsAmountWithIds(
+    ids: string[],
+  ): Promise<Partial<ProductVariant>[]> {
+    return await this.variantsRepository.find({
+      select: { id: true, amount: true },
+      where: {
+        id: In(ids),
+        isActive: true,
+        isDeleted: false,
+        product: { isActive: true, isDeleted: false },
+      },
+    });
   }
 
   async findActiveVariantsByIds(
@@ -152,11 +166,32 @@ export class ProductVariantsRepository {
     return this.variantsRepository.save(variants);
   }
 
-  async reserveVariantsAmountByVariantIdsAtomically(
-    reserveRequests: { variantId: string; quantity: number }[],
+  async reserveVariantsAmountById(
+    reserveRequests: { variantId: string; amount: number }[],
   ): Promise<number> {
-    if (reserveRequests.length === 0) return 0;
+    const variantIds = reserveRequests.map((rq) => rq.variantId);
+    const whenCases = reserveRequests
+      .map(() => `WHEN id = ? THEN amount - ?`)
+      .join(' ');
+    const whenParameters = reserveRequests.flatMap((request) => [
+      request.variantId,
+      request.amount,
+    ]);
+    const sql = `
+        UPDATE product_variants 
+        SET amount = CASE ${whenCases} ELSE amount END
+        WHERE id IN (?)
+      `;
+    const updateResult: ResultSetHeader = await this.variantsRepository.query(
+      sql,
+      [...whenParameters, variantIds],
+    );
+    return updateResult.affectedRows;
+  }
 
+  async reserveVariantsAmountByVariantIdsAtomically(
+    reserveRequests: { variantId: string; amount: number }[],
+  ): Promise<number> {
     const variantIds = reserveRequests.map((request) => request.variantId);
     const whenCases = reserveRequests
       .map(() => `WHEN id = ? THEN amount - ?`)
@@ -166,11 +201,11 @@ export class ProductVariantsRepository {
     );
     const whenParameters = reserveRequests.flatMap((request) => [
       request.variantId,
-      request.quantity,
+      request.amount,
     ]);
     const conditionParameters = reserveRequests.flatMap((request) => [
       request.variantId,
-      request.quantity,
+      request.amount,
     ]);
     const sql = `
         UPDATE product_variants 
@@ -186,16 +221,16 @@ export class ProductVariantsRepository {
 
   async restockVariantAmountByAtomically(
     id: string,
-    quantity: number,
+    amount: number,
   ): Promise<number> {
     const updateResult = await this.variantsRepository
       .createQueryBuilder()
       .update(ProductVariant)
-      .set({ amount: () => 'amount + :quantity' })
+      .set({ amount: () => 'amount + :amount' })
       .where('id = :id', {
         id: id,
       })
-      .setParameter('quantity', quantity)
+      .setParameter('amount', amount)
       .execute();
     return updateResult.affected ?? 0;
   }

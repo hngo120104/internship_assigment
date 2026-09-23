@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import Redis from 'ioredis';
 import { ResourceLock } from '../interfaces/resource-lock.interface';
-import { REDIS_CLIENT } from '../redis.constants';
+import { REDIS_CLIENT } from '../constants/redis.constants';
 
 @Injectable()
 export class RedisLockService {

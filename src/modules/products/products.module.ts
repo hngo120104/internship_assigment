@@ -16,6 +16,7 @@ import { ProductVariant } from './entities/product-variant.entity';
 import { ProductVariantsRepository } from './repositories/product-variants.repository';
 import { ProductVariantsService } from './services/product-variants.service';
 import { RedisModule } from '../redis/redis.module';
+import { InventoryCachingService } from './services/inventory-caching.service';
 
 @Module({
   imports: [
@@ -39,7 +40,13 @@ import { RedisModule } from '../redis/redis.module';
     ProductCategoriesRepository,
     ProductVariantsRepository,
     ProductVariantsService,
+    InventoryCachingService,
   ],
-  exports: [ProductsService, ProductsRepository, ProductVariantsService],
+  exports: [
+    ProductsService,
+    ProductsRepository,
+    ProductVariantsService,
+    InventoryCachingService,
+  ],
 })
 export class ProductsModule {}
