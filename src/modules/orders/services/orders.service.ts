@@ -77,7 +77,7 @@ export class OrdersService {
         findOrderRequestDto.page,
         findOrderRequestDto.size,
         findOrderRequestDto.orderStatus,
-        // findOrderRequestDto.paymentStatus,
+        findOrderRequestDto.paymentStatus,
       );
     const response = toListResponseDtos(ShopOrderResponseDto, foundUserOrders, [
       'order-details',
@@ -313,7 +313,7 @@ export class OrdersService {
     for (const orderItem of requestedItems) {
       const createdOrderItem = this.createOrderItemSnapshot(
         order,
-        orderItem.quantity,
+        orderItem.amount,
         orderItem.variant,
         orderItem.note,
       );

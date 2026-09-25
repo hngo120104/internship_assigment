@@ -32,6 +32,19 @@ export class CheckoutRepository {
     });
   }
 
+  async findByUserIdAndIdempotencyKey(
+    userId: string,
+    idempotencyKey: string,
+  ): Promise<Checkout | null> {
+    return await this.checkoutRepository.findOne({
+      where: { userId, idempotencyKey },
+      relations: {
+        shippingAddress: true,
+        orders: { orderItems: true },
+      },
+    });
+  }
+
   createCheckout(data: CreateCheckoutData): Checkout {
     return this.checkoutRepository.create({
       ...data,

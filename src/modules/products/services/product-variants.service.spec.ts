@@ -1,25 +1,30 @@
-import { NotFoundException } from '@nestjs/common';
-import { ProductVariant } from '../entities/product-variant.entity';
 import { ProductVariantsRepository } from '../repositories/product-variants.repository';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ProductVariantsService } from './product-variants.service';
 
+jest.mock(
+  '../dto/product-variants/request/product-variant-update.request.dto',
+  () => ({
+    ProductVariantUpdateRequestDto: class ProductVariantUpdateRequestDto {},
+  }),
+);
+
+jest.mock('typeorm-transactional', () => ({
+  Transactional:
+    () =>
+    (_target: object, _propertyKey: string, descriptor: PropertyDescriptor) =>
+      descriptor,
+}));
+
 describe('ProductVariantsService stock reservation', () => {
   let repository: {
     reserveVariantsAmountByVariantIdsAtomically: jest.Mock;
-    findActiveVariantsByIds: jest.Mock;
   };
   let service: ProductVariantsService;
-
-  const variants = [
-    { id: 'variant-a', amount: 5 },
-    { id: 'variant-b', amount: 3 },
-  ] as ProductVariant[];
 
   beforeEach(() => {
     repository = {
       reserveVariantsAmountByVariantIdsAtomically: jest.fn(),
-      findActiveVariantsByIds: jest.fn(),
     };
     service = new ProductVariantsService(
       repository as unknown as ProductVariantsRepository,
@@ -27,38 +32,31 @@ describe('ProductVariantsService stock reservation', () => {
     );
   });
 
-  it('returns refreshed variants when every requested stock row is updated', async () => {
+  it('reserves every requested stock row atomically', async () => {
     repository.reserveVariantsAmountByVariantIdsAtomically.mockResolvedValue(2);
-    repository.findActiveVariantsByIds.mockResolvedValue(variants);
 
-    const result = await service.validateAndReserveVariantsAmountOrThrow([
-      { variant: variants[0], quantity: 2 },
-      { variant: variants[1], quantity: 1 },
+    const result = await service.reserveVariantsAmountAtomicallyOrThrow([
+      { variantId: 'variant-b', amount: 1 },
+      { variantId: 'variant-a', amount: 2 },
     ]);
 
     expect(
       repository.reserveVariantsAmountByVariantIdsAtomically,
     ).toHaveBeenCalledWith([
-      { variantId: 'variant-a', quantity: 2 },
-      { variantId: 'variant-b', quantity: 1 },
+      { variantId: 'variant-a', amount: 2 },
+      { variantId: 'variant-b', amount: 1 },
     ]);
-    expect(repository.findActiveVariantsByIds).toHaveBeenCalledWith([
-      'variant-a',
-      'variant-b',
-    ]);
-    expect(result).toBe(variants);
+    expect(result).toBe(2);
   });
 
   it('rejects the reservation when not every stock row is updated', async () => {
     repository.reserveVariantsAmountByVariantIdsAtomically.mockResolvedValue(1);
 
     await expect(
-      service.validateAndReserveVariantsAmountOrThrow([
-        { variant: variants[0], quantity: 2 },
-        { variant: variants[1], quantity: 1 },
+      service.reserveVariantsAmountAtomicallyOrThrow([
+        { variantId: 'variant-a', amount: 2 },
+        { variantId: 'variant-b', amount: 1 },
       ]),
-    ).rejects.toBeInstanceOf(NotFoundException);
-
-    expect(repository.findActiveVariantsByIds).not.toHaveBeenCalled();
+    ).rejects.toThrow('Atomic database inventory reservation failed.');
   });
 });

@@ -14,8 +14,6 @@ import { Transactional } from 'typeorm-transactional';
 import { toResponseDto } from '../../../utils/response-dto.mapper';
 import { ProductVariantResponseDto } from '../dto/product-variants/response/product-variant.response.dto';
 import { Product } from '../entities/product.entity';
-import { InvalidVariantAmountResult } from '../interfaces/invalid-variant-amount-result.interface';
-import { InsufficientVariantAmountException } from '../exceptions/variant-insufficient-stock.exception';
 
 @Injectable()
 export class ProductVariantsService {
@@ -218,55 +216,25 @@ export class ProductVariantsService {
     return this.findPurchasableVariantEntityByIdOrThrow(variantId);
   }
 
-  findVariantsHasInsufficientAmount(
-    requestedItem: {
-      variant: ProductVariant;
-      amount: number;
-    }[],
-  ): InvalidVariantAmountResult[] {
-    const insufficientVariants: InvalidVariantAmountResult[] = [];
-    for (const item of requestedItem) {
-      const availableAmount = item.variant.amount;
-      if (availableAmount === undefined || availableAmount < item.amount) {
-        insufficientVariants.push({
-          variantId: item.variant.id,
-          requestedAmount: item.amount,
-          availableAmount: availableAmount ?? 0,
-        });
-      }
-    }
-    return insufficientVariants;
-  }
-
   @Transactional()
-  async validateAndReserveVariantsAmountOrThrow(
-    requestedItem: {
-      variant: ProductVariant;
+  async reserveVariantsAmountAtomicallyOrThrow(
+    reservationRequests: {
+      variantId: string;
       amount: number;
     }[],
   ): Promise<number> {
-    const sortedRequestItems = [...requestedItem].sort((l, r) =>
-      l.variant.id.localeCompare(r.variant.id),
+    const sortedReservationRequests = [...reservationRequests].sort((l, r) =>
+      l.variantId.localeCompare(r.variantId),
     );
-    const insufficientVariants =
-      this.findVariantsHasInsufficientAmount(requestedItem);
-
-    if (insufficientVariants.length > 0) {
-      throw new InsufficientVariantAmountException(insufficientVariants);
-    }
 
     const reservationResult =
       await this.productVariantsRepository.reserveVariantsAmountByVariantIdsAtomically(
-        sortedRequestItems.map((item) => {
-          return {
-            variantId: item.variant.id,
-            amount: item.amount,
-          };
-        }),
+        sortedReservationRequests,
       );
 
-    if (reservationResult !== requestedItem.length)
-      throw new Error('Reservation failed. Something is wrong.');
+    if (reservationResult !== sortedReservationRequests.length) {
+      throw new Error('Atomic database inventory reservation failed.');
+    }
     return reservationResult;
   }
 

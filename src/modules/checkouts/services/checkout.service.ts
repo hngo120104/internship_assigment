@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { OrdersService } from '../../orders/services/orders.service';
 import { RedlockService } from '../../redis/services/redlock.service';
 import { CheckoutRequestDto } from '../dto/requests/checkout.request.dto';
@@ -26,13 +31,16 @@ import { PaymentStatus } from '../enums/payment-status.enum';
 import { CheckoutStatus } from '../enums/checkout-status.enum';
 import {
   InventoryCachingService,
-  RedisReservationResult,
+  RedisReservationReturn,
 } from '../../products/services/inventory-caching.service';
+import { InsufficientVariantAmountException } from '../../products/exceptions/variant-insufficient-stock.exception';
 
-const CHECKOUT_LOCK_TTL_MS = 5_000;
+const CHECKOUT_IDEMPOTENCY_LOCK_TTL_MS = 5_000;
 
 @Injectable()
 export class CheckoutsService {
+  private readonly logger = new Logger(CheckoutsService.name);
+
   constructor(
     private readonly checkoutRepository: CheckoutRepository,
     private readonly ordersService: OrdersService,
@@ -43,94 +51,113 @@ export class CheckoutsService {
     private readonly inventoryCachingService: InventoryCachingService,
   ) {}
 
-  private async placeOrdersWithLock(
-    variantIds: string[],
+  private async placeOrdersWithIdempotencyLock(
+    userId: string,
+    idempotencyKey: string,
     buildCommand: () => Promise<PlaceOrdersCommand>,
   ): Promise<Checkout> {
-    const keys = [...new Set(variantIds)]
-      .sort()
-      .map((id) => `lock:variant:${id}`);
+    const lockKey = `lock:checkout:idempotency:${userId}:${idempotencyKey}`;
 
     return this.redlockService.withLock(
-      keys,
-      CHECKOUT_LOCK_TTL_MS,
+      [lockKey],
+      CHECKOUT_IDEMPOTENCY_LOCK_TTL_MS,
       async () => {
+        const existingCheckout =
+          await this.checkoutRepository.findByUserIdAndIdempotencyKey(
+            userId,
+            idempotencyKey,
+          );
+        if (existingCheckout) {
+          return existingCheckout;
+        }
+
         const command = await buildCommand();
-        return this.placeOrders(command);
+        return this.placeOrdersWithInventoryReservation(command);
       },
     );
   }
 
-  @Transactional()
-  private async placeOrdersWithRedisCaching(
+  private async placeOrdersWithInventoryReservation(
     command: PlaceOrdersCommand,
-  ): Promise<Checkout | RedisReservationResult> {
-    const { userId, idempotencyKey, itemsByShop, cartItemIds } = command;
-    const requestedOrderItems = Array.from(itemsByShop.values()).flat();
-    const reservationRequests = requestedOrderItems.map(
-      ({ variant, amount }) => ({
-        variantId: variant.id,
-        amount,
-      }),
+  ): Promise<Checkout> {
+    const reservationKey = `${command.userId}:${command.idempotencyKey}`;
+    const reservationRequests = this.buildInventoryReservationRequests(
+      command.itemsByShop,
     );
-    const { success, succeededItems, failedItems } =
-      await this.inventoryCachingService.reserveInventory(
-        idempotencyKey,
-        reservationRequests,
-      );
-    if (success && succeededItems) {
-      const createdCheckout = this.createCheckout({
-        userId: command.userId,
-        idempotencyKey: command.idempotencyKey,
-        shippingAddressId: command.shippingAddress.id,
-        shippingAddress: command.shippingAddress,
-        paymentMethod: command.paymentMethod,
-        paymentStatus: PaymentStatus.PENDING,
-        orders: [],
-        status: CheckoutStatus.PROCESSING,
-      });
 
-      const createdOrders =
-        this.ordersService.createOrdersForEachShop(itemsByShop);
-      createdCheckout.orders = createdOrders;
-      if (cartItemIds) {
-        await this.cartItemsService.markUserCartItemsAsOrderedOrThrow(
-          userId,
-          cartItemIds,
+    const reservation = await this.inventoryCachingService.reserveInventory(
+      reservationKey,
+      reservationRequests,
+    );
+
+    switch (reservation.state) {
+      case RedisReservationReturn.SUCCESS:
+        break;
+      case RedisReservationReturn.FAILED:
+        throw new InsufficientVariantAmountException(
+          (reservation.failedItems ?? []).map((item) => ({
+            variantId: item.variantId,
+            requestedAmount: item.requestAmount,
+            availableAmount: item.availableAmount,
+          })),
+        );
+      case RedisReservationReturn.ALREADY_RESERVED:
+      case RedisReservationReturn.ALREADY_COMPLETED:
+      case RedisReservationReturn.ALREADY_COMPENSATED: {
+        const duplicatedCheckout =
+          await this.checkoutRepository.findByUserIdAndIdempotencyKey(
+            command.userId,
+            command.idempotencyKey,
+          );
+        if (duplicatedCheckout) {
+          return duplicatedCheckout;
+        }
+
+        throw new ConflictException(
+          'Checkout with this idempotency key is being processed or cannot be retried.',
         );
       }
-      for (const order of createdOrders) {
-        order.checkout = createdCheckout;
-      }
-      createdCheckout.status = CheckoutStatus.COMPLETED;
-      createdCheckout.completedAt = new Date();
-      const savedCheckout =
-        await this.checkoutRepository.saveCheckout(createdCheckout);
-      await this.inventoryCachingService.releaseReservations(
-        idempotencyKey,
-        succeededItems?.map(({ variantId, reservedAmount }) => ({
-          variantId: variantId,
-          amount: reservedAmount,
-        })),
-      );
-      return savedCheckout;
-    } else {
-      return {
-        success: false,
-        failedItems: failedItems,
-      };
+      default:
+        throw new Error(
+          `Unexpected Redis reservation state: ${reservation.state}`,
+        );
     }
+
+    let savedCheckout: Checkout;
+    try {
+      savedCheckout = await this.placeOrders(command);
+    } catch (error) {
+      try {
+        await this.inventoryCachingService.releaseReservations(
+          reservationKey,
+          reservationRequests,
+        );
+      } catch (compensationError) {
+        throw new AggregateError(
+          [error, compensationError],
+          'Order placement and inventory compensation both failed.',
+        );
+      }
+      throw error;
+    }
+
+    try {
+      await this.inventoryCachingService.completeReservation(reservationKey);
+    } catch (error) {
+      this.logger.error(
+        `Unable to mark inventory reservation as completed for checkout ${command.idempotencyKey}.`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+
+    return savedCheckout;
   }
 
   @Transactional()
   private async placeOrders(command: PlaceOrdersCommand): Promise<Checkout> {
     const { userId, itemsByShop, cartItemIds } = command;
-    const requestedOrderItems = Array.from(itemsByShop.values()).flat();
-    await this.productVariantsService.validateAndReserveVariantsAmountOrThrow(
-      requestedOrderItems.map(({ variant, amount }) => ({
-        variant,
-        amount: amount,
-      })),
+    await this.productVariantsService.reserveVariantsAmountAtomicallyOrThrow(
+      this.buildInventoryReservationRequests(itemsByShop),
     );
     const createdCheckout = this.createCheckout({
       userId: command.userId,
@@ -162,6 +189,23 @@ export class CheckoutsService {
     return savedCheckout;
   }
 
+  private buildInventoryReservationRequests(
+    itemsByShop: RequestedItemsByShop,
+  ): { variantId: string; amount: number }[] {
+    const amountsByVariant = new Map<string, number>();
+    for (const { variant, amount } of Array.from(itemsByShop.values()).flat()) {
+      amountsByVariant.set(
+        variant.id,
+        (amountsByVariant.get(variant.id) ?? 0) + amount,
+      );
+    }
+
+    return Array.from(amountsByVariant, ([variantId, amount]) => ({
+      variantId,
+      amount,
+    })).sort((left, right) => left.variantId.localeCompare(right.variantId));
+  }
+
   private async processCheckout(
     userId: string,
     checkoutRequestDto: CheckoutRequestDto,
@@ -170,55 +214,58 @@ export class CheckoutsService {
     if (!checkoutItems.length) {
       throw new BadRequestException('Checkout items cannot be empty.');
     }
-    const shippingAddress =
-      await this.userAddressesService.findActiveUserAddressEntityByIdOrThrow(
-        userId,
-        checkoutRequestDto.shippingAddressId,
-      );
-    //TODO: may need to refetch fresh cart items inside lock
-    const userActiveCartItems =
-      await this.cartItemsService.findActiveCartItemsEntitiesByUserIdAndIdsOrThrow(
-        userId,
-        checkoutRequestDto.checkoutItems.map((item) => item.cartItemId),
-        checkoutRequestDto.checkoutItems.length,
-      );
-    const variantIds = userActiveCartItems.map((item) => item.variantId);
-
-    return this.placeOrdersWithLock(variantIds, async () => {
-      const purchasableVariants =
-        await this.productVariantsService.findPurchasableVariantsEntitiesByIdsOrThrow(
-          variantIds,
-          userActiveCartItems.length,
+    return this.placeOrdersWithIdempotencyLock(
+      userId,
+      checkoutRequestDto.idempotencyKey,
+      async () => {
+        const shippingAddress =
+          await this.userAddressesService.findActiveUserAddressEntityByIdOrThrow(
+            userId,
+            checkoutRequestDto.shippingAddressId,
+          );
+        const userActiveCartItems =
+          await this.cartItemsService.findActiveCartItemsEntitiesByUserIdAndIdsOrThrow(
+            userId,
+            checkoutRequestDto.checkoutItems.map((item) => item.cartItemId),
+            checkoutRequestDto.checkoutItems.length,
+          );
+        const variantIds = userActiveCartItems.map((item) => item.variantId);
+        const purchasableVariants =
+          await this.productVariantsService.findPurchasableVariantsEntitiesByIdsOrThrow(
+            variantIds,
+            userActiveCartItems.length,
+          );
+        const requestedOrderItemsByShop = this.groupOrderItemsByShopId(
+          checkoutItems,
+          userActiveCartItems,
+          purchasableVariants,
         );
-      const requestedOrderItemsByShop = this.groupOrderItemsByShopId(
-        checkoutItems,
-        userActiveCartItems,
-        purchasableVariants,
-      );
 
-      return {
-        userId: userId,
-        idempotencyKey: checkoutRequestDto.idempotencyKey,
-        shippingAddress: shippingAddress,
-        paymentMethod: checkoutRequestDto.paymentMethod,
-        itemsByShop: requestedOrderItemsByShop,
-        cartItemIds: userActiveCartItems.map((item) => item.id),
-      };
-    });
+        return {
+          userId: userId,
+          idempotencyKey: checkoutRequestDto.idempotencyKey,
+          shippingAddress: shippingAddress,
+          paymentMethod: checkoutRequestDto.paymentMethod,
+          itemsByShop: requestedOrderItemsByShop,
+          cartItemIds: userActiveCartItems.map((item) => item.id),
+        };
+      },
+    );
   }
 
   private async processBuynow(
     userId: string,
     buyNowRequestDto: BuyNowRequestDto,
   ): Promise<Checkout> {
-    const shippingAddress =
-      await this.userAddressesService.findActiveUserAddressEntityByIdOrThrow(
-        userId,
-        buyNowRequestDto.shippingAddressId,
-      );
-    const savedCheckout = await this.placeOrdersWithLock(
-      [buyNowRequestDto.variantId],
+    const savedCheckout = await this.placeOrdersWithIdempotencyLock(
+      userId,
+      buyNowRequestDto.idempotencyKey,
       async () => {
+        const shippingAddress =
+          await this.userAddressesService.findActiveUserAddressEntityByIdOrThrow(
+            userId,
+            buyNowRequestDto.shippingAddressId,
+          );
         const foundVariant =
           await this.productVariantsService.findPurchasableVariantEntityByIdOrThrow(
             buyNowRequestDto.variantId,

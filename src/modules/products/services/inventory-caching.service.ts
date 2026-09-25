@@ -16,8 +16,15 @@ export enum RedisReservationReturn {
   ALREADY_RESERVED = 'ALREADY_RESERVED',
   ALREADY_COMPENSATED = 'ALREADY_COMPENSATED',
   ALREADY_COMPLETED = 'ALREADY_COMPLETED',
+  CACHE_MISS = 'CACHE_MISS',
   INVALID_AMOUNT = 'INVALID_AMOUNT',
   FAILED = 'FAILED',
+  SUCCESS = 'SUCCESS',
+}
+
+export enum RedisCompletionReturn {
+  ALREADY_COMPLETED = 'ALREADY_COMPLETED',
+  RESERVATION_NOT_FOUND = 'RESERVATION_NOT_FOUND',
   SUCCESS = 'SUCCESS',
 }
 
@@ -39,17 +46,16 @@ export interface RedisFailedItem {
 }
 
 export interface RedisReservationResult {
-  success: boolean;
+  state: RedisReservationReturn;
   succeededItems?: RedisSucceededItem[];
   failedItems?: RedisFailedItem[];
 }
 
 @Injectable()
 export class InventoryCachingService {
-  constructor(
-    private readonly VARIANT_STOCK_PREFIX = 'cache:inventory:amount:',
-    private readonly RESERVATION_RECORD = 'inventory:reservation:',
-    private readonly bulkReservationLuaScript = `
+  private readonly VARIANT_STOCK_PREFIX = 'cache:inventory:amount:';
+  private readonly RESERVATION_RECORD = 'inventory:reservation:';
+  private readonly bulkReservationLuaScript = `
         local failedItems = {}
         local succeededItems = {}
         local status = redis.call("GET", KEYS[1])
@@ -60,6 +66,7 @@ export class InventoryCachingService {
 
         if status == "COMPENSATED" then
           return { "ALREADY_COMPENSATED" }
+        end
 
         if status == "COMPLETED" then 
           return { "ALREADY_COMPLETED" }
@@ -109,14 +116,19 @@ export class InventoryCachingService {
                 KEYS[i],
                 tonumber(ARGV[i-1])
             )
-            table.insert(succeededItems, KEYS[i], tonumber(ARGV[i-1]))
+            table.insert(succeededItems, KEYS[i])
+            table.insert(succeededItems, tonumber(ARGV[i-1]))
         end
         redis.call("SET", KEYS[1], "RESERVED", "EX", 86400)
 
-        return { "SUCCESS", succeededItems }
-    `,
+        local result = { "SUCCESS" }
+        for i = 1, #succeededItems do
+          table.insert(result, succeededItems[i])
+        end
+        return result
+    `;
 
-    private readonly bulkCompensationLuaScript = `
+  private readonly bulkCompensationLuaScript = `
       local status = redis.call("GET", KEYS[1])
 
       if status == "COMPENSATED" then
@@ -129,9 +141,11 @@ export class InventoryCachingService {
 
       if #KEYS < 2 then
         return { "INVALID_ARGUMENTS" }
+      end
 
       if (#KEYS-1) ~= #ARGV then
         return { "INVALID_ARGUMENTS" }
+      end
 
       for i=2, #KEYS do
         local amount = tonumber(ARGV[i-1])
@@ -144,8 +158,24 @@ export class InventoryCachingService {
       redis.call("SET", KEYS[1], "COMPENSATED", "EX", 86400)
 
       return { "SUCCESS" }
-    `,
+    `;
 
+  private readonly completeReservationLuaScript = `
+      local status = redis.call("GET", KEYS[1])
+
+      if status == "COMPLETED" then
+        return { "ALREADY_COMPLETED" }
+      end
+
+      if status ~= "RESERVED" then
+        return { "RESERVATION_NOT_FOUND" }
+      end
+
+      redis.call("SET", KEYS[1], "COMPLETED", "EX", 86400)
+      return { "SUCCESS" }
+    `;
+
+  constructor(
     @Inject(REDIS_CLIENT)
     private readonly redisClient: Redis,
     private readonly productVariantRepository: ProductVariantsRepository,
@@ -200,6 +230,9 @@ export class InventoryCachingService {
       amount: number;
     }[],
   ): Promise<RedisReservationResult> {
+    await this.getAvailableAmounts(
+      reservationRequests.map((request) => request.variantId),
+    );
     const reservationResult = await this.executeLuaScript(
       idempotencyKey,
       this.bulkReservationLuaScript,
@@ -208,20 +241,22 @@ export class InventoryCachingService {
     switch (reservationResult[0]) {
       case RedisReservationReturn.ALREADY_COMPENSATED:
         return {
-          success: true,
+          state: RedisReservationReturn.ALREADY_COMPENSATED,
         };
       case RedisReservationReturn.ALREADY_RESERVED:
         return {
-          success: true,
+          state: RedisReservationReturn.ALREADY_RESERVED,
         };
       case RedisReservationReturn.ALREADY_COMPLETED:
         return {
-          success: true,
+          state: RedisReservationReturn.ALREADY_COMPLETED,
         };
       case RedisReservationReturn.INVALID_ARGUMENTS:
         throw new Error('Redis caching error.');
       case RedisReservationReturn.INVALID_AMOUNT:
         throw new Error('Redis caching error.');
+      case RedisReservationReturn.CACHE_MISS:
+        throw new Error('Inventory cache miss after initialization.');
       case RedisReservationReturn.FAILED: {
         const failedItems: RedisFailedItem[] = [];
         for (let i = 1; i < reservationResult.length; i += 3) {
@@ -237,7 +272,7 @@ export class InventoryCachingService {
           });
         }
         return {
-          success: false,
+          state: RedisReservationReturn.FAILED,
           failedItems,
         };
       }
@@ -254,14 +289,31 @@ export class InventoryCachingService {
           });
         }
         return {
-          success: true,
+          state: RedisReservationReturn.SUCCESS,
           succeededItems,
         };
       }
       default:
-        return {
-          success: true,
-        };
+        throw new Error(`Unexpected Redis reservation result.`);
+    }
+  }
+
+  async completeReservation(idempotencyKey: string): Promise<void> {
+    const checkoutKey = `${this.RESERVATION_RECORD}${idempotencyKey}`;
+    const result = (await this.redisClient.eval(
+      this.completeReservationLuaScript,
+      1,
+      checkoutKey,
+    )) as Array<string | number>;
+
+    switch (result[0]) {
+      case RedisCompletionReturn.SUCCESS:
+      case RedisCompletionReturn.ALREADY_COMPLETED:
+        return;
+      case RedisCompletionReturn.RESERVATION_NOT_FOUND:
+        throw new Error('Redis reservation not found.');
+      default:
+        throw new Error('Unexpected Redis completion result.');
     }
   }
 
