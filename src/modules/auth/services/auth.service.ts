@@ -28,7 +28,6 @@ export class AuthService {
 
     const matchedPassword = await bcrypt.compare(
       loginDto.password,
-      // 'Abc!@#123',
       userWithEmailExist.passwordHashed,
     );
 

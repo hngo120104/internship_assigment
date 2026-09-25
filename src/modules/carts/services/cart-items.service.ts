@@ -38,7 +38,7 @@ export class CartItemsService {
       cartItems: foundUserCartItems,
     };
     const response = toResponseDto(UserCartResponseDto, userCartObj);
-    return new ListResponseDto([response], count, size, page);
+    return new ListResponseDto([response], count, page, size);
   }
 
   async getUserActiveCart(
@@ -145,7 +145,7 @@ export class CartItemsService {
   private validateVariantAmount(amountUpdate: number, availableAmount: number) {
     const allowedAmount = Math.min(
       availableAmount,
-      Number(process.env.MAX_CART_ITEMS),
+      Number(process.env.MAX_CART_ITEMS) || 100,
     );
     if (amountUpdate > allowedAmount) {
       if (allowedAmount > availableAmount) {

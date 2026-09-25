@@ -5,6 +5,7 @@ import {
   IsArray,
   IsEnum,
   IsNotEmpty,
+  IsString,
   IsUUID,
   ValidateNested,
 } from 'class-validator';
@@ -14,6 +15,8 @@ import { CheckoutItemRequestDto } from './checkout-item.request.dto';
 export class CheckoutRequestDto {
   @Expose({ name: 'idempotency_key' })
   @IsNotEmpty()
+  @IsUUID()
+  @IsString()
   idempotencyKey!: string;
 
   @Expose({ name: 'ship_address_id' })

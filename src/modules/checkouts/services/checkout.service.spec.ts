@@ -38,8 +38,10 @@ describe('CheckoutsService inventory integration', () => {
     markUserCartItemsAsOrderedOrThrow: jest.fn(() => Promise.resolve(1)),
   };
   const inventoryCachingService = {
-    reserveInventory: jest.fn(),
-    releaseReservations: jest.fn(() => Promise.resolve(undefined)),
+    reserveInventoryWithIdempotencyKey: jest.fn(),
+    releaseReservationsWithIdempotency: jest.fn(() =>
+      Promise.resolve(undefined),
+    ),
     completeReservation: jest.fn(() => Promise.resolve(undefined)),
   };
   const redlockService = {
@@ -100,33 +102,40 @@ describe('CheckoutsService inventory integration', () => {
     ).placeOrdersWithInventoryReservation(command);
 
   it('reserves Redis inventory, uses the existing placeOrders flow, then completes the reservation', async () => {
-    inventoryCachingService.reserveInventory.mockResolvedValue({
-      state: RedisReservationReturn.SUCCESS,
-      succeededItems: [{ variantId: 'variant-id', reservedAmount: 3 }],
-    });
+    inventoryCachingService.reserveInventoryWithIdempotencyKey.mockResolvedValue(
+      {
+        state: RedisReservationReturn.SUCCESS,
+        succeededItems: [{ variantId: 'variant-id', reservedAmount: 3 }],
+      },
+    );
 
     await placeOrdersWithInventory();
 
-    expect(inventoryCachingService.reserveInventory).toHaveBeenCalledWith(
-      'user-id:idempotency-key',
-      [{ variantId: 'variant-id', amount: 3 }],
-    );
+    expect(
+      inventoryCachingService.reserveInventoryWithIdempotencyKey,
+    ).toHaveBeenCalledWith('user-id:idempotency-key', [
+      { variantId: 'variant-id', amount: 3 },
+    ]);
     expect(
       productVariantsService.reserveVariantsAmountAtomicallyOrThrow,
     ).toHaveBeenCalledWith([{ variantId: 'variant-id', amount: 3 }]);
     expect(inventoryCachingService.completeReservation).toHaveBeenCalledWith(
       'user-id:idempotency-key',
     );
-    expect(inventoryCachingService.releaseReservations).not.toHaveBeenCalled();
+    expect(
+      inventoryCachingService.releaseReservationsWithIdempotency,
+    ).not.toHaveBeenCalled();
   });
 
   it('returns the existing insufficient-stock exception shape', async () => {
-    inventoryCachingService.reserveInventory.mockResolvedValue({
-      state: RedisReservationReturn.FAILED,
-      failedItems: [
-        { variantId: 'variant-id', requestAmount: 3, availableAmount: 2 },
-      ],
-    });
+    inventoryCachingService.reserveInventoryWithIdempotencyKey.mockResolvedValue(
+      {
+        state: RedisReservationReturn.FAILED,
+        failedItems: [
+          { variantId: 'variant-id', requestAmount: 3, availableAmount: 2 },
+        ],
+      },
+    );
 
     await expect(placeOrdersWithInventory()).rejects.toBeInstanceOf(
       InsufficientVariantAmountException,
@@ -138,18 +147,21 @@ describe('CheckoutsService inventory integration', () => {
 
   it('compensates Redis inventory when the database order transaction fails', async () => {
     const databaseError = new Error('database failed');
-    inventoryCachingService.reserveInventory.mockResolvedValue({
-      state: RedisReservationReturn.SUCCESS,
-    });
+    inventoryCachingService.reserveInventoryWithIdempotencyKey.mockResolvedValue(
+      {
+        state: RedisReservationReturn.SUCCESS,
+      },
+    );
     productVariantsService.reserveVariantsAmountAtomicallyOrThrow.mockRejectedValueOnce(
       databaseError,
     );
 
     await expect(placeOrdersWithInventory()).rejects.toBe(databaseError);
-    expect(inventoryCachingService.releaseReservations).toHaveBeenCalledWith(
-      'user-id:idempotency-key',
-      [{ variantId: 'variant-id', amount: 3 }],
-    );
+    expect(
+      inventoryCachingService.releaseReservationsWithIdempotency,
+    ).toHaveBeenCalledWith('user-id:idempotency-key', [
+      { variantId: 'variant-id', amount: 3 },
+    ]);
     expect(inventoryCachingService.completeReservation).not.toHaveBeenCalled();
   });
 
@@ -158,9 +170,11 @@ describe('CheckoutsService inventory integration', () => {
     checkoutRepository.findByUserIdAndIdempotencyKey.mockResolvedValue(
       existingCheckout,
     );
-    inventoryCachingService.reserveInventory.mockResolvedValue({
-      state: RedisReservationReturn.ALREADY_COMPLETED,
-    });
+    inventoryCachingService.reserveInventoryWithIdempotencyKey.mockResolvedValue(
+      {
+        state: RedisReservationReturn.ALREADY_COMPLETED,
+      },
+    );
 
     await expect(placeOrdersWithInventory()).resolves.toBe(existingCheckout);
     expect(
@@ -172,9 +186,11 @@ describe('CheckoutsService inventory integration', () => {
   });
 
   it('locks concurrent checkout requests by user and idempotency key', async () => {
-    inventoryCachingService.reserveInventory.mockResolvedValue({
-      state: RedisReservationReturn.SUCCESS,
-    });
+    inventoryCachingService.reserveInventoryWithIdempotencyKey.mockResolvedValue(
+      {
+        state: RedisReservationReturn.SUCCESS,
+      },
+    );
 
     await (
       service as unknown as {
@@ -218,6 +234,8 @@ describe('CheckoutsService inventory integration', () => {
 
     expect(result).toBe(existingCheckout);
     expect(buildCommand).not.toHaveBeenCalled();
-    expect(inventoryCachingService.reserveInventory).not.toHaveBeenCalled();
+    expect(
+      inventoryCachingService.reserveInventoryWithIdempotencyKey,
+    ).not.toHaveBeenCalled();
   });
 });

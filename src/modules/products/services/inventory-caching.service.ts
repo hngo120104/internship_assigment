@@ -205,7 +205,7 @@ export class InventoryCachingService {
     return amounts.map((amount) => Number(amount));
   }
 
-  private async syncAmountsToCache(variantIds: string[]): Promise<number[]> {
+  async syncAmountsToCache(variantIds: string[]): Promise<number[]> {
     const variants =
       await this.productVariantRepository.findPurchasableProductVariantsByIds(
         variantIds,
@@ -223,7 +223,7 @@ export class InventoryCachingService {
     return variants.map((variant) => variant.amount);
   }
 
-  async reserveInventory(
+  async reserveInventoryWithIdempotencyKey(
     idempotencyKey: string,
     reservationRequests: {
       variantId: string;
@@ -338,7 +338,7 @@ export class InventoryCachingService {
     )) as Array<string | number>;
   }
 
-  async releaseReservations(
+  async releaseReservationsWithIdempotency(
     idempotencyKey: string,
     reservationRequests: {
       variantId: string;

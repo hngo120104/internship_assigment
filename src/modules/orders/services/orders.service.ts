@@ -30,6 +30,7 @@ import type { RequestedItemsByShop } from '../types/requested-item-by-shop.type'
 import { RequestedOrderItem } from '../interfaces/requested-item.interface';
 import { PaymentStatus } from '../../checkouts/enums/payment-status.enum';
 import { PaymentMethod } from '../../checkouts/enums/payment-method.enum';
+import { InventoryCachingService } from '../../products/services/inventory-caching.service';
 
 @Injectable()
 export class OrdersService {
@@ -37,6 +38,7 @@ export class OrdersService {
     private readonly ordersRepository: OrdersRepository,
     private readonly orderItemsRepository: OrderItemsRepository,
     private readonly productVariantsService: ProductVariantsService,
+    private readonly inventoryCachingService: InventoryCachingService,
   ) {}
 
   private async findOrderEntityByShopIdAndOrderIdOrThrow(
@@ -151,7 +153,7 @@ export class OrdersService {
     orderId: string,
     shopId: string,
   ): Promise<ShopOrderResponseDto> {
-    const result = await this.ordersRepository.shopConfirmOrderByOrderId(
+    const result = await this.ordersRepository.shopProcessOrderByOrderId(
       shopId,
       orderId,
     );
@@ -195,6 +197,13 @@ export class OrdersService {
         item.variantId,
         item.quantity,
       );
+    }
+    try {
+      await this.inventoryCachingService.syncAmountsToCache(
+        sortedOrderItems.map(({ variantId }) => variantId),
+      );
+    } catch (error) {
+      throw new Error(`Redis error: ${error}`);
     }
   }
 

@@ -85,10 +85,11 @@ export class CheckoutsService {
       command.itemsByShop,
     );
 
-    const reservation = await this.inventoryCachingService.reserveInventory(
-      reservationKey,
-      reservationRequests,
-    );
+    const reservation =
+      await this.inventoryCachingService.reserveInventoryWithIdempotencyKey(
+        reservationKey,
+        reservationRequests,
+      );
 
     switch (reservation.state) {
       case RedisReservationReturn.SUCCESS:
@@ -128,7 +129,7 @@ export class CheckoutsService {
       savedCheckout = await this.placeOrders(command);
     } catch (error) {
       try {
-        await this.inventoryCachingService.releaseReservations(
+        await this.inventoryCachingService.releaseReservationsWithIdempotency(
           reservationKey,
           reservationRequests,
         );

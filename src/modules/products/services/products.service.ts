@@ -140,7 +140,9 @@ export class ProductsService {
     productId: string,
   ): Promise<ProductResponseDto> {
     const product =
-      await this.findProductWithActiveCategoriesOrThrow(productId);
+      await this.productsRepository.findProductWithActiveCategoriesById(
+        productId,
+      );
     return toResponseDto(ProductResponseDto, product);
   }
 

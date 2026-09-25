@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { PaymentStatus } from '../../checkouts/enums/payment-status.enum';
 import { randomUUID } from 'crypto';
+import { CheckoutStatus } from '../../checkouts/enums/checkout-status.enum';
 
 @Injectable()
 export class OrdersRepository {
@@ -20,13 +21,13 @@ export class OrdersRepository {
     paymentStatus?: PaymentStatus,
   ): Promise<[Order[], number]> {
     const whereConditions: FindOptionsWhere<Order> = {
-      checkout: { userId: userId },
+      checkout: {
+        userId: userId,
+        ...(paymentStatus && { paymentStatus: paymentStatus }),
+      },
     };
     if (orderStatus) whereConditions.orderStatus = orderStatus;
-    if (paymentStatus)
-      whereConditions.checkout = {
-        paymentStatus: paymentStatus,
-      };
+
     return await this.ordersRepository.findAndCount({
       where: whereConditions,
       relations: { orderItems: true },
@@ -38,7 +39,6 @@ export class OrdersRepository {
     });
   }
 
-  //TODO: revise where conditions of payment
   async findAllShopOrdersWithOptionStatusesByShopId(
     shopId: string,
     page: number,
@@ -48,10 +48,9 @@ export class OrdersRepository {
   ): Promise<[Order[], number]> {
     const whereConditions: FindOptionsWhere<Order> = {
       shopId: shopId,
+      checkout: { ...(paymentStatus && { paymentStatus: paymentStatus }) },
     };
     if (orderStatus) whereConditions.orderStatus = orderStatus;
-    if (paymentStatus)
-      whereConditions.checkout = { paymentStatus: paymentStatus };
     return await this.ordersRepository.findAndCount({
       where: whereConditions,
       relations: { orderItems: true },
@@ -63,14 +62,17 @@ export class OrdersRepository {
     });
   }
 
-  //TODO: where condition of payment need to be revised
   async findOrderByUserIdAndOrderIdAndLockForCancel(
     userId: string,
     orderId: string,
   ): Promise<Order | null> {
     return await this.ordersRepository.findOne({
       where: {
-        checkout: { userId: userId },
+        checkout: {
+          userId: userId,
+          status: In([CheckoutStatus.COMPLETED, CheckoutStatus.PROCESSING]),
+          paymentStatus: In([PaymentStatus.PAID, PaymentStatus.PENDING]),
+        },
         id: orderId,
         orderStatus: In([
           OrderStatus.PENDING,
@@ -79,24 +81,11 @@ export class OrdersRepository {
         ]),
         shop: { isDeleted: false },
       },
+      relations: {
+        checkout: true,
+        orderItems: true,
+      },
     });
-  }
-
-  //TODO: where condition of payment need to be revised
-  async findOrderByShopIdAndOrderIdAndLock(
-    shopId: string,
-    orderId: string,
-  ): Promise<Order | null> {
-    return await this.ordersRepository
-      .createQueryBuilder('orders')
-      .setLock('pessimistic_write')
-      .leftJoinAndSelect('orders.orderItems', 'orderItems')
-      .where('orders.id = :orderId', { orderId: orderId })
-      .andWhere('shopId = :shopId', { shopId: shopId })
-      .andWhere('orders.orderStatus = :OrderStatus', {
-        OrderStatus: OrderStatus.PENDING,
-      })
-      .getOne();
   }
 
   async findOrderByUserIdAndOrderId(

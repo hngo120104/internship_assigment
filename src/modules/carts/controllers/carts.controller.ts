@@ -26,11 +26,11 @@ export class CartsController {
 
   @Get(':userId')
   async findUserCartItemsByUserId(
-    @Query('userId') userId: string,
+    @CurrentUser() user: CurrentUserPayload,
     @Query() paginationQueryDto: PaginationQueryDto,
   ): Promise<ListResponseDto<UserCartResponseDto>> {
     return this.cartItemsService.findAllCartItemsByUserId(
-      userId,
+      user.userId,
       paginationQueryDto.page,
       paginationQueryDto.size,
     );

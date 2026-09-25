@@ -36,7 +36,6 @@ export class Order {
   @Column({ name: 'shop_id', type: 'varchar', length: 36 })
   shopId!: string;
 
-  //TODO: change to not null after seeding
   @Column({ name: 'checkout_id', type: 'varchar', length: 36 })
   checkoutId!: string;
 
