@@ -5,7 +5,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { OrdersService } from '../../orders/services/orders.service';
-import { RedlockService } from '../../redis/services/redlock.service';
 import { CheckoutRequestDto } from '../dto/requests/checkout.request.dto';
 import { CheckoutResponseDto } from '../dto/responses/checkout.response.dto';
 import type { PlaceOrdersCommand } from '../interfaces/place-orders.interface';
@@ -34,8 +33,7 @@ import {
   RedisReservationReturn,
 } from '../../products/services/inventory-caching.service';
 import { InsufficientVariantAmountException } from '../../products/exceptions/variant-insufficient-stock.exception';
-
-const CHECKOUT_IDEMPOTENCY_LOCK_TTL_MS = 5_000;
+import { RedisLockService } from '../../redis/services/redis-lock.service';
 
 @Injectable()
 export class CheckoutsService {
@@ -47,7 +45,7 @@ export class CheckoutsService {
     private readonly productVariantsService: ProductVariantsService,
     private readonly userAddressesService: UserAddressesService,
     private readonly cartItemsService: CartItemsService,
-    private readonly redlockService: RedlockService,
+    private readonly redisLockService: RedisLockService,
     private readonly inventoryCachingService: InventoryCachingService,
   ) {}
 
@@ -58,23 +56,19 @@ export class CheckoutsService {
   ): Promise<Checkout> {
     const lockKey = `lock:checkout:idempotency:${userId}:${idempotencyKey}`;
 
-    return this.redlockService.withLock(
-      [lockKey],
-      CHECKOUT_IDEMPOTENCY_LOCK_TTL_MS,
-      async () => {
-        const existingCheckout =
-          await this.checkoutRepository.findByUserIdAndIdempotencyKey(
-            userId,
-            idempotencyKey,
-          );
-        if (existingCheckout) {
-          return existingCheckout;
-        }
+    return this.redisLockService.withLock([lockKey], async () => {
+      const existingCheckout =
+        await this.checkoutRepository.findByUserIdAndIdempotencyKey(
+          userId,
+          idempotencyKey,
+        );
+      if (existingCheckout) {
+        return existingCheckout;
+      }
 
-        const command = await buildCommand();
-        return this.placeOrdersWithInventoryReservation(command);
-      },
-    );
+      const command = await buildCommand();
+      return this.placeOrdersWithInventoryReservation(command);
+    });
   }
 
   private async placeOrdersWithInventoryReservation(

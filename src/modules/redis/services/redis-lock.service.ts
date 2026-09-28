@@ -18,18 +18,10 @@ export class RedisLockService {
     private readonly redis: Redis,
   ) {}
 
-  async acquireLock(resource: string, ttlMs: number): Promise<string | null> {
-    const ownershipToken = randomUUID();
-
-    const result = await this.redis.set(
-      resource,
-      ownershipToken,
-      'PX',
-      ttlMs,
-      'NX',
-    );
-
-    return result === 'OK' ? ownershipToken : null;
+  async acquireLock(resource: string, ttlS: number): Promise<string | null> {
+    const token = randomUUID();
+    const result = await this.redis.set(resource, token, 'EX', ttlS, 'NX');
+    return result === 'OK' ? result : null;
   }
 
   async releaseLock(resource: string, token: string): Promise<boolean> {
@@ -49,7 +41,7 @@ export class RedisLockService {
 
   async acquireWithRetry(
     resource: string,
-    ttlMs: number = 5000,
+    ttlMs: number = 5_000,
     maxRetry: number = 5,
     baseDelayMs: number = 50,
     maxDelayMs: number = 500,
@@ -97,7 +89,7 @@ export class RedisLockService {
     callback: () => Promise<T>,
   ): Promise<T> {
     const locks = await this.acquireAllLocks(resources);
-    if (!locks || locks.length !== resources.length) {
+    if (!locks) {
       throw new Error('Failed to acquire one or more locks of resources.');
     }
 

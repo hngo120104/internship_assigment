@@ -217,7 +217,7 @@ export class InventoryCachingService {
 
     const pipeline = this.redisClient.pipeline();
     variants.forEach((variant) =>
-      pipeline.set(this.createKey(variant.id), variant.amount, 'NX'),
+      pipeline.set(this.createKey(variant.id), variant.amount, 'EX', 3, 'NX'),
     );
     await pipeline.exec();
     return variants.map((variant) => variant.amount);
